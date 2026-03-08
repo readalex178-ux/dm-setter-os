@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   demoProspects, demoMessages, suggestedReplies,
   type Prospect as DemoProspect,
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft,
 } from "lucide-react";
 
 interface DBProspect {
@@ -67,14 +68,21 @@ const platformIcon = (platform: string | null) => {
 };
 
 export default function InboxPage() {
+  const isMobile = useIsMobile();
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
   const [dbMessages, setDbMessages] = useState<DBMessage[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
   const [search, setSearch] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
   const [useDemo, setUseDemo] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  function selectProspect(id: string) {
+    setSelectedId(id);
+    if (isMobile) setShowChat(true);
+  }
 
   // Load DB prospects
   useEffect(() => {
@@ -238,10 +246,13 @@ export default function InboxPage() {
         unread: false,
       };
 
+  const mobileShowList = isMobile && !showChat;
+  const mobileShowChat = isMobile && showChat;
+
   return (
-    <div className="flex h-[calc(100vh-3rem)] flex-col lg:flex-row">
+    <div className="absolute inset-0 flex flex-col lg:flex-row overflow-hidden bg-background">
       {/* Left: Conversation List */}
-      <div className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 max-h-[35vh] lg:max-h-full">
+      <div className={`w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 lg:h-full ${mobileShowChat ? "hidden" : "flex-1"} lg:flex`}>
         <div className="p-3 border-b border-border">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -269,7 +280,7 @@ export default function InboxPage() {
             return (
               <button
                 key={id}
-                onClick={() => setSelectedId(id)}
+                onClick={() => selectProspect(id)}
                 className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors ${
                   selectedId === id ? "bg-accent" : ""
                 }`}
@@ -307,13 +318,20 @@ export default function InboxPage() {
       </div>
 
       {/* Center: Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${mobileShowList ? "hidden" : ""} lg:flex`}>
         <div className="p-3 lg:p-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-sm lg:text-base flex items-center gap-1.5">
-              {platformIcon(sel.platform)} {sel.name}
-            </h2>
-            <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowChat(false)}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div>
+              <h2 className="font-semibold text-sm lg:text-base flex items-center gap-1.5">
+                {platformIcon(sel.platform)} {sel.name}
+              </h2>
+              <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Badge variant="score" className="text-xs">{sel.intentLevel} {sel.intentConfidence}%</Badge>
@@ -353,17 +371,30 @@ export default function InboxPage() {
           </div>
         </ScrollArea>
 
-        {/* Suggested Replies (demo only for now) */}
+        {/* Suggested Replies — compact on mobile */}
         {replies.length > 0 && (
-          <div className="border-t border-border p-3 lg:p-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="border-t border-border p-2 lg:p-4 shrink-0">
+            <div className="flex items-center gap-2 mb-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">AI Suggestions</span>
               <span className="text-[10px] text-muted-foreground ml-auto">
                 <Info className="h-3 w-3 inline mr-0.5" /> Never auto-sent
               </span>
             </div>
-            <div className="grid gap-2">
+            {/* Mobile: horizontal scroll chips */}
+            <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+              {replies.map((r, i) => (
+                <button
+                  key={i}
+                  className="shrink-0 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium hover:bg-muted/50 transition-colors"
+                  onClick={() => setMessageInput(r.content)}
+                >
+                  {r.type}
+                </button>
+              ))}
+            </div>
+            {/* Desktop: full cards */}
+            <div className="hidden lg:grid gap-2">
               {replies.map((r, i) => (
                 <div
                   key={i}
@@ -395,7 +426,7 @@ export default function InboxPage() {
         )}
 
         {/* Message Input */}
-        <div className="border-t border-border p-3 lg:p-4">
+        <div className="border-t border-border p-2 lg:p-4 shrink-0">
           <div className="flex gap-2 max-w-2xl mx-auto">
             <Textarea
               placeholder="Type a message..."
