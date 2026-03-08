@@ -15,6 +15,8 @@ import CoachingPage from "./pages/CoachingPage";
 import TrainingPage from "./pages/TrainingPage";
 import SettingsPage from "./pages/SettingsPage";
 import KPITrackerPage from "./pages/KPITrackerPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
