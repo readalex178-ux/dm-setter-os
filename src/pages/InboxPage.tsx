@@ -68,14 +68,21 @@ const platformIcon = (platform: string | null) => {
 };
 
 export default function InboxPage() {
+  const isMobile = useIsMobile();
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
   const [dbMessages, setDbMessages] = useState<DBMessage[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
   const [search, setSearch] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
   const [useDemo, setUseDemo] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  function selectProspect(id: string) {
+    setSelectedId(id);
+    if (isMobile) setShowChat(true);
+  }
 
   // Load DB prospects
   useEffect(() => {
