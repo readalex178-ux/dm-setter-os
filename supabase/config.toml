@@ -1,1 +1,10 @@
 project_id = "kwqoaqifvccxflaajrjv"
+
+[functions.meta-oauth-start]
+verify_jwt = false
+
+[functions.meta-oauth-callback]
+verify_jwt = false
+
+[functions.meta-sync-messages]
+verify_jwt = false
