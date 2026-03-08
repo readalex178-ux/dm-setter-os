@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
-  GraduationCap, Target, BarChart3, Settings, Activity,
+  GraduationCap, Target, BarChart3, Settings, Activity, Link2,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -19,6 +19,7 @@ const items = [
   { title: "Coaching", url: "/app/coaching", icon: GraduationCap },
   { title: "Training Mode", url: "/app/training", icon: Target },
   { title: "Analytics", url: "/app/analytics", icon: BarChart3 },
+  { title: "Integrations", url: "/app/integrations", icon: Link2 },
   { title: "Settings", url: "/app/settings", icon: Settings },
 ];
 

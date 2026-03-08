@@ -15,6 +15,8 @@ import CoachingPage from "./pages/CoachingPage";
 import TrainingPage from "./pages/TrainingPage";
 import SettingsPage from "./pages/SettingsPage";
 import KPITrackerPage from "./pages/KPITrackerPage";
+import IntegrationsPage from "./pages/IntegrationsPage";
+import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +40,8 @@ const App = () => (
             <Route path="coaching" element={<CoachingPage />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="integrations/callback" element={<OAuthCallbackPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
