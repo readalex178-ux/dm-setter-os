@@ -40,6 +40,8 @@ const App = () => (
             <Route path="coaching" element={<CoachingPage />} />
             <Route path="training" element={<TrainingPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="integrations" element={<IntegrationsPage />} />
+            <Route path="integrations/callback" element={<OAuthCallbackPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
