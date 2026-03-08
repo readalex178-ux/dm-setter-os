@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
-  GraduationCap, Target, BarChart3, Settings,
+  GraduationCap, Target, BarChart3, Settings, Activity,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
