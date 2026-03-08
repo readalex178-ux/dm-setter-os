@@ -29,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/app" replace />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="kpi" element={<KPITrackerPage />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="pipeline" element={<PipelinePage />} />
             <Route path="prospects" element={<ProspectsPage />} />
