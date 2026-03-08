@@ -1,11 +1,16 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Progress } from "@/components/ui/progress";
 import { dashboardStats, demoProspects } from "@/data/demo-data";
+import { demoKPIs, kpiGoals, getStreak } from "@/data/kpi-data";
 import {
   MessageSquare, Users, UserCheck, Phone, PhoneCall,
   Snowflake, TrendingUp, Clock, ArrowRight, AlertCircle,
-  RefreshCw, Flame,
+  RefreshCw, Flame, Plus, Send, UserPlus, CheckCircle2,
+  Target, Activity,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -28,14 +33,64 @@ const actions = [
 ];
 
 export default function Dashboard() {
+  const [quickName, setQuickName] = useState("");
+  const [quickHandle, setQuickHandle] = useState("");
   const hotProspects = demoProspects.filter(p => p.leadScore >= 7).slice(0, 4);
+  const today = demoKPIs[0];
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Your daily DM setting overview</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Your daily DM setting overview</p>
+        </div>
+        <Link to="/app/kpi">
+          <Button variant="outline" size="sm">
+            <Activity className="h-4 w-4 mr-1" /> Full KPI Tracker
+          </Button>
+        </Link>
       </div>
+
+      {/* Today's Goal Progress — compact */}
+      <Card className="border-primary/20">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" /> Today's Targets
+            </h3>
+            <Badge variant="outline" className="text-xs">
+              {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+            {kpiGoals.map((goal) => {
+              const val = today[goal.metric] as number;
+              const pct = Math.min((val / goal.dailyTarget) * 100, 100);
+              const hit = val >= goal.dailyTarget;
+              const streak = getStreak(demoKPIs, goal.metric, goal.dailyTarget);
+              return (
+                <div key={goal.metric}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs text-muted-foreground">{goal.label}</span>
+                    {hit && <CheckCircle2 className="h-3 w-3 text-success" />}
+                  </div>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-lg font-bold">{val}</span>
+                    <span className="text-xs text-muted-foreground">/ {goal.dailyTarget}</span>
+                  </div>
+                  <Progress value={pct} className="h-1 mt-1" />
+                  {streak > 1 && (
+                    <span className="text-xs text-warning flex items-center gap-0.5 mt-1">
+                      <Flame className="h-2.5 w-2.5" /> {streak}d
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -52,7 +107,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid lg:grid-cols-3 gap-6">
         {/* Daily Actions */}
         <Card>
           <CardHeader className="pb-3">
@@ -99,6 +154,39 @@ export default function Dashboard() {
                 </div>
               </Link>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Quick Add Prospect */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserPlus className="h-4 w-4" /> Quick Add Prospect
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div>
+              <label className="text-xs text-muted-foreground">Name</label>
+              <Input
+                placeholder="e.g. Sarah Mitchell"
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground">Instagram Handle</label>
+              <Input
+                placeholder="e.g. @sarahmitchell_fit"
+                value={quickHandle}
+                onChange={(e) => setQuickHandle(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <Button className="w-full" size="sm" disabled={!quickName.trim()}>
+              <Plus className="h-4 w-4 mr-1" /> Add to New Leads
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">Opens in inbox for conversation paste</p>
           </CardContent>
         </Card>
       </div>

@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
-  GraduationCap, Target, BarChart3, Settings,
+  GraduationCap, Target, BarChart3, Settings, Activity,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -11,6 +11,7 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard },
+  { title: "KPI Tracker", url: "/app/kpi", icon: Activity },
   { title: "Inbox", url: "/app/inbox", icon: Inbox },
   { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
   { title: "Prospects", url: "/app/prospects", icon: Users },

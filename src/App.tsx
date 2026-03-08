@@ -14,6 +14,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import CoachingPage from "./pages/CoachingPage";
 import TrainingPage from "./pages/TrainingPage";
 import SettingsPage from "./pages/SettingsPage";
+import KPITrackerPage from "./pages/KPITrackerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/app" replace />} />
           <Route path="/app" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
+            <Route path="kpi" element={<KPITrackerPage />} />
             <Route path="inbox" element={<InboxPage />} />
             <Route path="pipeline" element={<PipelinePage />} />
             <Route path="prospects" element={<ProspectsPage />} />
