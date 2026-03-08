@@ -426,7 +426,7 @@ export default function InboxPage() {
         )}
 
         {/* Message Input */}
-        <div className="border-t border-border p-3 lg:p-4">
+        <div className="border-t border-border p-2 lg:p-4 shrink-0">
           <div className="flex gap-2 max-w-2xl mx-auto">
             <Textarea
               placeholder="Type a message..."
