@@ -11,6 +11,7 @@ import {
 
 const items = [
   { title: "Dashboard", url: "/app", icon: LayoutDashboard },
+  { title: "KPI Tracker", url: "/app/kpi", icon: Activity },
   { title: "Inbox", url: "/app/inbox", icon: Inbox },
   { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
   { title: "Prospects", url: "/app/prospects", icon: Users },
