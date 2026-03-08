@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { User, Bell, Palette, Link2, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function SettingsPage() {
   return (
