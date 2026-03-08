@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { User, Bell, Palette, Link2, Shield } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export default function SettingsPage() {
   return (
@@ -63,19 +64,11 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2"><Link2 className="h-4 w-4" /> Integrations</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
-            <div><p className="text-sm font-medium">Instagram DMs</p><p className="text-xs text-muted-foreground">Import/sync conversations</p></div>
-            <Button variant="outline" size="sm">Coming Soon</Button>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
-            <div><p className="text-sm font-medium">Facebook Messenger</p><p className="text-xs text-muted-foreground">Import conversations</p></div>
-            <Button variant="outline" size="sm">Coming Soon</Button>
-          </div>
-          <div className="flex items-center justify-between p-3 rounded-lg border border-border">
-            <div><p className="text-sm font-medium">WhatsApp</p><p className="text-xs text-muted-foreground">Import conversations</p></div>
-            <Button variant="outline" size="sm">Coming Soon</Button>
-          </div>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-3">Manage your Instagram, Facebook, and WhatsApp connections.</p>
+          <Link to="/app/integrations">
+            <Button variant="outline" size="sm">Go to Integrations</Button>
+          </Link>
         </CardContent>
       </Card>
 
