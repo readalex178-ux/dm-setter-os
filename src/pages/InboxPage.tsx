@@ -250,7 +250,7 @@ export default function InboxPage() {
   const mobileShowChat = isMobile && showChat;
 
   return (
-    <div className="fixed inset-0 top-12 bottom-14 lg:bottom-0 lg:left-[var(--sidebar-width,16rem)] flex flex-col lg:flex-row overflow-hidden z-10 bg-background">
+    <div className="absolute inset-0 flex flex-col lg:flex-row overflow-hidden bg-background">
       {/* Left: Conversation List */}
       <div className={`w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 lg:h-full ${mobileShowChat ? "hidden" : "flex-1"} lg:flex`}>
         <div className="p-3 border-b border-border">
