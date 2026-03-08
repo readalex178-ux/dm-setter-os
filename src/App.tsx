@@ -14,6 +14,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import CoachingPage from "./pages/CoachingPage";
 import TrainingPage from "./pages/TrainingPage";
 import SettingsPage from "./pages/SettingsPage";
+import KPITrackerPage from "./pages/KPITrackerPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
