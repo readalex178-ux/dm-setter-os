@@ -318,13 +318,20 @@ export default function InboxPage() {
       </div>
 
       {/* Center: Chat */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className={`flex-1 flex flex-col min-w-0 ${mobileShowList ? "hidden" : ""} lg:flex`}>
         <div className="p-3 lg:p-4 border-b border-border flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-sm lg:text-base flex items-center gap-1.5">
-              {platformIcon(sel.platform)} {sel.name}
-            </h2>
-            <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
+          <div className="flex items-center gap-2">
+            {isMobile && (
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => setShowChat(false)}>
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <div>
+              <h2 className="font-semibold text-sm lg:text-base flex items-center gap-1.5">
+                {platformIcon(sel.platform)} {sel.name}
+              </h2>
+              <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
+            </div>
           </div>
           <div className="flex gap-2">
             <Badge variant="score" className="text-xs">{sel.intentLevel} {sel.intentConfidence}%</Badge>
