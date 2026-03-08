@@ -371,17 +371,30 @@ export default function InboxPage() {
           </div>
         </ScrollArea>
 
-        {/* Suggested Replies (demo only for now) */}
+        {/* Suggested Replies — compact on mobile */}
         {replies.length > 0 && (
-          <div className="border-t border-border p-3 lg:p-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="border-t border-border p-2 lg:p-4 shrink-0">
+            <div className="flex items-center gap-2 mb-1.5">
               <Sparkles className="h-3.5 w-3.5 text-primary" />
               <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">AI Suggestions</span>
               <span className="text-[10px] text-muted-foreground ml-auto">
                 <Info className="h-3 w-3 inline mr-0.5" /> Never auto-sent
               </span>
             </div>
-            <div className="grid gap-2">
+            {/* Mobile: horizontal scroll chips */}
+            <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+              {replies.map((r, i) => (
+                <button
+                  key={i}
+                  className="shrink-0 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium hover:bg-muted/50 transition-colors"
+                  onClick={() => setMessageInput(r.content)}
+                >
+                  {r.type}
+                </button>
+              ))}
+            </div>
+            {/* Desktop: full cards */}
+            <div className="hidden lg:grid gap-2">
               {replies.map((r, i) => (
                 <div
                   key={i}
