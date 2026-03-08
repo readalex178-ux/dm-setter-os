@@ -18,7 +18,7 @@ export default function AppLayout() {
               DM Setter OS
             </span>
           </header>
-          <main className="flex-1 overflow-auto pb-16 lg:pb-0">
+          <main className="flex-1 overflow-hidden pb-16 lg:pb-0">
             <Outlet />
           </main>
         </div>
