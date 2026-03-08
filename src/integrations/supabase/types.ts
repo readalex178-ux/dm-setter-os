@@ -14,7 +14,279 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      connected_accounts: {
+        Row: {
+          access_token: string
+          created_at: string
+          display_name: string | null
+          id: string
+          is_active: boolean
+          last_synced_at: string | null
+          page_access_token: string | null
+          page_id: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          platform_user_id: string
+          platform_username: string | null
+          refresh_token: string | null
+          token_expires_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          page_access_token?: string | null
+          page_id?: string | null
+          platform: Database["public"]["Enums"]["platform_type"]
+          platform_user_id: string
+          platform_username?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          is_active?: boolean
+          last_synced_at?: string | null
+          page_access_token?: string | null
+          page_id?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"]
+          platform_user_id?: string
+          platform_username?: string | null
+          refresh_token?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      daily_kpis: {
+        Row: {
+          calls_booked: number | null
+          calls_completed: number | null
+          conversions_to_qualified: number | null
+          created_at: string
+          date: string
+          dms_received: number | null
+          dms_sent: number | null
+          follow_ups_sent: number | null
+          hours_worked: number | null
+          id: string
+          new_leads: number | null
+          no_shows: number | null
+          notes: string | null
+          objections_handled: number | null
+          updated_at: string
+        }
+        Insert: {
+          calls_booked?: number | null
+          calls_completed?: number | null
+          conversions_to_qualified?: number | null
+          created_at?: string
+          date: string
+          dms_received?: number | null
+          dms_sent?: number | null
+          follow_ups_sent?: number | null
+          hours_worked?: number | null
+          id?: string
+          new_leads?: number | null
+          no_shows?: number | null
+          notes?: string | null
+          objections_handled?: number | null
+          updated_at?: string
+        }
+        Update: {
+          calls_booked?: number | null
+          calls_completed?: number | null
+          conversions_to_qualified?: number | null
+          created_at?: string
+          date?: string
+          dms_received?: number | null
+          dms_sent?: number | null
+          follow_ups_sent?: number | null
+          hours_worked?: number | null
+          id?: string
+          new_leads?: number | null
+          no_shows?: number | null
+          notes?: string | null
+          objections_handled?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          platform_message_id: string | null
+          prospect_id: string
+          sender: string
+          sent_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          platform_message_id?: string | null
+          prospect_id: string
+          sender: string
+          sent_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          platform_message_id?: string | null
+          prospect_id?: string
+          sender?: string
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prospects: {
+        Row: {
+          avatar_url: string | null
+          call_readiness: number | null
+          concerns: string | null
+          concerns_confidence: number | null
+          connected_account_id: string | null
+          created_at: string
+          current_job: string | null
+          handle: string | null
+          id: string
+          income_goal: string | null
+          intent_confidence: number | null
+          intent_level: string | null
+          last_contact_at: string | null
+          lead_score: number | null
+          location: string | null
+          motivation: string | null
+          motivation_confidence: number | null
+          name: string
+          notes: string | null
+          platform: Database["public"]["Enums"]["platform_type"] | null
+          platform_thread_id: string | null
+          source: string | null
+          stage: string
+          tags: string[] | null
+          time_availability: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          call_readiness?: number | null
+          concerns?: string | null
+          concerns_confidence?: number | null
+          connected_account_id?: string | null
+          created_at?: string
+          current_job?: string | null
+          handle?: string | null
+          id?: string
+          income_goal?: string | null
+          intent_confidence?: number | null
+          intent_level?: string | null
+          last_contact_at?: string | null
+          lead_score?: number | null
+          location?: string | null
+          motivation?: string | null
+          motivation_confidence?: number | null
+          name: string
+          notes?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"] | null
+          platform_thread_id?: string | null
+          source?: string | null
+          stage?: string
+          tags?: string[] | null
+          time_availability?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          call_readiness?: number | null
+          concerns?: string | null
+          concerns_confidence?: number | null
+          connected_account_id?: string | null
+          created_at?: string
+          current_job?: string | null
+          handle?: string | null
+          id?: string
+          income_goal?: string | null
+          intent_confidence?: number | null
+          intent_level?: string | null
+          last_contact_at?: string | null
+          lead_score?: number | null
+          location?: string | null
+          motivation?: string | null
+          motivation_confidence?: number | null
+          name?: string
+          notes?: string | null
+          platform?: Database["public"]["Enums"]["platform_type"] | null
+          platform_thread_id?: string | null
+          source?: string | null
+          stage?: string
+          tags?: string[] | null
+          time_availability?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospects_connected_account_id_fkey"
+            columns: ["connected_account_id"]
+            isOneToOne: false
+            referencedRelation: "connected_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timeline_events: {
+        Row: {
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          occurred_at: string
+          prospect_id: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          event_type: string
+          id?: string
+          occurred_at?: string
+          prospect_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          occurred_at?: string
+          prospect_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timeline_events_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +295,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      platform_type: "instagram" | "facebook" | "whatsapp"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +422,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      platform_type: ["instagram", "facebook", "whatsapp"],
+    },
   },
 } as const
