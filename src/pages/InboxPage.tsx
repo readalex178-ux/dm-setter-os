@@ -280,7 +280,7 @@ export default function InboxPage() {
             return (
               <button
                 key={id}
-                onClick={() => setSelectedId(id)}
+                onClick={() => selectProspect(id)}
                 className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors ${
                   selectedId === id ? "bg-accent" : ""
                 }`}
