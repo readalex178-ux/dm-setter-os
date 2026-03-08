@@ -6,13 +6,14 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   demoProspects, demoMessages, suggestedReplies,
   type Prospect as DemoProspect,
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft,
 } from "lucide-react";
 
 interface DBProspect {
