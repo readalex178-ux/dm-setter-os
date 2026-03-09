@@ -424,59 +424,118 @@ export default function InboxPage() {
           </div>
         </ScrollArea>
 
-        {/* Suggested Replies — compact on mobile */}
-        {replies.length > 0 && (
-          <div className="border-t border-border p-2 lg:p-4 shrink-0">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">AI Suggestions</span>
-              <span className="text-[10px] text-muted-foreground ml-auto">
-                <Info className="h-3 w-3 inline mr-0.5" /> Never auto-sent
-              </span>
+        {/* AI-Powered Suggestions */}
+        <div className="border-t border-border p-2 lg:p-4 shrink-0">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-primary" />
+            <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">AI Coaching</span>
+            <span className="text-[10px] text-muted-foreground ml-auto">
+              <Info className="h-3 w-3 inline mr-0.5" /> Never auto-sent
+            </span>
+          </div>
+
+          {/* AI Suggest Button */}
+          {aiSuggestions.length === 0 && !aiLoading && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mb-2 text-xs"
+              onClick={fetchAiSuggestions}
+              disabled={messages.length === 0}
+            >
+              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+              Get AI Reply Suggestions
+            </Button>
+          )}
+
+          {aiLoading && (
+            <div className="flex items-center justify-center py-3 gap-2 text-xs text-muted-foreground">
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              Analyzing conversation...
             </div>
-            {/* Mobile: horizontal scroll chips */}
-            <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
-              {replies.map((r, i) => (
-                <button
-                  key={i}
-                  className="shrink-0 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium hover:bg-muted/50 transition-colors"
-                  onClick={() => setMessageInput(r.content)}
-                >
-                  {r.type}
-                </button>
-              ))}
+          )}
+
+          {aiError && (
+            <div className="text-xs text-destructive text-center py-2 mb-1">
+              {aiError}
+              <Button variant="ghost" size="sm" className="ml-2 text-xs h-6" onClick={fetchAiSuggestions}>
+                Retry
+              </Button>
             </div>
-            {/* Desktop: full cards */}
-            <div className="hidden lg:grid gap-2">
+          )}
+
+          {/* Mobile: horizontal scroll chips */}
+          {aiSuggestions.length > 0 && (
+            <>
+              <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
+                {aiSuggestions.map((r, i) => (
+                  <button
+                    key={i}
+                    className="shrink-0 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium hover:bg-muted/50 transition-colors"
+                    onClick={() => setMessageInput(r.content)}
+                  >
+                    {r.type}
+                  </button>
+                ))}
+              </div>
+              {/* Desktop: full cards with coaching notes */}
+              <div className="hidden lg:grid gap-2">
+                {aiSuggestions.map((r, i) => (
+                  <div
+                    key={i}
+                    className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group cursor-pointer"
+                    onClick={() => setMessageInput(r.content)}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <Badge variant="outline" className="text-[10px]">{r.type}</Badge>
+                      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          title="Copy"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(r.content);
+                          }}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-foreground">{r.content}</p>
+                    <p className="text-[10px] text-muted-foreground mt-1 italic">💡 {r.coaching_note}</p>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full mt-1.5 text-[10px] h-6"
+                onClick={fetchAiSuggestions}
+                disabled={aiLoading}
+              >
+                <Sparkles className="h-3 w-3 mr-1" /> Regenerate
+              </Button>
+            </>
+          )}
+
+          {/* Demo static suggestions fallback */}
+          {useDemo && aiSuggestions.length === 0 && !aiLoading && replies.length > 0 && (
+            <div className="hidden lg:grid gap-2 mt-2">
               {replies.map((r, i) => (
                 <div
                   key={i}
-                  className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors group cursor-pointer"
+                  className="p-2.5 rounded-lg border border-border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
                   onClick={() => setMessageInput(r.content)}
                 >
-                  <div className="flex items-center justify-between mb-1">
-                    <Badge variant="outline" className="text-[10px]">{r.type}</Badge>
-                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        title="Copy"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(r.content);
-                        }}
-                      >
-                        <Copy className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  </div>
+                  <Badge variant="outline" className="text-[10px] mb-1">{r.type}</Badge>
                   <p className="text-xs text-foreground">{r.content}</p>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Message Input */}
         <div className="border-t border-border p-2 lg:p-4 shrink-0">
