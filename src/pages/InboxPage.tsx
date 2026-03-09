@@ -90,6 +90,8 @@ export default function InboxPage() {
 
   function selectProspect(id: string) {
     setSelectedId(id);
+    setAiSuggestions([]);
+    setAiError(null);
     if (isMobile) setShowChat(true);
   }
 
