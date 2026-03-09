@@ -163,7 +163,17 @@ export default function InboxPage() {
     if (!messageInput.trim() || !selectedId) return;
 
     if (useDemo) {
-      // For demo mode, just show a toast or add to local state
+      const newMsg = {
+        id: `local-${Date.now()}`,
+        prospectId: selectedId,
+        sender: "setter",
+        content: messageInput.trim(),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setLocalDemoMessages((prev) => ({
+        ...prev,
+        [selectedId]: [...(prev[selectedId] || []), newMsg],
+      }));
       setMessageInput("");
       return;
     }
