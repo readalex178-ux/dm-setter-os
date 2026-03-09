@@ -208,7 +208,7 @@ export default function InboxPage() {
     : dbProspects.find((p) => p.id === selectedId) || dbProspects[0];
 
   const messages = useDemo
-    ? (demoMessages[selectedId || "p1"] || [])
+    ? [...(demoMessages[selectedId || "p1"] || []), ...(localDemoMessages[selectedId || "p1"] || [])]
     : dbMessages;
 
   const replies = useDemo
