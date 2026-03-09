@@ -63,7 +63,7 @@ export default function Dashboard() {
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
             </Badge>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
             {kpiGoals.map((goal) => {
               const val = today[goal.metric] as number;
               const pct = Math.min((val / goal.dailyTarget) * 100, 100);
