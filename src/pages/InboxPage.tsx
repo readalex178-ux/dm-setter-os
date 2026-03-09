@@ -77,6 +77,7 @@ export default function InboxPage() {
   const isMobile = useIsMobile();
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
   const [dbMessages, setDbMessages] = useState<DBMessage[]>([]);
+  const [localDemoMessages, setLocalDemoMessages] = useState<Record<string, { id: string; prospectId: string; sender: string; content: string; timestamp: string }[]>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [search, setSearch] = useState("");
@@ -155,14 +156,24 @@ export default function InboxPage() {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [dbMessages, selectedId]);
+  }, [dbMessages, localDemoMessages, selectedId]);
 
   // Send message
   async function handleSend() {
     if (!messageInput.trim() || !selectedId) return;
 
     if (useDemo) {
-      // For demo mode, just show a toast or add to local state
+      const newMsg = {
+        id: `local-${Date.now()}`,
+        prospectId: selectedId,
+        sender: "setter",
+        content: messageInput.trim(),
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setLocalDemoMessages((prev) => ({
+        ...prev,
+        [selectedId]: [...(prev[selectedId] || []), newMsg],
+      }));
       setMessageInput("");
       return;
     }
@@ -197,7 +208,7 @@ export default function InboxPage() {
     : dbProspects.find((p) => p.id === selectedId) || dbProspects[0];
 
   const messages = useDemo
-    ? (demoMessages[selectedId || "p1"] || [])
+    ? [...(demoMessages[selectedId || "p1"] || []), ...(localDemoMessages[selectedId || "p1"] || [])]
     : dbMessages;
 
   const replies = useDemo
