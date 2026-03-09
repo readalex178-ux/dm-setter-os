@@ -77,6 +77,7 @@ export default function InboxPage() {
   const isMobile = useIsMobile();
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
   const [dbMessages, setDbMessages] = useState<DBMessage[]>([]);
+  const [localDemoMessages, setLocalDemoMessages] = useState<Record<string, { id: string; prospectId: string; sender: string; content: string; timestamp: string }[]>>({});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [search, setSearch] = useState("");
