@@ -156,7 +156,7 @@ export default function InboxPage() {
   // Auto-scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [dbMessages, selectedId]);
+  }, [dbMessages, localDemoMessages, selectedId]);
 
   // Send message
   async function handleSend() {
