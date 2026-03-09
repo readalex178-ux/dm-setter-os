@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.suggest-replies]
 verify_jwt = false
+
+[functions.training-chat]
+verify_jwt = false
