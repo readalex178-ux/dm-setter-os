@@ -107,7 +107,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
         {/* Daily Actions */}
         <Card>
           <CardHeader className="pb-3">
