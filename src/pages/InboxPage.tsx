@@ -257,6 +257,48 @@ export default function InboxPage() {
         unread: false,
       };
 
+  async function fetchAiSuggestions() {
+    if (!selectedId || messages.length === 0) return;
+    setAiLoading(true);
+    setAiError(null);
+    setAiSuggestions([]);
+
+    try {
+      const msgPayload = messages.map((m: any) => ({
+        sender: m.sender || (m.role === "setter" ? "setter" : "prospect"),
+        content: m.content || m.text || "",
+      }));
+
+      const prospectPayload = {
+        name: sel.name,
+        stage: sel.stage,
+        intentLevel: sel.intentLevel,
+        intentConfidence: sel.intentConfidence,
+        motivation: sel.motivation,
+        concerns: sel.concerns,
+        callReadiness: sel.callReadiness,
+        leadScore: sel.leadScore,
+        currentJob: sel.currentJob,
+        incomeGoal: sel.incomeGoal,
+      };
+
+      const { data, error } = await supabase.functions.invoke("suggest-replies", {
+        body: { messages: msgPayload, prospect: prospectPayload },
+      });
+
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (data?.suggestions) {
+        setAiSuggestions(data.suggestions);
+      }
+    } catch (e: any) {
+      console.error("AI suggestion error:", e);
+      setAiError(e.message || "Failed to get AI suggestions");
+    } finally {
+      setAiLoading(false);
+    }
+  }
+
   const mobileShowList = isMobile && !showChat;
   const mobileShowChat = isMobile && showChat;
 
