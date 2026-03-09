@@ -67,6 +67,12 @@ const platformIcon = (platform: string | null) => {
   return null;
 };
 
+interface AISuggestion {
+  type: string;
+  content: string;
+  coaching_note: string;
+}
+
 export default function InboxPage() {
   const isMobile = useIsMobile();
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
@@ -77,6 +83,9 @@ export default function InboxPage() {
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
   const [useDemo, setUseDemo] = useState(true);
+  const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   function selectProspect(id: string) {
