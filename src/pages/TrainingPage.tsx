@@ -4,68 +4,211 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { supabase } from "@/integrations/supabase/client";
 import { demoTrainingScenarios } from "@/data/demo-data";
-import { Target, Send, Bot, User, Sparkles } from "lucide-react";
+import { Target, Send, Bot, User, Sparkles, Loader2, ArrowLeft, RotateCcw } from "lucide-react";
 
 interface ChatMsg {
   role: "user" | "ai-prospect";
   content: string;
 }
 
-const aiResponses: Record<string, string[]> = {
-  ts1: [
-    "Hey... thanks I guess? Lol. What do you actually do?",
-    "Hmm interesting. How does it work exactly?",
-    "I mean sounds cool but how do I know it's not just another scam?",
-    "Ok fair enough. So what would someone like me need to do?",
-  ],
-  ts2: [
-    "Hey! Yeah I downloaded it, the guide was pretty helpful actually",
-    "I've been wanting to make money online for a while but never found the right thing",
-    "What kind of income are people making with this?",
-    "That sounds good but I'm a bit worried about the time commitment honestly",
-  ],
-  ts3: [
-    "Look, I've been burned before by these 'online business' things. What makes yours different?",
-    "I need proof. Can you show me actual results from real people?",
-    "Fine, but how much does it actually cost? People always hide the real price.",
-    "I need to think about it. Send me something I can review on my own time.",
-  ],
-};
-
 export default function TrainingPage() {
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
-  const [aiMsgIndex, setAiMsgIndex] = useState(0);
+  const [aiThinking, setAiThinking] = useState(false);
   const [completed, setCompleted] = useState(false);
-
-  const startScenario = (id: string) => {
-    const responses = aiResponses[id] || aiResponses.ts1;
-    setActiveScenario(id);
-    setMessages([{ role: "ai-prospect", content: responses[0] }]);
-    setAiMsgIndex(1);
-    setCompleted(false);
-  };
-
-  const sendMessage = () => {
-    if (!input.trim() || !activeScenario) return;
-    const newMessages: ChatMsg[] = [...messages, { role: "user", content: input }];
-    setInput("");
-
-    const responses = aiResponses[activeScenario] || aiResponses.ts1;
-    if (aiMsgIndex < responses.length) {
-      setTimeout(() => {
-        setMessages([...newMessages, { role: "ai-prospect", content: responses[aiMsgIndex] }]);
-        setAiMsgIndex((i) => i + 1);
-      }, 800);
-    } else {
-      setCompleted(true);
-    }
-    setMessages(newMessages);
-  };
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{
+    grade: string;
+    strengths: string[];
+    improvements: string[];
+    summary: string;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [turnCount, setTurnCount] = useState(0);
 
   const scenario = demoTrainingScenarios.find((s) => s.id === activeScenario);
+
+  async function getAiReply(conversationHistory: ChatMsg[]) {
+    setAiThinking(true);
+    setError(null);
+    try {
+      const aiMessages = conversationHistory.map((m) => ({
+        role: m.role === "user" ? "user" : "assistant",
+        content: m.content,
+      }));
+
+      const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
+        body: {
+          messages: aiMessages,
+          scenario: scenario
+            ? {
+                name: scenario.name,
+                description: scenario.description,
+                difficulty: scenario.difficulty,
+                personaType: scenario.personaType,
+              }
+            : null,
+        },
+      });
+
+      if (fnError) throw fnError;
+      if (data?.error) throw new Error(data.error);
+      return data?.reply || "...";
+    } catch (e: any) {
+      console.error("Training AI error:", e);
+      setError(e.message || "Failed to get AI response");
+      return null;
+    } finally {
+      setAiThinking(false);
+    }
+  }
+
+  async function getFeedback(conversationHistory: ChatMsg[]) {
+    setFeedbackLoading(true);
+    try {
+      const convoText = conversationHistory
+        .map((m) => `${m.role === "user" ? "Setter" : "Prospect"}: ${m.content}`)
+        .join("\n");
+
+      const { data, error: fnError } = await supabase.functions.invoke("suggest-replies", {
+        body: {
+          messages: conversationHistory.map((m) => ({
+            sender: m.role === "user" ? "setter" : "prospect",
+            content: m.content,
+          })),
+          prospect: {
+            name: "Training Prospect",
+            stage: scenario?.personaType || "Unknown",
+            intentLevel: scenario?.difficulty || "Unknown",
+            intentConfidence: 0,
+            motivation: "Practice scenario",
+            concerns: "N/A",
+            callReadiness: 0,
+            leadScore: 0,
+          },
+          feedbackMode: true,
+        },
+      });
+
+      // Use a dedicated feedback call via training-chat with a feedback prompt
+      const { data: fbData } = await supabase.functions.invoke("training-chat", {
+        body: {
+          messages: [
+            {
+              role: "user",
+              content: `You are now a DM coaching expert. Analyze this practice conversation and provide feedback.
+
+Conversation:
+${convoText}
+
+Scenario: ${scenario?.name} (${scenario?.difficulty}) — ${scenario?.description}
+
+Respond with ONLY a JSON object (no markdown, no code blocks):
+{"grade":"A/B/C/D","strengths":["point1","point2"],"improvements":["point1","point2","point3"],"summary":"One sentence overall assessment"}`,
+            },
+          ],
+          scenario: {
+            name: "Feedback Mode",
+            description: "Provide coaching feedback",
+            difficulty: "N/A",
+            personaType: "Coach",
+          },
+        },
+      });
+
+      if (fbData?.reply) {
+        try {
+          // Try to parse JSON from the reply, handling potential markdown code blocks
+          let jsonStr = fbData.reply.trim();
+          if (jsonStr.startsWith("```")) {
+            jsonStr = jsonStr.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
+          }
+          const parsed = JSON.parse(jsonStr);
+          setFeedback(parsed);
+        } catch {
+          setFeedback({
+            grade: "B",
+            strengths: ["Completed the conversation"],
+            improvements: ["Keep practicing to improve"],
+            summary: fbData.reply,
+          });
+        }
+      }
+    } catch (e) {
+      console.error("Feedback error:", e);
+      setFeedback({
+        grade: "?",
+        strengths: ["Conversation completed"],
+        improvements: ["Unable to generate detailed feedback"],
+        summary: "Practice makes perfect! Try again with a different approach.",
+      });
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }
+
+  async function startScenario(id: string) {
+    setActiveScenario(id);
+    setMessages([]);
+    setCompleted(false);
+    setFeedback(null);
+    setTurnCount(0);
+    setError(null);
+
+    // Get AI's opening message
+    const sc = demoTrainingScenarios.find((s) => s.id === id);
+    setAiThinking(true);
+    const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
+      body: {
+        messages: [],
+        scenario: sc
+          ? {
+              name: sc.name,
+              description: sc.description,
+              difficulty: sc.difficulty,
+              personaType: sc.personaType,
+            }
+          : null,
+      },
+    });
+    setAiThinking(false);
+
+    if (data?.reply) {
+      setMessages([{ role: "ai-prospect", content: data.reply }]);
+    } else {
+      setError(fnError?.message || data?.error || "Failed to start scenario");
+    }
+  }
+
+  async function sendMessage() {
+    if (!input.trim() || !activeScenario || aiThinking) return;
+    const userMsg: ChatMsg = { role: "user", content: input };
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
+    setInput("");
+    const newTurnCount = turnCount + 1;
+    setTurnCount(newTurnCount);
+
+    // After 5+ user turns, allow ending
+    if (newTurnCount >= 6) {
+      setCompleted(true);
+      getFeedback(newMessages);
+      return;
+    }
+
+    const reply = await getAiReply(newMessages);
+    if (reply) {
+      setMessages([...newMessages, { role: "ai-prospect", content: reply }]);
+    }
+  }
+
+  function endConversation() {
+    setCompleted(true);
+    getFeedback(messages);
+  }
 
   return (
     <div className="p-6 space-y-6 max-w-5xl mx-auto">
@@ -77,7 +220,7 @@ export default function TrainingPage() {
       {!activeScenario ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {demoTrainingScenarios.map((s) => (
-            <Card key={s.id} className="hover:glow-sm transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
+            <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="h-5 w-5 text-primary" />
@@ -100,9 +243,18 @@ export default function TrainingPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm">{scenario?.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect</p>
+                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect • Turn {turnCount}/6</p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => setActiveScenario(null)}>Exit</Button>
+                  <div className="flex gap-2">
+                    {turnCount >= 3 && !completed && (
+                      <Button variant="outline" size="sm" onClick={endConversation}>
+                        End & Get Feedback
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" onClick={() => { setActiveScenario(null); setFeedback(null); }}>
+                      <ArrowLeft className="h-4 w-4 mr-1" /> Exit
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <ScrollArea className="flex-1 p-4">
@@ -123,9 +275,24 @@ export default function TrainingPage() {
                       </div>
                     </div>
                   ))}
+                  {aiThinking && (
+                    <div className="flex justify-start">
+                      <div className="flex items-start gap-2 max-w-[80%]">
+                        <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 bg-muted">
+                          <Bot className="h-3.5 w-3.5 text-muted-foreground" />
+                        </div>
+                        <div className="rounded-xl px-3 py-2 text-sm bg-muted">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </ScrollArea>
               <div className="p-3 border-t border-border">
+                {error && (
+                  <p className="text-xs text-destructive text-center mb-2">{error}</p>
+                )}
                 {!completed ? (
                   <div className="flex gap-2">
                     <Input
@@ -133,13 +300,16 @@ export default function TrainingPage() {
                       value={input}
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+                      disabled={aiThinking}
                     />
-                    <Button onClick={sendMessage} size="icon"><Send className="h-4 w-4" /></Button>
+                    <Button onClick={sendMessage} size="icon" disabled={aiThinking || !input.trim()}>
+                      {aiThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    </Button>
                   </div>
                 ) : (
                   <div className="text-center py-2">
                     <Badge variant="success" className="mb-2">Practice Complete</Badge>
-                    <p className="text-xs text-muted-foreground">See feedback on the right →</p>
+                    <p className="text-xs text-muted-foreground">See AI feedback on the right →</p>
                   </div>
                 )}
               </div>
@@ -154,29 +324,49 @@ export default function TrainingPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-              {completed ? (
+              {feedbackLoading ? (
+                <div className="text-center py-8">
+                  <Loader2 className="h-8 w-8 mx-auto mb-2 animate-spin text-primary" />
+                  <p className="text-muted-foreground text-xs">Analyzing your conversation...</p>
+                </div>
+              ) : feedback ? (
                 <>
                   <div>
-                    <Badge variant="score" className="text-lg px-3 py-1 mb-3">B+</Badge>
+                    <Badge variant="score" className="text-lg px-3 py-1 mb-3">{feedback.grade}</Badge>
+                    <p className="text-xs text-muted-foreground mb-3">{feedback.summary}</p>
                     <h4 className="font-semibold text-success mb-1">Strengths</h4>
                     <ul className="text-muted-foreground space-y-1">
-                      <li>• Good conversational tone</li>
-                      <li>• Asked relevant follow-up questions</li>
+                      {feedback.strengths.map((s, i) => (
+                        <li key={i}>• {s}</li>
+                      ))}
                     </ul>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-warning mb-1">Improve</h4>
+                    <h4 className="font-semibold text-warning mb-1">Areas to Improve</h4>
                     <ul className="text-muted-foreground space-y-1">
-                      <li>• Try addressing concerns earlier</li>
-                      <li>• Use more acknowledgement before questions</li>
-                      <li>• Look for call transition opportunities</li>
+                      {feedback.improvements.map((s, i) => (
+                        <li key={i}>• {s}</li>
+                      ))}
                     </ul>
                   </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => startScenario(activeScenario!)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" /> Try Again
+                  </Button>
                 </>
               ) : (
                 <div className="text-muted-foreground text-center py-8">
                   <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p>Complete the conversation to receive feedback</p>
+                  <p>Complete the conversation to receive AI coaching feedback</p>
+                  {turnCount >= 3 && !completed && (
+                    <Button variant="outline" size="sm" className="mt-3" onClick={endConversation}>
+                      End & Get Feedback
+                    </Button>
+                  )}
                 </div>
               )}
             </CardContent>
