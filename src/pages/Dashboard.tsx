@@ -39,7 +39,7 @@ export default function Dashboard() {
   const today = demoKPIs[0];
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+    <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -63,7 +63,7 @@ export default function Dashboard() {
               {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
             </Badge>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4">
             {kpiGoals.map((goal) => {
               const val = today[goal.metric] as number;
               const pct = Math.min((val / goal.dailyTarget) * 100, 100);
@@ -93,7 +93,7 @@ export default function Dashboard() {
       </Card>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 lg:gap-4">
         {kpis.map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="p-4">
@@ -107,7 +107,7 @@ export default function Dashboard() {
         ))}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-2 xl:grid-cols-3 gap-4 lg:gap-6">
         {/* Daily Actions */}
         <Card>
           <CardHeader className="pb-3">
