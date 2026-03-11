@@ -195,6 +195,21 @@ export const demoScripts: Script[] = [
   { id: "s10", category: "Call Transition Messages", title: "Direct Call CTA", content: "I think you'd really benefit from a quick call with [coach name] — they can break everything down and answer your questions way better than I can over text. Want me to set that up?", isFavorite: false },
   { id: "s11", category: "Follow-Up Messages", title: "Gentle Follow-Up", content: "Hey [Name]! Just checking in — I know life gets busy. Were you still thinking about what we chatted about?", isFavorite: true },
   { id: "s12", category: "Follow-Up Messages", title: "Value Follow-Up", content: "Hey! Thought of you when I saw this — [relevant content/result]. Still open to chatting more about how this could work for you?", isFavorite: false },
+  // BANT Framework Scripts
+  { id: "s13", category: "BANT — Need", title: "Uncover Pain", content: "Talk me through what's not working right now.", isFavorite: true },
+  { id: "s14", category: "BANT — Need", title: "Frustration Discovery", content: "What's frustrating you most about this?", isFavorite: false },
+  { id: "s15", category: "BANT — Need", title: "Past Attempts", content: "What have you tried already?", isFavorite: false },
+  { id: "s16", category: "BANT — Need", title: "Cost of Inaction", content: "What happens if nothing changes in the next 6 months?", isFavorite: true },
+  { id: "s17", category: "BANT — Timeline", title: "Why Now", content: "Why are you looking at solving this now?", isFavorite: true },
+  { id: "s18", category: "BANT — Timeline", title: "Trigger Event", content: "Has something happened recently that made this feel more urgent?", isFavorite: false },
+  { id: "s19", category: "BANT — Timeline", title: "Future Projection", content: "If we did nothing, where are you in 6 months?", isFavorite: false },
+  { id: "s20", category: "BANT — Authority", title: "Decision Maker Check", content: "Is there anyone else involved in decisions like this?", isFavorite: true },
+  { id: "s21", category: "BANT — Authority", title: "Blocker Discovery", content: "If this makes sense today, is there anything stopping you from moving forward?", isFavorite: false },
+  { id: "s22", category: "BANT — Budget", title: "Past Investment", content: "Have you invested in yourself before? What did you spend on that?", isFavorite: true },
+  { id: "s23", category: "BANT — Budget", title: "Financial Readiness", content: "If you found the right solution, would finances stop you?", isFavorite: false },
+  { id: "s24", category: "BANT — Budget", title: "Close-Ready Budget Check", content: "If we decided to move forward today, would you be comfortable investing in this?", isFavorite: true },
+  { id: "s25", category: "BANT — Advanced", title: "Increase Pain (Weak Budget)", content: "What's another 6 months of this costing you? Let them say the number — then price feels smaller.", isFavorite: true },
+  { id: "s26", category: "BANT — Advanced", title: "BANT Scoring Guide", content: "Score each 0–2: Need, Timeline, Authority, Budget. 8/8 → Hard close. 6–7 → Close. 4–5 → Nurture. Below 4 → Disqualify.", isFavorite: true },
 ];
 
 export const demoTrainingScenarios: TrainingScenario[] = [
@@ -203,6 +218,9 @@ export const demoTrainingScenarios: TrainingScenario[] = [
   { id: "ts3", name: "Skeptical Prospect", description: "Has been burned by online programs before. Very direct, asks tough questions, needs proof and transparency.", difficulty: "Advanced", personaType: "Skeptical" },
   { id: "ts4", name: "Busy Professional", description: "High earner with limited time. Interested but constantly says they're too busy. Needs to see ROI clearly.", difficulty: "Intermediate", personaType: "Time-pressed" },
   { id: "ts5", name: "Curious but Hesitant", description: "Asks lots of questions but avoids commitment. Says things like 'I'll think about it' and 'Maybe later'.", difficulty: "Intermediate", personaType: "Hesitant" },
+  { id: "ts6", name: "BANT Phone Qualification", description: "Practice qualifying a prospect on a call using the BANT framework (Need → Timeline → Authority → Budget). The prospect is interested but you must uncover all four pillars naturally before closing.", difficulty: "Advanced", personaType: "Phone Prospect" },
+  { id: "ts7", name: "BANT: Weak Budget Signal", description: "The prospect has strong need and urgency but limited budget. Practice increasing perceived cost of inaction to justify the investment without dropping price.", difficulty: "Advanced", personaType: "Budget-Conscious" },
+  { id: "ts8", name: "BANT: Partner Approval Needed", description: "The prospect is interested but needs partner sign-off. Practice uncovering authority early and handling the 'I need to ask my partner' response.", difficulty: "Intermediate", personaType: "Dependent Decision-Maker" },
 ];
 
 export const suggestedReplies = {
