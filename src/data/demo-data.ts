@@ -203,6 +203,9 @@ export const demoTrainingScenarios: TrainingScenario[] = [
   { id: "ts3", name: "Skeptical Prospect", description: "Has been burned by online programs before. Very direct, asks tough questions, needs proof and transparency.", difficulty: "Advanced", personaType: "Skeptical" },
   { id: "ts4", name: "Busy Professional", description: "High earner with limited time. Interested but constantly says they're too busy. Needs to see ROI clearly.", difficulty: "Intermediate", personaType: "Time-pressed" },
   { id: "ts5", name: "Curious but Hesitant", description: "Asks lots of questions but avoids commitment. Says things like 'I'll think about it' and 'Maybe later'.", difficulty: "Intermediate", personaType: "Hesitant" },
+  { id: "ts6", name: "BANT Phone Qualification", description: "Practice qualifying a prospect on a call using the BANT framework (Need → Timeline → Authority → Budget). The prospect is interested but you must uncover all four pillars naturally before closing.", difficulty: "Advanced", personaType: "Phone Prospect" },
+  { id: "ts7", name: "BANT: Weak Budget Signal", description: "The prospect has strong need and urgency but limited budget. Practice increasing perceived cost of inaction to justify the investment without dropping price.", difficulty: "Advanced", personaType: "Budget-Conscious" },
+  { id: "ts8", name: "BANT: Partner Approval Needed", description: "The prospect is interested but needs partner sign-off. Practice uncovering authority early and handling the 'I need to ask my partner' response.", difficulty: "Intermediate", personaType: "Dependent Decision-Maker" },
 ];
 
 export const suggestedReplies = {
