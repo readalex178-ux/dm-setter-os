@@ -28,9 +28,25 @@ export default function OAuthCallbackPage() {
       return;
     }
 
-    // Exchange code for token via edge function
+    // Determine which platform from state
+    let platform = "meta";
+    try {
+      if (state) {
+        const parsed = JSON.parse(atob(state));
+        if (parsed.platform === "hubspot") {
+          platform = "hubspot";
+        }
+      }
+    } catch {
+      // State isn't JSON — assume Meta
+    }
+
     async function exchangeCode() {
-      const { data, error } = await supabase.functions.invoke("meta-oauth-callback", {
+      const functionName = platform === "hubspot"
+        ? "hubspot-oauth-callback"
+        : "meta-oauth-callback";
+
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { code, state },
       });
 

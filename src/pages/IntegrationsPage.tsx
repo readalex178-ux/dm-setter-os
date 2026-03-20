@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import PlatformCard, { type ConnectedAccount } from "@/components/integrations/PlatformCard";
 import { messagingPlatforms, crmPlatforms } from "@/data/integrations-data";
 
+const LIVE_CRM_IDS = ["hubspot"]; // CRMs with working integrations
+
 export default function IntegrationsPage() {
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,22 +34,30 @@ export default function IntegrationsPage() {
 
   async function handleConnect(platform: string) {
     setConnecting(platform);
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-    if (!projectId) {
-      toast({ title: "Configuration error", description: "Project ID not found.", variant: "destructive" });
-      setConnecting(null);
-      return;
-    }
 
-    // CRM platforms — show coming soon toast for now
-    const crmIds = crmPlatforms.map((c) => c.id);
-    if (crmIds.includes(platform)) {
-      toast({ title: "Coming Soon", description: `${platform} integration is under development. We'll notify you when it's ready!` });
+    // Coming soon CRMs
+    if (!LIVE_CRM_IDS.includes(platform) && !["instagram", "facebook", "whatsapp"].includes(platform)) {
+      toast({ title: "Coming Soon", description: `${platform} integration is under development.` });
       setConnecting(null);
       return;
     }
 
     const redirectUri = `${window.location.origin}/app/integrations/callback`;
+
+    if (platform === "hubspot") {
+      const { data, error } = await supabase.functions.invoke("hubspot-oauth-start", {
+        body: { redirectUri },
+      });
+      if (error || !data?.url) {
+        toast({ title: "Connection failed", description: error?.message || "Could not start HubSpot OAuth. Make sure HubSpot credentials are configured.", variant: "destructive" });
+        setConnecting(null);
+        return;
+      }
+      window.location.href = data.url;
+      return;
+    }
+
+    // Meta platforms
     const scopes = platform === "instagram"
       ? "instagram_manage_messages,instagram_basic,pages_show_list,pages_manage_metadata"
       : platform === "facebook"
@@ -80,12 +90,20 @@ export default function IntegrationsPage() {
   }
 
   async function handleSync(accountId: string, platformName: string) {
-    toast({ title: "Syncing...", description: `Pulling latest ${platformName} messages.` });
-    const { data, error } = await supabase.functions.invoke("meta-sync-messages", { body: { accountId } });
+    // Determine which sync function to call based on the account's platform
+    const account = accounts.find((a) => a.id === accountId);
+    const isHubSpot = account?.platform === "hubspot";
+
+    toast({ title: "Syncing...", description: `Pulling latest ${platformName} data.` });
+
+    const functionName = isHubSpot ? "hubspot-sync-contacts" : "meta-sync-messages";
+    const { data, error } = await supabase.functions.invoke(functionName, { body: { accountId } });
+
     if (error) {
       toast({ title: "Sync failed", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Sync complete", description: `${data?.count || 0} new messages imported.` });
+      const label = isHubSpot ? "contacts" : "messages";
+      toast({ title: "Sync complete", description: `${data?.count || 0} ${label} synced.` });
       fetchAccounts();
     }
   }
@@ -136,9 +154,15 @@ export default function IntegrationsPage() {
           {crmPlatforms.map((platform) => (
             <PlatformCard
               key={platform.id}
-              platform={{ ...platform, comingSoon: true }}
+              platform={{
+                ...platform,
+                comingSoon: !LIVE_CRM_IDS.includes(platform.id),
+              }}
+              account={getAccountForPlatform(platform.id)}
               isConnecting={connecting === platform.id}
               onConnect={() => handleConnect(platform.id)}
+              onDisconnect={handleDisconnect}
+              onSync={handleSync}
             />
           ))}
         </div>
@@ -153,17 +177,19 @@ export default function IntegrationsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>To connect messaging accounts, you need a <strong>Meta Developer App</strong> with these products enabled:</p>
+          <p>To connect integrations, you need developer credentials for each platform:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><strong>Instagram API</strong> — for Instagram DM access</li>
-            <li><strong>Messenger</strong> — for Facebook Messenger access</li>
-            <li><strong>WhatsApp Business</strong> — for WhatsApp access</li>
+            <li><strong>Meta (Instagram/FB/WhatsApp)</strong> — Meta Developer App</li>
+            <li><strong>HubSpot</strong> — HubSpot Developer App with OAuth</li>
           </ul>
-          <p className="mt-3">
-            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-              Go to Meta Developer Console <ExternalLink className="h-3 w-3" />
+          <div className="flex gap-4 mt-3">
+            <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
+              Meta Console <ExternalLink className="h-3 w-3" />
             </a>
-          </p>
+            <a href="https://developers.hubspot.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
+              HubSpot Developer <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>
