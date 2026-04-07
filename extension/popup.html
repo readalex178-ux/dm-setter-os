@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="popup.css" />
+  <title>DM Setter OS</title>
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <div class="logo-row">
+        <img src="icon128.png" alt="DM Setter OS" class="logo-icon" />
+        <h1>DM Setter OS</h1>
+      </div>
+      <button id="open-full-app" class="btn-secondary" title="Open full app">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      </button>
+    </header>
+
+    <div class="stats-bar">
+      <div class="stat"><span class="stat-value" id="stat-unread">0</span><span class="stat-label">Unread</span></div>
+      <div class="stat"><span class="stat-value" id="stat-hot">0</span><span class="stat-label">Hot Leads</span></div>
+      <div class="stat"><span class="stat-value" id="stat-ready">0</span><span class="stat-label">Call Ready</span></div>
+    </div>
+
+    <div class="section-title">Recent Conversations</div>
+    <div id="inbox-list" class="inbox-list">
+      <div class="empty-state">Loading conversations…</div>
+    </div>
+
+    <div class="section-title">Quick Actions</div>
+    <div class="quick-actions">
+      <button class="action-btn" id="btn-inbox">📥 Inbox</button>
+      <button class="action-btn" id="btn-pipeline">📊 Pipeline</button>
+      <button class="action-btn" id="btn-scripts">📝 Scripts</button>
+      <button class="action-btn" id="btn-training">🎓 Training</button>
+    </div>
+
+    <footer class="popup-footer">
+      <label class="toggle-row">
+        <span>Page overlay</span>
+        <input type="checkbox" id="toggle-overlay" />
+      </label>
+      <label class="toggle-row">
+        <span>Notifications</span>
+        <input type="checkbox" id="toggle-notifs" checked />
+      </label>
+    </footer>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>
