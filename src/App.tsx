@@ -17,6 +17,7 @@ import SettingsPage from "./pages/SettingsPage";
 import KPITrackerPage from "./pages/KPITrackerPage";
 import IntegrationsPage from "./pages/IntegrationsPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
+import ExtensionPage from "./pages/ExtensionPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
