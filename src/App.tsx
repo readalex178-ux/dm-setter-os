@@ -43,6 +43,7 @@ const App = () => (
             <Route path="settings" element={<SettingsPage />} />
             <Route path="integrations" element={<IntegrationsPage />} />
             <Route path="integrations/callback" element={<OAuthCallbackPage />} />
+            <Route path="extension" element={<ExtensionPage />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
