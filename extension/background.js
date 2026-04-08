@@ -26,7 +26,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 chrome.notifications.onClicked.addListener(() => {
-  chrome.tabs.create({ url: "APP_URL_PLACEHOLDER/inbox" });
+  chrome.tabs.create({ url: "https://id-preview--3111d325-1216-4abf-b2fb-cbb0926c6d5c.lovable.app/app/inbox" });
 });
 
 // Badge for unread count
