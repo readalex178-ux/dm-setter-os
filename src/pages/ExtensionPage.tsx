@@ -1,4 +1,5 @@
-import { Download, Chrome, Puzzle, Bell, Layout, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import { Download, Chrome, Puzzle, Bell, Layout, MessageSquare, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +19,18 @@ const steps = [
   "Click Load unpacked and select the unzipped folder",
 ];
 
+type DownloadState = "idle" | "loading" | "success" | "error";
+
 export default function ExtensionPage() {
+  const [dlState, setDlState] = useState<DownloadState>("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+
   const handleDownload = () => {
+    setDlState("loading");
+    setErrorMsg("");
     fetch("/dm-setter-os-extension.zip")
       .then((res) => {
-        if (!res.ok) throw new Error(`Download failed: ${res.status}`);
+        if (!res.ok) throw new Error(`Server returned ${res.status}`);
         return res.blob();
       })
       .then((blob) => {
@@ -31,8 +39,12 @@ export default function ExtensionPage() {
         a.download = "dm-setter-os-extension.zip";
         a.click();
         URL.revokeObjectURL(a.href);
+        setDlState("success");
       })
-      .catch((err) => alert(err.message));
+      .catch((err) => {
+        setDlState("error");
+        setErrorMsg(err.message);
+      });
   };
 
   return (
@@ -64,12 +76,44 @@ export default function ExtensionPage() {
         ))}
       </div>
 
+      {/* Download section */}
       <Card className="bg-card border-primary/20">
         <CardContent className="p-6 flex flex-col items-center gap-4">
-          <Button size="lg" onClick={handleDownload} className="gap-2">
-            <Download className="h-5 w-5" /> Download Extension
+          <Button size="lg" onClick={handleDownload} disabled={dlState === "loading"} className="gap-2">
+            {dlState === "loading" ? (
+              <><Loader2 className="h-5 w-5 animate-spin" /> Downloading…</>
+            ) : dlState === "success" ? (
+              <><CheckCircle2 className="h-5 w-5" /> Downloaded!</>
+            ) : (
+              <><Download className="h-5 w-5" /> Download Extension</>
+            )}
           </Button>
+
+          {dlState === "error" && (
+            <div className="flex items-center gap-2 text-destructive text-sm">
+              <AlertCircle className="h-4 w-4" />
+              <span>Download failed: {errorMsg}</span>
+            </div>
+          )}
+
+          {dlState === "success" && (
+            <p className="text-xs text-emerald-500">Check your Downloads folder for <strong>dm-setter-os-extension.zip</strong></p>
+          )}
+
           <p className="text-xs text-muted-foreground">v1.0.0 · ~50 KB · No account required</p>
+
+          {/* Fallback direct link */}
+          <a
+            href="/dm-setter-os-extension.zip"
+            download="dm-setter-os-extension.zip"
+            className="text-xs text-primary underline underline-offset-2 hover:text-primary/80"
+          >
+            Trouble downloading? Try this direct link
+          </a>
+
+          <p className="text-xs text-muted-foreground text-center max-w-md">
+            This is a private install — no Chrome Web Store needed. Just unzip and load it in Developer Mode.
+          </p>
         </CardContent>
       </Card>
 
@@ -86,6 +130,9 @@ export default function ExtensionPage() {
               </li>
             ))}
           </ol>
+          <p className="text-xs text-muted-foreground mt-2">
+            💡 If the download doesn't start, try opening this page in desktop Chrome, Edge, or Brave and use the direct link above.
+          </p>
         </CardContent>
       </Card>
     </div>
