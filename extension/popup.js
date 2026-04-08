@@ -1,6 +1,6 @@
 // DM Setter OS — Popup Script
 
-const APP_URL = "APP_URL_PLACEHOLDER"; // Replace after publishing
+const APP_URL = "https://id-preview--3111d325-1216-4abf-b2fb-cbb0926c6d5c.lovable.app/app";
 
 // Demo data for offline / demo mode
 const DEMO_CONVERSATIONS = [
