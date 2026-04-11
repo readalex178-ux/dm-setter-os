@@ -1,0 +1,3 @@
+// DM Setter OS — Supabase Configuration
+const SUPABASE_URL = "https://kwqoaqifvccxflaajrjv.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cW9hcWlmdmNjeGZsYWFqcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODA2NTcsImV4cCI6MjA4ODU1NjY1N30.uNNWvCSPyckxAWjRZfNP7jB8hqCD44noPmlKJ7WjDLI";
