@@ -30,6 +30,8 @@ const ACTION_PATTERNS = [
   { pattern: /^(type|write|enter|input)\s+(.+)/i, type: "dictate" as const },
   { pattern: /^(search|find|look up|look for)\s+(.+)/i, type: "search" as const },
   { pattern: /^(send message to|message|dm)\s+(.+)/i, type: "send_message" as const },
+  { pattern: /^(send|use)\s+(.+?)\s+(?:to|for)\s+(.+)/i, type: "send_script" as const },
+  { pattern: /^(reply to|respond to|open chat with)\s+(.+)/i, type: "reply_to" as const },
   { pattern: /^(mark|set|tag)\s+(.+)\s+as\s+(.+)/i, type: "mark" as const },
   { pattern: /^(call|schedule call with|book call with)\s+(.+)/i, type: "call" as const },
 ];

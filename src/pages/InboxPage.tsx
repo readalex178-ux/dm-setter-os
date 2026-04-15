@@ -13,8 +13,9 @@ import {
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff,
 } from "lucide-react";
+import { useSpeechToText } from "@/hooks/use-speech-to-text";
 
 interface DBProspect {
   id: string;
@@ -559,6 +560,7 @@ export default function InboxPage() {
               className="min-h-[42px] max-h-[120px] resize-none text-sm"
               rows={1}
             />
+            <DictateButton onText={(t) => setMessageInput(t)} />
             <Button
               onClick={handleSend}
               disabled={!messageInput.trim() || sending}
