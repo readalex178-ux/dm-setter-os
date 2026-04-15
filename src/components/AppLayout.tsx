@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
+import { VoiceAssistant } from "@/components/VoiceAssistant";
 import { Outlet } from "react-router-dom";
 
 export default function AppLayout() {
