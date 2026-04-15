@@ -90,6 +90,22 @@ export default function InboxPage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Pick up voice_prefill from voice commands
+  useEffect(() => {
+    const raw = sessionStorage.getItem("voice_prefill");
+    if (!raw) return;
+    sessionStorage.removeItem("voice_prefill");
+    try {
+      const prefill = JSON.parse(raw);
+      if (prefill.prospectId) {
+        selectProspect(prefill.prospectId);
+      }
+      if (prefill.message) {
+        setTimeout(() => setMessageInput(prefill.message), 300);
+      }
+    } catch {}
+  }, []);
+
   function selectProspect(id: string) {
     setSelectedId(id);
     setAiSuggestions([]);
