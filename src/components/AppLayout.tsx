@@ -25,6 +25,7 @@ export default function AppLayout() {
         </div>
       </div>
       <BottomNav />
+      <VoiceAssistant />
     </SidebarProvider>
   );
 }
