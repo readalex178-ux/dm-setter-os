@@ -221,6 +221,14 @@ export function useVoiceCommand() {
           toast({ title: "💬 Message", description: `Opening inbox for ${result.target}` });
         } else if (result.type === "navigate_failed") {
           toast({ title: "🤔 Not found", description: `Couldn't find "${result.target}". Try: inbox, pipeline, prospects, scripts…`, variant: "destructive" });
+        } else if (result.type === "send_script") {
+          toast({ title: "📝 Script loaded", description: `"${result.value}" ready for ${result.target || "selected prospect"}` });
+        } else if (result.type === "reply_to") {
+          toast({ title: "💬 Opening chat", description: `Opening conversation with ${result.target}` });
+        } else if (result.type === "send_script_failed") {
+          toast({ title: "🤔 Script not found", description: `Try "send warm welcome to Sarah"`, variant: "destructive" });
+        } else if (result.type === "reply_to_failed") {
+          toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}"`, variant: "destructive" });
         } else if (result.type === "unknown") {
           toast({ title: "🎙️ Heard you", description: `"${result.raw}" — try "go to inbox" or "search John"` });
         }
