@@ -1,49 +1,52 @@
 
-Goal: make the Chrome extension ZIP easy to find and reliably downloadable.
 
-What I found
-- The ZIP file does exist at `public/dm-setter-os-extension.zip`.
-- The download page exists at `/app/extension`.
-- The button already uses the safer `fetch(...).blob()` download pattern in `src/pages/ExtensionPage.tsx`.
-- But the Extension page is not linked from the sidebar or mobile “More” menu, so from `/app` it is easy to feel like there is no file to download.
-- The session snapshot shows scrolling only and no actual click/download request, which suggests the main issue may be “I can’t get to it / nothing obvious is happening,” not that the ZIP is missing.
+## Plan: Voice Dictation + Smart Voice Actions for Messaging
 
-Likely reason you can’t download it
-1. Discoverability issue: there is no navigation link to the Extension page.
-2. Weak error UX: if the download fails or is blocked, the page only shows a browser `alert`, so there is no clear recovery path.
-3. Preview-only context: the app is not published yet, so download behavior can be less obvious depending on browser/device.
+**Goal**: Speak your messages to prospects instead of typing, and use voice commands like "send follow-up 1 to Sarah" to auto-fill scripts and target specific conversations.
 
-Implementation plan
-1. Add “Chrome Extension” to navigation
-- Add it to `src/components/AppSidebar.tsx`
-- Add it to the mobile “More” menu in `src/components/BottomNav.tsx`
+### Changes
 
-2. Improve the download experience on `src/pages/ExtensionPage.tsx`
-- Keep the existing fetch+blob approach
-- Add visible loading/success/error states instead of only `alert(...)`
-- Show the exact file name users are downloading
-- Add a fallback link/button such as “Open ZIP directly” for browsers that block programmatic downloads
-- Add a short troubleshooting note: if the file does not start downloading, open the page in desktop Chrome/Edge/Brave and try the fallback link
+**1. Create `useSpeechToText` hook** (`src/hooks/use-speech-to-text.ts`)
+- Pure dictation hook — continuous listening, streams transcript into a callback
+- Returns `{ isListening, start, stop, isSupported }`
+- No command parsing — just raw speech-to-text
 
-3. Make the page self-explanatory
-- Add a sentence near the button explaining that the ZIP is for private local install via `chrome://extensions`
-- Clarify that publishing to the Chrome Web Store is not required for personal use
+**2. Add mic button to Inbox message composer** (`src/pages/InboxPage.tsx`)
+- Microphone icon button next to the Send button (line ~562)
+- Tapping starts dictation, speech streams into `messageInput` state in real-time
+- Button pulses red while listening, tap again to stop
 
-4. Verify the flow end-to-end
-- Open `/app/extension`
-- Click download and confirm the ZIP request returns successfully
-- Confirm the fallback link works
-- Confirm the flow is visible on both desktop and mobile layouts
+**3. Add mic button to Training page chat** (`src/pages/TrainingPage.tsx`)
+- Same pattern — mic button next to the send button for dictating roleplay responses
 
-Technical details
-- Files to update:
-  - `src/components/AppSidebar.tsx`
-  - `src/components/BottomNav.tsx`
-  - `src/pages/ExtensionPage.tsx`
-- No backend/database changes needed
-- No changes needed to the ZIP file itself unless you want a re-packaged version after updating extension contents later
+**4. Expand voice command actions** (`src/hooks/use-voice-command.ts`)
+- Add new patterns:
+  - `"send follow up 1 to sarah"` / `"send script opener to john"` — navigates to Inbox, selects the matching conversation, and pre-fills the message input with the matching script from `demoScripts`
+  - `"reply to sarah"` — navigates to Inbox and selects Sarah's conversation
+- Fuzzy-match script names (e.g., "follow up 1" matches script titled "Follow-Up Message #1") and contact names
 
-Expected result
-- You’ll be able to reach the Extension page from the app navigation
-- The page will clearly show whether the download started, failed, or needs a fallback
-- The private “download ZIP and load unpacked in Chrome” flow will be much easier to use
+### How "send follow-up 1 to Sarah" works
+
+1. Voice command hook parses: action=`send_script`, script=`follow up 1`, target=`sarah`
+2. Navigates to `/app/inbox`
+3. Finds the conversation matching "sarah" and selects it
+4. Looks up the script matching "follow up 1" from the scripts data
+5. Pre-fills the message input with the script content
+6. You review and hit Send (manual control preserved)
+
+### Technical Details
+
+- `useSpeechToText` is separate from `useVoiceCommand` — dictation vs commands
+- Script matching uses fuzzy includes on `demoScripts` title/category
+- Contact matching uses fuzzy includes on conversation names
+- Both Inbox and Training pages get the mic button via the same reusable hook
+
+### Files
+
+| File | Action |
+|------|--------|
+| `src/hooks/use-speech-to-text.ts` | Create — pure dictation hook |
+| `src/hooks/use-voice-command.ts` | Edit — add `send_script` and `reply_to` patterns |
+| `src/pages/InboxPage.tsx` | Edit — add mic button to composer |
+| `src/pages/TrainingPage.tsx` | Edit — add mic button to chat input |
+
