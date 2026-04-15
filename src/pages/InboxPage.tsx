@@ -13,8 +13,9 @@ import {
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff,
 } from "lucide-react";
+import { useSpeechToText } from "@/hooks/use-speech-to-text";
 
 interface DBProspect {
   id: string;
@@ -88,6 +89,22 @@ export default function InboxPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Pick up voice_prefill from voice commands
+  useEffect(() => {
+    const raw = sessionStorage.getItem("voice_prefill");
+    if (!raw) return;
+    sessionStorage.removeItem("voice_prefill");
+    try {
+      const prefill = JSON.parse(raw);
+      if (prefill.prospectId) {
+        selectProspect(prefill.prospectId);
+      }
+      if (prefill.message) {
+        setTimeout(() => setMessageInput(prefill.message), 300);
+      }
+    } catch {}
+  }, []);
 
   function selectProspect(id: string) {
     setSelectedId(id);
@@ -559,6 +576,7 @@ export default function InboxPage() {
               className="min-h-[42px] max-h-[120px] resize-none text-sm"
               rows={1}
             />
+            <DictateButton onText={(t) => setMessageInput(t)} />
             <Button
               onClick={handleSend}
               disabled={!messageInput.trim() || sending}
@@ -678,5 +696,21 @@ export default function InboxPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function DictateButton({ onText }: { onText: (text: string) => void }) {
+  const { isListening, start, stop, isSupported } = useSpeechToText(onText);
+  if (!isSupported) return null;
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant={isListening ? "destructive" : "outline"}
+      className={`shrink-0 h-[42px] w-[42px] ${isListening ? "animate-pulse" : ""}`}
+      onClick={isListening ? stop : start}
+    >
+      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+    </Button>
   );
 }

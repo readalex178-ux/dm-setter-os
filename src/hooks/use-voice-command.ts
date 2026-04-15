@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { demoProspects, demoScripts } from "@/data/demo-data";
 
 // Route mapping for navigation commands
 const ROUTE_MAP: Record<string, string> = {
@@ -30,6 +31,8 @@ const ACTION_PATTERNS = [
   { pattern: /^(type|write|enter|input)\s+(.+)/i, type: "dictate" as const },
   { pattern: /^(search|find|look up|look for)\s+(.+)/i, type: "search" as const },
   { pattern: /^(send message to|message|dm)\s+(.+)/i, type: "send_message" as const },
+  { pattern: /^(send|use)\s+(.+?)\s+(?:to|for)\s+(.+)/i, type: "send_script" as const },
+  { pattern: /^(reply to|respond to|open chat with)\s+(.+)/i, type: "reply_to" as const },
   { pattern: /^(mark|set|tag)\s+(.+)\s+as\s+(.+)/i, type: "mark" as const },
   { pattern: /^(call|schedule call with|book call with)\s+(.+)/i, type: "call" as const },
 ];
@@ -101,6 +104,44 @@ export function useVoiceCommand() {
             return { type: "dictate", value: match[2].trim(), raw: text };
           }
           return { type: "dictate_no_focus", value: match[2].trim(), raw: text };
+        }
+        if (type === "send_script") {
+          const scriptQuery = match[2].trim().toLowerCase();
+          const targetName = match[3].trim().toLowerCase();
+          const script = demoScripts.find(s =>
+            s.title.toLowerCase().includes(scriptQuery) ||
+            s.category.toLowerCase().includes(scriptQuery)
+          );
+          const prospect = demoProspects.find(p =>
+            p.name.toLowerCase().includes(targetName)
+          );
+          if (script && prospect) {
+            navigate("/app/inbox");
+            // Store in sessionStorage for the inbox to pick up
+            sessionStorage.setItem("voice_prefill", JSON.stringify({
+              prospectId: prospect.id,
+              message: script.content.replace("[Name]", prospect.name.split(" ")[0]),
+            }));
+            return { type: "send_script", target: prospect.name, value: script.title, raw: text };
+          }
+          if (script) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({ message: script.content }));
+            return { type: "send_script", value: script.title, raw: text };
+          }
+          return { type: "send_script_failed", raw: text };
+        }
+        if (type === "reply_to") {
+          const targetName = match[2].trim().toLowerCase();
+          const prospect = demoProspects.find(p =>
+            p.name.toLowerCase().includes(targetName)
+          );
+          if (prospect) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({ prospectId: prospect.id }));
+            return { type: "reply_to", target: prospect.name, raw: text };
+          }
+          return { type: "reply_to_failed", target: match[2].trim(), raw: text };
         }
         if (type === "send_message") {
           navigate("/app/inbox");
@@ -180,6 +221,14 @@ export function useVoiceCommand() {
           toast({ title: "💬 Message", description: `Opening inbox for ${result.target}` });
         } else if (result.type === "navigate_failed") {
           toast({ title: "🤔 Not found", description: `Couldn't find "${result.target}". Try: inbox, pipeline, prospects, scripts…`, variant: "destructive" });
+        } else if (result.type === "send_script") {
+          toast({ title: "📝 Script loaded", description: `"${result.value}" ready for ${result.target || "selected prospect"}` });
+        } else if (result.type === "reply_to") {
+          toast({ title: "💬 Opening chat", description: `Opening conversation with ${result.target}` });
+        } else if (result.type === "send_script_failed") {
+          toast({ title: "🤔 Script not found", description: `Try "send warm welcome to Sarah"`, variant: "destructive" });
+        } else if (result.type === "reply_to_failed") {
+          toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}"`, variant: "destructive" });
         } else if (result.type === "unknown") {
           toast({ title: "🎙️ Heard you", description: `"${result.raw}" — try "go to inbox" or "search John"` });
         }
