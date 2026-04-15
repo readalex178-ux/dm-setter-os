@@ -366,3 +366,34 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     </div>
   );
 }
+
+function TrainingDictateButton({ input, setInput, aiThinking, sendMessage }: {
+  input: string; setInput: (v: string) => void; aiThinking: boolean; sendMessage: () => void;
+}) {
+  const { isListening, start, stop, isSupported } = useSpeechToText((t) => setInput(t));
+  return (
+    <div className="flex gap-2">
+      <Input
+        placeholder="Type your response..."
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+        disabled={aiThinking}
+      />
+      {isSupported && (
+        <Button
+          type="button"
+          size="icon"
+          variant={isListening ? "destructive" : "outline"}
+          className={isListening ? "animate-pulse" : ""}
+          onClick={isListening ? stop : start}
+        >
+          {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+        </Button>
+      )}
+      <Button onClick={sendMessage} size="icon" disabled={aiThinking || !input.trim()}>
+        {aiThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+      </Button>
+    </div>
+  );
+}

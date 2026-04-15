@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { demoProspects, demoScripts } from "@/data/demo-data";
 
 // Route mapping for navigation commands
 const ROUTE_MAP: Record<string, string> = {
@@ -103,6 +104,44 @@ export function useVoiceCommand() {
             return { type: "dictate", value: match[2].trim(), raw: text };
           }
           return { type: "dictate_no_focus", value: match[2].trim(), raw: text };
+        }
+        if (type === "send_script") {
+          const scriptQuery = match[2].trim().toLowerCase();
+          const targetName = match[3].trim().toLowerCase();
+          const script = demoScripts.find(s =>
+            s.title.toLowerCase().includes(scriptQuery) ||
+            s.category.toLowerCase().includes(scriptQuery)
+          );
+          const prospect = demoProspects.find(p =>
+            p.name.toLowerCase().includes(targetName)
+          );
+          if (script && prospect) {
+            navigate("/app/inbox");
+            // Store in sessionStorage for the inbox to pick up
+            sessionStorage.setItem("voice_prefill", JSON.stringify({
+              prospectId: prospect.id,
+              message: script.content.replace("[Name]", prospect.name.split(" ")[0]),
+            }));
+            return { type: "send_script", target: prospect.name, value: script.title, raw: text };
+          }
+          if (script) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({ message: script.content }));
+            return { type: "send_script", value: script.title, raw: text };
+          }
+          return { type: "send_script_failed", raw: text };
+        }
+        if (type === "reply_to") {
+          const targetName = match[2].trim().toLowerCase();
+          const prospect = demoProspects.find(p =>
+            p.name.toLowerCase().includes(targetName)
+          );
+          if (prospect) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({ prospectId: prospect.id }));
+            return { type: "reply_to", target: prospect.name, raw: text };
+          }
+          return { type: "reply_to_failed", target: match[2].trim(), raw: text };
         }
         if (type === "send_message") {
           navigate("/app/inbox");

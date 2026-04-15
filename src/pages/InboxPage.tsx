@@ -682,3 +682,19 @@ export default function InboxPage() {
     </div>
   );
 }
+
+function DictateButton({ onText }: { onText: (text: string) => void }) {
+  const { isListening, start, stop, isSupported } = useSpeechToText(onText);
+  if (!isSupported) return null;
+  return (
+    <Button
+      type="button"
+      size="icon"
+      variant={isListening ? "destructive" : "outline"}
+      className={`shrink-0 h-[42px] w-[42px] ${isListening ? "animate-pulse" : ""}`}
+      onClick={isListening ? stop : start}
+    >
+      {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+    </Button>
+  );
+}
