@@ -30,6 +30,8 @@ const ACTION_PATTERNS = [
   { pattern: /^(go to|open|navigate to|show me|take me to)\s+(.+)/i, type: "navigate" as const },
   { pattern: /^(type|write|enter|input)\s+(.+)/i, type: "dictate" as const },
   { pattern: /^(search|find|look up|look for)\s+(.+)/i, type: "search" as const },
+  { pattern: /^what stage is\s+(.+?)(?:\s+at)?\??$/i, type: "analyze_stage_q" as const },
+  { pattern: /^(analyze|analyse)\s+(.+)/i, type: "analyze_stage" as const },
   { pattern: /^(send message to|message|dm)\s+(.+)/i, type: "send_message" as const },
   { pattern: /^(send|use)\s+(.+?)\s+(?:to|for)\s+(.+)/i, type: "send_script" as const },
   { pattern: /^(reply to|respond to|open chat with)\s+(.+)/i, type: "reply_to" as const },
@@ -143,6 +145,19 @@ export function useVoiceCommand() {
           }
           return { type: "reply_to_failed", target: match[2].trim(), raw: text };
         }
+        if (type === "analyze_stage" || type === "analyze_stage_q") {
+          const targetName = (type === "analyze_stage_q" ? match[1] : match[2]).trim().toLowerCase();
+          const prospect = demoProspects.find(p => p.name.toLowerCase().includes(targetName));
+          if (prospect) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({
+              prospectId: prospect.id,
+              analyze: true,
+            }));
+            return { type: "analyze_stage", target: prospect.name, raw: text };
+          }
+          return { type: "analyze_stage_failed", target: targetName, raw: text };
+        }
         if (type === "send_message") {
           navigate("/app/inbox");
           return { type: "send_message", target: match[2].trim(), raw: text };
@@ -229,6 +244,10 @@ export function useVoiceCommand() {
           toast({ title: "🤔 Script not found", description: `Try "send warm welcome to Sarah"`, variant: "destructive" });
         } else if (result.type === "reply_to_failed") {
           toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}"`, variant: "destructive" });
+        } else if (result.type === "analyze_stage") {
+          toast({ title: "🎯 Analyzing", description: `AI analyzing ${result.target}'s stage…` });
+        } else if (result.type === "analyze_stage_failed") {
+          toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}" to analyze`, variant: "destructive" });
         } else if (result.type === "unknown") {
           toast({ title: "🎙️ Heard you", description: `"${result.raw}" — try "go to inbox" or "search John"` });
         }

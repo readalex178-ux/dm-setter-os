@@ -13,9 +13,10 @@ import {
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff, Target,
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
+import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 
 interface DBProspect {
   id: string;
@@ -88,6 +89,7 @@ export default function InboxPage() {
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Pick up voice_prefill from voice commands
@@ -102,6 +104,9 @@ export default function InboxPage() {
       }
       if (prefill.message) {
         setTimeout(() => setMessageInput(prefill.message), 300);
+      }
+      if (prefill.analyze) {
+        setTimeout(() => setStageDialogOpen(true), 500);
       }
     } catch {}
   }, []);
@@ -414,7 +419,16 @@ export default function InboxPage() {
               <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setStageDialogOpen(true)}
+              title="AI analyzes this prospect's stage"
+            >
+              <Target className="h-3 w-3 mr-1" /> Analyze Stage
+            </Button>
             <Badge variant="score" className="text-xs">{sel.intentLevel} {sel.intentConfidence}%</Badge>
             <Badge variant={sel.callReadiness >= 70 ? "success" : "warning"} className="text-xs">
               <Phone className="h-3 w-3 mr-1" /> {sel.callReadiness}%
@@ -695,6 +709,41 @@ export default function InboxPage() {
           </Card>
         </div>
       </div>
+
+      <StageAnalysisDialog
+        open={stageDialogOpen}
+        onOpenChange={setStageDialogOpen}
+        prospectId={selectedId}
+        prospectName={sel.name}
+        currentStage={sel.stage}
+        prospect={{
+          name: sel.name,
+          stage: sel.stage,
+          currentJob: sel.currentJob,
+          incomeGoal: sel.incomeGoal,
+          motivation: sel.motivation,
+          concerns: sel.concerns,
+        }}
+        messages={messages.map((m: any) => ({
+          sender: m.sender || "prospect",
+          content: m.content || "",
+        }))}
+        onApply={async (newStage) => {
+          if (useDemo) {
+            // Demo mode — just update local state visually
+            return;
+          }
+          if (!selectedId) return;
+          const { error } = await supabase
+            .from("prospects")
+            .update({ stage: newStage })
+            .eq("id", selectedId);
+          if (error) throw error;
+          setDbProspects((prev) =>
+            prev.map((p) => (p.id === selectedId ? { ...p, stage: newStage } : p))
+          );
+        }}
+      />
     </div>
   );
 }
