@@ -89,6 +89,7 @@ export default function InboxPage() {
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Pick up voice_prefill from voice commands
