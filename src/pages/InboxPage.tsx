@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
+import { toast } from "@/hooks/use-toast";
 
 interface DBProspect {
   id: string;
