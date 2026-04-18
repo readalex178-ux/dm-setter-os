@@ -13,9 +13,10 @@ import {
 } from "@/data/demo-data";
 import {
   Search, Copy, Phone, Heart, AlertTriangle, Info, Sparkles,
-  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff,
+  Brain, Send, Loader2, Instagram, Facebook, MessageCircle, ArrowLeft, Mic, MicOff, Target,
 } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
+import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 
 interface DBProspect {
   id: string;
