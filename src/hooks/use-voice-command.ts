@@ -145,6 +145,19 @@ export function useVoiceCommand() {
           }
           return { type: "reply_to_failed", target: match[2].trim(), raw: text };
         }
+        if (type === "analyze_stage" || type === "analyze_stage_q") {
+          const targetName = (type === "analyze_stage_q" ? match[1] : match[2]).trim().toLowerCase();
+          const prospect = demoProspects.find(p => p.name.toLowerCase().includes(targetName));
+          if (prospect) {
+            navigate("/app/inbox");
+            sessionStorage.setItem("voice_prefill", JSON.stringify({
+              prospectId: prospect.id,
+              analyze: true,
+            }));
+            return { type: "analyze_stage", target: prospect.name, raw: text };
+          }
+          return { type: "analyze_stage_failed", target: targetName, raw: text };
+        }
         if (type === "send_message") {
           navigate("/app/inbox");
           return { type: "send_message", target: match[2].trim(), raw: text };
