@@ -165,7 +165,12 @@ export default function InboxPage() {
           filter: `prospect_id=eq.${selectedId}`,
         },
         (payload) => {
-          setDbMessages((prev) => [...prev, payload.new as DBMessage]);
+          const newMsg = payload.new as DBMessage;
+          setDbMessages((prev) => [...prev, newMsg]);
+          // Auto-analyze stage when an inbound (prospect) message arrives
+          if (newMsg.sender !== "setter") {
+            autoAnalyzeStage(selectedId!);
+          }
         }
       )
       .subscribe();
