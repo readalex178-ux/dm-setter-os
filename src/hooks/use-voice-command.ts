@@ -244,6 +244,10 @@ export function useVoiceCommand() {
           toast({ title: "🤔 Script not found", description: `Try "send warm welcome to Sarah"`, variant: "destructive" });
         } else if (result.type === "reply_to_failed") {
           toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}"`, variant: "destructive" });
+        } else if (result.type === "analyze_stage") {
+          toast({ title: "🎯 Analyzing", description: `AI analyzing ${result.target}'s stage…` });
+        } else if (result.type === "analyze_stage_failed") {
+          toast({ title: "🤔 Contact not found", description: `Couldn't find "${result.target}" to analyze`, variant: "destructive" });
         } else if (result.type === "unknown") {
           toast({ title: "🎙️ Heard you", description: `"${result.raw}" — try "go to inbox" or "search John"` });
         }
