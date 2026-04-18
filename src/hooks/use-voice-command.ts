@@ -30,6 +30,8 @@ const ACTION_PATTERNS = [
   { pattern: /^(go to|open|navigate to|show me|take me to)\s+(.+)/i, type: "navigate" as const },
   { pattern: /^(type|write|enter|input)\s+(.+)/i, type: "dictate" as const },
   { pattern: /^(search|find|look up|look for)\s+(.+)/i, type: "search" as const },
+  { pattern: /^what stage is\s+(.+?)(?:\s+at)?\??$/i, type: "analyze_stage_q" as const },
+  { pattern: /^(analyze|analyse)\s+(.+)/i, type: "analyze_stage" as const },
   { pattern: /^(send message to|message|dm)\s+(.+)/i, type: "send_message" as const },
   { pattern: /^(send|use)\s+(.+?)\s+(?:to|for)\s+(.+)/i, type: "send_script" as const },
   { pattern: /^(reply to|respond to|open chat with)\s+(.+)/i, type: "reply_to" as const },
