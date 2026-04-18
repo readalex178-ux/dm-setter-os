@@ -105,6 +105,9 @@ export default function InboxPage() {
       if (prefill.message) {
         setTimeout(() => setMessageInput(prefill.message), 300);
       }
+      if (prefill.analyze) {
+        setTimeout(() => setStageDialogOpen(true), 500);
+      }
     } catch {}
   }, []);
 
