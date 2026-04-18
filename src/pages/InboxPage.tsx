@@ -709,6 +709,41 @@ export default function InboxPage() {
           </Card>
         </div>
       </div>
+
+      <StageAnalysisDialog
+        open={stageDialogOpen}
+        onOpenChange={setStageDialogOpen}
+        prospectId={selectedId}
+        prospectName={sel.name}
+        currentStage={sel.stage}
+        prospect={{
+          name: sel.name,
+          stage: sel.stage,
+          currentJob: sel.currentJob,
+          incomeGoal: sel.incomeGoal,
+          motivation: sel.motivation,
+          concerns: sel.concerns,
+        }}
+        messages={messages.map((m: any) => ({
+          sender: m.sender || "prospect",
+          content: m.content || "",
+        }))}
+        onApply={async (newStage) => {
+          if (useDemo) {
+            // Demo mode — just update local state visually
+            return;
+          }
+          if (!selectedId) return;
+          const { error } = await supabase
+            .from("prospects")
+            .update({ stage: newStage })
+            .eq("id", selectedId);
+          if (error) throw error;
+          setDbProspects((prev) =>
+            prev.map((p) => (p.id === selectedId ? { ...p, stage: newStage } : p))
+          );
+        }}
+      />
     </div>
   );
 }
