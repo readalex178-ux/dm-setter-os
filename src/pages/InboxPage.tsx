@@ -419,7 +419,16 @@ export default function InboxPage() {
               <p className="text-xs text-muted-foreground">{sel.handle} • {sel.stage}</p>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setStageDialogOpen(true)}
+              title="AI analyzes this prospect's stage"
+            >
+              <Target className="h-3 w-3 mr-1" /> Analyze Stage
+            </Button>
             <Badge variant="score" className="text-xs">{sel.intentLevel} {sel.intentConfidence}%</Badge>
             <Badge variant={sel.callReadiness >= 70 ? "success" : "warning"} className="text-xs">
               <Phone className="h-3 w-3 mr-1" /> {sel.callReadiness}%
