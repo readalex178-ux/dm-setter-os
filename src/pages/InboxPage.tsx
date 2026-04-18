@@ -92,6 +92,55 @@ export default function InboxPage() {
   const [aiError, setAiError] = useState<string | null>(null);
   const [stageDialogOpen, setStageDialogOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoAnalyzeCooldown = useRef<Record<string, number>>({});
+
+  async function autoAnalyzeStage(prospectId: string) {
+    // Cooldown: don't re-analyze the same prospect within 30s
+    const last = autoAnalyzeCooldown.current[prospectId] || 0;
+    if (Date.now() - last < 30_000) return;
+    autoAnalyzeCooldown.current[prospectId] = Date.now();
+
+    try {
+      // Fetch latest messages + prospect snapshot
+      const [{ data: msgs }, { data: pData }] = await Promise.all([
+        supabase
+          .from("messages")
+          .select("sender, content")
+          .eq("prospect_id", prospectId)
+          .order("sent_at", { ascending: true }),
+        supabase.from("prospects").select("*").eq("id", prospectId).maybeSingle(),
+      ]);
+      if (!pData) return;
+
+      const { data, error } = await supabase.functions.invoke("analyze-stage", {
+        body: {
+          messages: (msgs || []).map((m: any) => ({ sender: m.sender, content: m.content })),
+          prospect: {
+            name: pData.name,
+            stage: pData.stage,
+            currentJob: pData.current_job,
+            incomeGoal: pData.income_goal,
+            motivation: pData.motivation,
+            concerns: pData.concerns,
+          },
+        },
+      });
+      if (error || data?.error) return;
+      const analysis = data?.analysis;
+      if (!analysis) return;
+
+      // Only notify if stage actually changed and confidence is meaningful
+      if (analysis.suggestedStage !== pData.stage && analysis.confidence >= 65) {
+        toast({
+          title: `🎯 Stage suggestion: ${pData.name}`,
+          description: `${pData.stage} → ${analysis.suggestedStage} (${analysis.confidence}%) — tap "Analyze Stage" to review & apply`,
+        });
+      }
+    } catch (e) {
+      console.error("Auto-analyze error:", e);
+    }
+  }
+
 
   // Pick up voice_prefill from voice commands
   useEffect(() => {
