@@ -8,10 +8,8 @@ export default function AppLayout() {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        {/* Sidebar — hidden on mobile, shown on lg+ */}
-        <div className="hidden lg:block">
-          <AppSidebar />
-        </div>
+        {/* Sidebar — hidden on mobile via media query inside Sidebar component */}
+        <AppSidebar />
         <div className="flex-1 flex flex-col min-w-0">
           <header className="h-12 flex items-center border-b border-border px-4 shrink-0">
             <SidebarTrigger className="mr-4 hidden lg:flex" />
