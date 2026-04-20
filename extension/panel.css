@@ -1,0 +1,214 @@
+/* DM Setter OS — Side Panel */
+
+#dms-root {
+  position: fixed;
+  top: 0;
+  right: -380px;
+  width: 360px;
+  height: 100vh;
+  z-index: 2147483647;
+  transition: right 0.25s ease;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+#dms-root.open {
+  right: 0;
+  pointer-events: all;
+}
+#dms-root * { box-sizing: border-box; }
+
+.dms-panel {
+  width: 100%;
+  height: 100%;
+  background: #0d1117;
+  border-left: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  color: #e6edf3;
+  overflow: hidden;
+}
+
+/* Header */
+.dms-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+}
+.dms-logo { font-weight: 700; font-size: 13px; color: #58a6ff; }
+.dms-platform-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #1f6feb22;
+  color: #58a6ff;
+  border: 1px solid #1f6feb44;
+}
+.dms-head-btns { display: flex; gap: 6px; }
+.dms-btn-sm {
+  background: none;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  width: 26px; height: 26px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.dms-btn-sm:hover { color: #e6edf3; border-color: #58a6ff; }
+
+/* Prospect bar */
+.dms-prospect {
+  padding: 10px 14px;
+  background: #161b22;
+  border-bottom: 1px solid #21262d;
+  flex-shrink: 0;
+}
+.dms-prospect-name { font-weight: 600; font-size: 14px; }
+.dms-prospect-sub { font-size: 11px; color: #8b949e; margin-top: 2px; }
+
+/* Scrollable body */
+.dms-body { flex: 1; overflow-y: auto; }
+
+/* Status */
+.dms-status {
+  margin: 10px 14px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: none;
+}
+.dms-status.error { background: #f8514918; color: #f85149; border: 1px solid #f8514933; display: block; }
+.dms-status.info { background: #1f6feb18; color: #58a6ff; border: 1px solid #1f6feb33; display: block; }
+
+/* Main analyse button */
+.dms-analyse-btn {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 12px 14px;
+  padding: 11px;
+  background: linear-gradient(135deg, #1f6feb, #388bfd);
+  border: none;
+  border-radius: 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.dms-analyse-btn:hover { opacity: 0.9; }
+.dms-analyse-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Section */
+.dms-section {
+  padding: 12px 14px;
+  border-bottom: 1px solid #21262d;
+}
+.dms-section-head {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #8b949e;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Reply cards */
+.dms-reply {
+  background: #161b22;
+  border: 1px solid #21262d;
+  border-radius: 8px;
+  padding: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.dms-reply:hover { border-color: #58a6ff; }
+.dms-reply-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.dms-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  background: #1f6feb22;
+  color: #58a6ff;
+  border: 1px solid #1f6feb44;
+}
+.dms-copy {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: #21262d;
+  border: 1px solid #30363d;
+  color: #8b949e;
+  cursor: pointer;
+}
+.dms-copy:hover { background: #3fb950; color: white; border-color: #3fb950; }
+.dms-reply-text { font-size: 12px; line-height: 1.5; margin-bottom: 4px; }
+.dms-reply-note { font-size: 10px; color: #8b949e; font-style: italic; }
+
+/* BANT */
+.dms-bant-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.dms-bant-cell {
+  text-align: center;
+  padding: 6px 4px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.dms-bant-cell.full { background: #3fb95018; border-color: #3fb95033; }
+.dms-bant-cell.partial { background: #d2992218; border-color: #d2992233; }
+.dms-bant-cell.empty { background: #21262d; border-color: #30363d; }
+.dms-bant-val { font-size: 13px; font-weight: 700; }
+.dms-bant-cell.full .dms-bant-val { color: #3fb950; }
+.dms-bant-cell.partial .dms-bant-val { color: #d29922; }
+.dms-bant-cell.empty .dms-bant-val { color: #484f58; }
+.dms-bant-lbl { font-size: 9px; color: #8b949e; margin-top: 2px; }
+.dms-bant-verdict { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.dms-bant-total { font-size: 18px; font-weight: 700; }
+.dms-bant-badge { font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 10px; }
+.dms-bant-note { width: 100%; font-size: 10px; color: #8b949e; margin-top: 4px; }
+
+/* Intel */
+.dms-intel-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; font-size: 12px; }
+.dms-intel-lbl { color: #8b949e; flex-shrink: 0; margin-right: 8px; }
+.dms-intel-val { text-align: right; }
+
+/* Conversation preview */
+.dms-conv { display: flex; flex-direction: column; gap: 3px; max-height: 140px; overflow-y: auto; }
+.dms-msg { font-size: 11px; padding: 4px 8px; border-radius: 6px; max-width: 88%; word-break: break-word; }
+.dms-msg.you { background: #1f6feb22; color: #79c0ff; align-self: flex-end; }
+.dms-msg.them { background: #21262d; color: #e6edf3; align-self: flex-start; }
+.dms-hint { font-size: 11px; color: #484f58; text-align: center; padding: 8px 0; }
+
+/* Save button */
+.dms-save-btn {
+  display: block;
+  width: calc(100% - 28px);
+  margin: 0 14px 10px;
+  padding: 10px;
+  background: linear-gradient(135deg, #3fb950, #2ea043);
+  border: none;
+  border-radius: 8px;
+  color: #0d1117;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.dms-save-btn:hover { opacity: 0.9; }
+.dms-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.dms-save-msg { font-size: 11px; text-align: center; padding: 0 14px 10px; }

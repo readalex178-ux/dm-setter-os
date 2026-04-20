@@ -1,39 +1,84 @@
-// DM Setter OS — Background Service Worker
+// background.js — service worker
+// Bridges extension ↔ app. Background workers can reach http://localhost freely.
 
 chrome.runtime.onInstalled.addListener(() => {
-  chrome.storage.local.set({ notifsEnabled: true, overlayEnabled: false });
-  chrome.alarms.create("check-messages", { periodInMinutes: 5 });
-  console.log("DM Setter OS installed");
+  chrome.storage.local.get("ai_mode").then(s => {
+    if (!s.ai_mode) {
+      chrome.storage.local.set({
+        ai_mode: "cloud",
+        cloud_url: "https://api.groq.com/openai/v1",
+        cloud_model: "llama-3.1-8b-instant",
+        cloud_key: "",
+        app_url: "http://localhost:8080",
+        overlay_enabled: false,
+      });
+    }
+  });
 });
 
-chrome.alarms.onAlarm.addListener(async (alarm) => {
-  if (alarm.name !== "check-messages") return;
-
-  const { notifsEnabled } = await chrome.storage.local.get("notifsEnabled");
-  if (!notifsEnabled) return;
-
-  // Demo notification — replace with real API polling
-  const shouldNotify = Math.random() > 0.7;
-  if (shouldNotify) {
-    chrome.notifications.create({
-      type: "basic",
-      iconUrl: "icon128.png",
-      title: "🔥 Hot Lead Activity",
-      message: "Sarah Johnson replied: \"I'm definitely interested in the program…\"",
-      priority: 2,
-    });
-  }
-});
-
-chrome.notifications.onClicked.addListener(() => {
-  chrome.tabs.create({ url: "https://id-preview--3111d325-1216-4abf-b2fb-cbb0926c6d5c.lovable.app/app/inbox" });
-});
-
-// Badge for unread count
-function updateBadge(count) {
-  chrome.action.setBadgeText({ text: count > 0 ? String(count) : "" });
-  chrome.action.setBadgeBackgroundColor({ color: "#00d4aa" });
+async function getAppBase() {
+  const s = await chrome.storage.local.get("app_url");
+  return (s.app_url || "http://localhost:8080").replace(/\/app.*$/, "");
 }
 
-// Set demo badge
-updateBadge(6);
+// Check if app is running
+async function checkHealth() {
+  try {
+    const base = await getAppBase();
+    const res = await fetch(base + "/api/health", { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    return data.ok === true;
+  } catch {
+    return false;
+  }
+}
+
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+
+  if (msg.type === "CHECK_HEALTH") {
+    checkHealth().then(ok => sendResponse({ ok }));
+    return true;
+  }
+
+  if (msg.type === "SAVE_CONVERSATION") {
+    (async () => {
+      try {
+        const base = await getAppBase();
+
+        // Check app is running first
+        const healthy = await checkHealth();
+        if (!healthy) {
+          sendResponse({ ok: false, error: "App is not running — start it with npm run dev at " + base });
+          return;
+        }
+
+        const res = await fetch(base + "/api/save-conversation", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(msg.payload),
+        });
+
+        const text = await res.text();
+        if (!res.ok) {
+          throw new Error("App returned " + res.status + ": " + text.slice(0, 100));
+        }
+
+        const data = JSON.parse(text);
+        sendResponse({ ok: true, id: data.id });
+
+      } catch (e) {
+        sendResponse({ ok: false, error: e.message });
+      }
+    })();
+    return true;
+  }
+
+});
+
+// Keep service worker alive with periodic health checks
+// Also updates badge icon to show connection status
+setInterval(async () => {
+  const ok = await checkHealth();
+  chrome.action.setBadgeText({ text: ok ? "" : "!" });
+  chrome.action.setBadgeBackgroundColor({ color: ok ? "#3fb950" : "#f85149" });
+}, 10000);

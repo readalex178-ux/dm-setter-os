@@ -2,96 +2,135 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="popup.css" />
   <title>DM Setter OS</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0d1117; color: #e6edf3; width: 300px; }
+
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #161b22; border-bottom: 1px solid #21262d; }
+    .logo { font-weight: 700; font-size: 14px; color: #58a6ff; }
+    .version { font-size: 10px; color: #484f58; }
+
+    .status-bar { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-bottom: 1px solid #21262d; font-size: 12px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .dot.green { background: #3fb950; }
+    .dot.orange { background: #d29922; }
+    .dot.grey { background: #484f58; }
+
+    .stats { display: flex; border-bottom: 1px solid #21262d; }
+    .stat { flex: 1; text-align: center; padding: 10px 0; border-right: 1px solid #21262d; }
+    .stat:last-child { border-right: none; }
+    .stat-val { display: block; font-size: 20px; font-weight: 700; color: #58a6ff; }
+    .stat-lbl { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
+
+    .section { padding: 10px 14px; border-bottom: 1px solid #21262d; }
+    .section-title { font-size: 10px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
+    .toggle-info p { font-size: 12px; font-weight: 500; }
+    .toggle-info small { font-size: 10px; color: #8b949e; }
+    .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; inset: 0; background: #30363d; border-radius: 20px; cursor: pointer; transition: 0.2s; }
+    .slider:before { content: ""; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
+    input:checked + .slider { background: #1f6feb; }
+    input:checked + .slider:before { transform: translateX(16px); }
+
+    .btn { display: block; width: 100%; padding: 9px; background: linear-gradient(135deg, #1f6feb, #388bfd); border: none; border-radius: 7px; color: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn:hover { opacity: 0.9; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-open { background: none; border: 1px solid #30363d; color: #8b949e; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px; }
+    .btn-open:hover { color: #e6edf3; border-color: #58a6ff; }
+
+    .recent-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #21262d22; }
+    .recent-item:last-child { border-bottom: none; }
+    .avatar { width: 30px; height: 30px; border-radius: 50%; background: #1f6feb22; color: #58a6ff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .recent-name { font-size: 12px; font-weight: 600; }
+    .recent-sub { font-size: 10px; color: #8b949e; }
+    .recent-score { font-size: 11px; font-weight: 700; color: #3fb950; margin-left: auto; }
+    .empty { font-size: 11px; color: #484f58; text-align: center; padding: 8px 0; }
+
+    details summary { font-size: 11px; color: #8b949e; cursor: pointer; padding: 8px 14px; list-style: none; border-top: 1px solid #21262d; }
+    details summary:hover { color: #e6edf3; }
+    details summary::-webkit-details-marker { display: none; }
+    .settings-body { padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 8px; }
+    label.field { display: flex; flex-direction: column; gap: 3px; }
+    label.field span { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
+    input.inp, select.inp { background: #161b22; border: 1px solid #30363d; border-radius: 5px; color: #e6edf3; padding: 6px 8px; font-size: 11px; width: 100%; }
+    input.inp:focus, select.inp:focus { outline: none; border-color: #58a6ff; }
+    .save-btn { padding: 7px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 12px; cursor: pointer; }
+    .save-btn:hover { background: #30363d; }
+    .saved-msg { font-size: 11px; color: #3fb950; text-align: center; display: none; }
+  </style>
 </head>
 <body>
-  <div class="popup-container">
-    <!-- AUTH VIEW -->
-    <div id="auth-view" style="display:none">
-      <header class="popup-header">
-        <div class="logo-row">
-          <img src="icon128.png" alt="DM Setter OS" class="logo-icon" />
-          <h1>DM Setter OS</h1>
-        </div>
-      </header>
-
-      <div class="auth-card">
-        <h2 id="auth-title">Sign In</h2>
-        <p class="auth-subtitle">Sign in to sync your data across devices</p>
-        <div id="auth-error" class="auth-error" style="display:none"></div>
-        <input type="email" id="auth-email" class="auth-input" placeholder="Email" />
-        <input type="password" id="auth-password" class="auth-input" placeholder="Password" />
-        <button id="auth-submit" class="auth-btn">Sign In</button>
-        <div class="auth-toggle">
-          <span id="auth-toggle-text">Don't have an account?</span>
-          <button id="auth-toggle-btn" class="auth-link">Sign Up</button>
-        </div>
-        <div class="auth-divider"><span>or</span></div>
-        <button id="auth-skip" class="btn-secondary auth-skip">Use offline only</button>
-      </div>
-    </div>
-
-    <!-- MAIN VIEW -->
-    <div id="main-view" style="display:none">
-      <header class="popup-header">
-        <div class="logo-row">
-          <img src="icon128.png" alt="DM Setter OS" class="logo-icon" />
-          <h1>DM Setter OS</h1>
-        </div>
-        <div class="header-actions">
-          <div id="sync-indicator" class="sync-indicator" title="Sync status">
-            <span id="sync-dot" class="sync-dot offline"></span>
-            <span id="sync-label" class="sync-label">Offline</span>
-          </div>
-          <button id="open-full-app" class="btn-secondary" title="Open full app">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
-          </button>
-        </div>
-      </header>
-
-      <div id="user-bar" class="user-bar" style="display:none">
-        <span id="user-email" class="user-email"></span>
-        <button id="btn-sync" class="btn-tiny" title="Sync now">🔄</button>
-        <button id="btn-logout" class="btn-tiny" title="Sign out">🚪</button>
-      </div>
-
-      <div class="stats-bar">
-        <div class="stat"><span class="stat-value" id="stat-unread">0</span><span class="stat-label">Unread</span></div>
-        <div class="stat"><span class="stat-value" id="stat-hot">0</span><span class="stat-label">Hot Leads</span></div>
-        <div class="stat"><span class="stat-value" id="stat-ready">0</span><span class="stat-label">Call Ready</span></div>
-      </div>
-
-      <div class="section-title">Recent Conversations</div>
-      <div id="inbox-list" class="inbox-list">
-        <div class="empty-state">Loading conversations…</div>
-      </div>
-
-      <div class="section-title">Quick Actions</div>
-      <div class="quick-actions">
-        <button class="action-btn" id="btn-inbox">📥 Inbox</button>
-        <button class="action-btn" id="btn-pipeline">📊 Pipeline</button>
-        <button class="action-btn" id="btn-scripts">📝 Scripts</button>
-        <button class="action-btn" id="btn-training">🎓 Training</button>
-      </div>
-
-      <footer class="popup-footer">
-        <label class="toggle-row">
-          <span>Page overlay</span>
-          <input type="checkbox" id="toggle-overlay" />
-        </label>
-        <label class="toggle-row">
-          <span>Notifications</span>
-          <input type="checkbox" id="toggle-notifs" checked />
-        </label>
-      </footer>
+  <div class="header">
+    <span class="logo">⚡ DM Setter OS</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span class="version">v1.0</span>
+      <button class="btn-open" id="btn-open-app" title="Open app">↗</button>
     </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-  <script src="supabase-config.js"></script>
-  <script src="storage.js"></script>
+  <div class="status-bar">
+    <span class="dot grey" id="status-dot"></span>
+    <span id="status-text">Checking...</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><span class="stat-val" id="stat-saved">—</span><span class="stat-lbl">Saved</span></div>
+    <div class="stat"><span class="stat-val" id="stat-today">—</span><span class="stat-lbl">Today</span></div>
+    <div class="stat"><span class="stat-val" id="stat-ai">—</span><span class="stat-lbl">AI</span></div>
+  </div>
+
+  <div class="section">
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <p>Show panel on page</p>
+        <small>Slide in the AI panel on the current tab</small>
+      </div>
+      <label class="switch">
+        <input type="checkbox" id="toggle-overlay" />
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="section">
+    <button class="btn" id="btn-analyse" disabled>⚡ Analyse Current DM</button>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Recently Saved</div>
+    <div id="recent-list"><div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save.</div></div>
+  </div>
+
+  <details>
+    <summary>⚙ Settings</summary>
+    <div class="settings-body">
+      <label class="field">
+        <span>AI Mode</span>
+        <select class="inp" id="ai-mode">
+          <option value="cloud">Cloud — Groq / OpenRouter / OpenAI</option>
+          <option value="local">Local — LM Studio / Ollama</option>
+        </select>
+      </label>
+      <div id="cloud-fields">
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <label class="field"><span>API URL</span><input class="inp" id="cloud-url" placeholder="https://api.groq.com/openai/v1" /></label>
+          <label class="field"><span>Model</span><input class="inp" id="cloud-model" placeholder="llama-3.1-8b-instant" /></label>
+          <label class="field"><span>API Key</span><input class="inp" type="password" id="cloud-key" placeholder="gsk_..." /></label>
+        </div>
+      </div>
+      <div id="local-fields" style="display:none">
+        <label class="field"><span>Local Model Name</span><input class="inp" id="local-model" placeholder="llama3" /></label>
+      </div>
+      <label class="field"><span>App URL</span><input class="inp" id="app-url" placeholder="http://localhost:8080" /></label>
+      <button class="save-btn" id="btn-save">Save Settings</button>
+      <div class="saved-msg" id="saved-msg">✓ Settings saved</div>
+    </div>
+  </details>
+
   <script src="popup.js"></script>
 </body>
 </html>
