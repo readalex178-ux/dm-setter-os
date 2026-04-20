@@ -1,52 +1,43 @@
 
 
-## Plan: Voice Dictation + Smart Voice Actions for Messaging
+## Fix: Chrome extension shows nothing after install
 
-**Goal**: Speak your messages to prospects instead of typing, and use voice commands like "send follow-up 1 to Sarah" to auto-fill scripts and target specific conversations.
+### Root cause
+The downloadable ZIP at `public/dm-setter-os-extension.zip` is stale (built 9 days ago) and only contains 10 files. Chrome's manifest references `panel.js`, `panel.css`, `platform.js`, `scraper.js`, `ai.js`, and `icon.png` — none of which are in the ZIP. Result: extension loads with no content scripts, no UI, nothing happens on Instagram/TikTok/etc.
 
-### Changes
+Additionally, two minor bugs in the source itself:
+1. `manifest.json` lists `icon.png` for the toolbar icon, but only `icon128.png` exists in the `extension/` folder — the toolbar icon will be blank.
+2. `content.js` (the older overlay) and `panel.js` are both injected and both build a UI — they conflict. `content.js` is dead code from the previous version and should not be in the manifest.
 
-**1. Create `useSpeechToText` hook** (`src/hooks/use-speech-to-text.ts`)
-- Pure dictation hook — continuous listening, streams transcript into a callback
-- Returns `{ isListening, start, stop, isSupported }`
-- No command parsing — just raw speech-to-text
+### Plan
 
-**2. Add mic button to Inbox message composer** (`src/pages/InboxPage.tsx`)
-- Microphone icon button next to the Send button (line ~562)
-- Tapping starts dictation, speech streams into `messageInput` state in real-time
-- Button pulses red while listening, tap again to stop
+**1. Clean up `extension/manifest.json`**
+- Remove `content.js` from `content_scripts.js` (panel.js is the real UI now)
+- Remove `overlay.css` from `content_scripts.css` (replaced by panel.css, already listed)
+- Fix icon paths: point `action.default_icon` and top-level `icons` to `icon128.png` (the file that actually exists), or copy `icon128.png` → `icon.png`. We'll standardize on `icon128.png`.
 
-**3. Add mic button to Training page chat** (`src/pages/TrainingPage.tsx`)
-- Same pattern — mic button next to the send button for dictating roleplay responses
+**2. Rebuild the ZIP from the current `extension/` folder**
+Run:
+```bash
+rm -f /dev-server/public/dm-setter-os-extension.zip
+cd /dev-server/extension && nix run nixpkgs#zip -- -r /dev-server/public/dm-setter-os-extension.zip .
+```
+This produces a fresh ZIP containing all 14 current files (manifest, popup.*, panel.*, platform.js, scraper.js, ai.js, background.js, storage.js, supabase-config.js, icon128.png, etc.).
 
-**4. Expand voice command actions** (`src/hooks/use-voice-command.ts`)
-- Add new patterns:
-  - `"send follow up 1 to sarah"` / `"send script opener to john"` — navigates to Inbox, selects the matching conversation, and pre-fills the message input with the matching script from `demoScripts`
-  - `"reply to sarah"` — navigates to Inbox and selects Sarah's conversation
-- Fuzzy-match script names (e.g., "follow up 1" matches script titled "Follow-Up Message #1") and contact names
+**3. Bump the version** in `manifest.json` to `1.0.1` so users can tell the new build apart from the broken one already loaded in their browser.
 
-### How "send follow-up 1 to Sarah" works
+**4. Update `ExtensionPage.tsx`** with a small re-install reminder note: "If you already installed an earlier version, remove it from `chrome://extensions` first, then load the new unzipped folder."
 
-1. Voice command hook parses: action=`send_script`, script=`follow up 1`, target=`sarah`
-2. Navigates to `/app/inbox`
-3. Finds the conversation matching "sarah" and selects it
-4. Looks up the script matching "follow up 1" from the scripts data
-5. Pre-fills the message input with the script content
-6. You review and hit Send (manual control preserved)
+### What the user does after the fix
+1. Click **Download Extension** again on the Extension page → gets the fresh ZIP.
+2. Go to `chrome://extensions`, remove the old "DM Setter OS" entry.
+3. Unzip the new file and **Load unpacked** the folder.
+4. Open Instagram/TikTok DMs → the side panel slides in, or click the toolbar icon → popup works.
 
-### Technical Details
+### Files to change
+- `extension/manifest.json` — drop `content.js`/`overlay.css`, fix icon paths, bump version
+- `public/dm-setter-os-extension.zip` — regenerated from `extension/`
+- `src/pages/ExtensionPage.tsx` — add a "remove old version first" note
 
-- `useSpeechToText` is separate from `useVoiceCommand` — dictation vs commands
-- Script matching uses fuzzy includes on `demoScripts` title/category
-- Contact matching uses fuzzy includes on conversation names
-- Both Inbox and Training pages get the mic button via the same reusable hook
-
-### Files
-
-| File | Action |
-|------|--------|
-| `src/hooks/use-speech-to-text.ts` | Create — pure dictation hook |
-| `src/hooks/use-voice-command.ts` | Edit — add `send_script` and `reply_to` patterns |
-| `src/pages/InboxPage.tsx` | Edit — add mic button to composer |
-| `src/pages/TrainingPage.tsx` | Edit — add mic button to chat input |
+No database, edge function, or app-side functional changes required.
 
