@@ -130,7 +130,10 @@ export default function ExtensionPage() {
               </li>
             ))}
           </ol>
-          <p className="text-xs text-muted-foreground mt-2">
+          <p className="text-xs text-amber-500 mt-2">
+            ⚠️ Already installed an earlier version? Remove it from <code className="text-xs">chrome://extensions</code> first, then load the newly unzipped folder.
+          </p>
+          <p className="text-xs text-muted-foreground">
             💡 If the download doesn't start, try opening this page in desktop Chrome, Edge, or Brave and use the direct link above.
           </p>
         </CardContent>
