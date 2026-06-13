@@ -105,31 +105,23 @@
     <div id="recent-list"><div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save.</div></div>
   </div>
 
-  <details>
-    <summary>⚙ Settings</summary>
+  <details id="account-details">
+    <summary>👤 Account</summary>
     <div class="settings-body">
-      <label class="field">
-        <span>AI Mode</span>
-        <select class="inp" id="ai-mode">
-          <option value="cloud">Cloud — Groq / OpenRouter / OpenAI</option>
-          <option value="local">Local — LM Studio / Ollama</option>
-        </select>
-      </label>
-      <div id="cloud-fields">
-        <div style="display:flex;flex-direction:column;gap:8px">
-          <label class="field"><span>API URL</span><input class="inp" id="cloud-url" placeholder="https://api.groq.com/openai/v1" /></label>
-          <label class="field"><span>Model</span><input class="inp" id="cloud-model" placeholder="llama-3.1-8b-instant" /></label>
-          <label class="field"><span>API Key</span><input class="inp" type="password" id="cloud-key" placeholder="gsk_..." /></label>
-        </div>
+      <div id="signed-out">
+        <p style="font-size:11px;color:#8b949e;margin-bottom:8px">Sign in with the same account you use in the DM Setter OS app. Your captured DMs and AI suggestions sync to your dashboard.</p>
+        <label class="field"><span>Email</span><input class="inp" type="email" id="auth-email" placeholder="you@example.com" /></label>
+        <label class="field"><span>Password</span><input class="inp" type="password" id="auth-password" placeholder="••••••••" /></label>
+        <button class="btn" id="btn-signin" style="margin-top:8px">Sign In</button>
+        <div class="saved-msg" id="auth-error" style="color:#f85149"></div>
       </div>
-      <div id="local-fields" style="display:none">
-        <label class="field"><span>Local Model Name</span><input class="inp" id="local-model" placeholder="llama3" /></label>
+      <div id="signed-in" style="display:none">
+        <p style="font-size:12px;color:#3fb950">✓ Signed in as <span id="auth-user"></span></p>
+        <button class="save-btn" id="btn-signout" style="margin-top:8px">Sign Out</button>
       </div>
-      <label class="field"><span>App URL</span><input class="inp" id="app-url" placeholder="http://localhost:8080" /></label>
-      <button class="save-btn" id="btn-save">Save Settings</button>
-      <div class="saved-msg" id="saved-msg">✓ Settings saved</div>
     </div>
   </details>
+
 
   <script src="popup.js"></script>
 </body>
