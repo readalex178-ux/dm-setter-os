@@ -30,6 +30,7 @@ export type Database = {
           refresh_token: string | null
           token_expires_at: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           access_token: string
@@ -46,6 +47,7 @@ export type Database = {
           refresh_token?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           access_token?: string
@@ -62,6 +64,7 @@ export type Database = {
           refresh_token?: string | null
           token_expires_at?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -82,6 +85,7 @@ export type Database = {
           notes: string | null
           objections_handled: number | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           calls_booked?: number | null
@@ -99,6 +103,7 @@ export type Database = {
           notes?: string | null
           objections_handled?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           calls_booked?: number | null
@@ -116,6 +121,7 @@ export type Database = {
           notes?: string | null
           objections_handled?: number | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -128,6 +134,7 @@ export type Database = {
           prospect_id: string
           sender: string
           sent_at: string
+          user_id: string | null
         }
         Insert: {
           content: string
@@ -137,6 +144,7 @@ export type Database = {
           prospect_id: string
           sender: string
           sent_at?: string
+          user_id?: string | null
         }
         Update: {
           content?: string
@@ -146,6 +154,7 @@ export type Database = {
           prospect_id?: string
           sender?: string
           sent_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -156,6 +165,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      offer_profiles: {
+        Row: {
+          core_promise: string
+          created_at: string
+          cta_goal: string
+          description: string
+          guarantee: string
+          id: string
+          ideal_client: string
+          is_active: boolean
+          objections: Json
+          offer_name: string
+          price: string
+          proof: string
+          tone: string
+          updated_at: string
+          user_id: string
+          value_props: string[]
+        }
+        Insert: {
+          core_promise?: string
+          created_at?: string
+          cta_goal?: string
+          description?: string
+          guarantee?: string
+          id?: string
+          ideal_client?: string
+          is_active?: boolean
+          objections?: Json
+          offer_name?: string
+          price?: string
+          proof?: string
+          tone?: string
+          updated_at?: string
+          user_id: string
+          value_props?: string[]
+        }
+        Update: {
+          core_promise?: string
+          created_at?: string
+          cta_goal?: string
+          description?: string
+          guarantee?: string
+          id?: string
+          ideal_client?: string
+          is_active?: boolean
+          objections?: Json
+          offer_name?: string
+          price?: string
+          proof?: string
+          tone?: string
+          updated_at?: string
+          user_id?: string
+          value_props?: string[]
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       prospects: {
         Row: {
@@ -185,6 +275,7 @@ export type Database = {
           tags: string[] | null
           time_availability: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -213,6 +304,7 @@ export type Database = {
           tags?: string[] | null
           time_availability?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -241,6 +333,7 @@ export type Database = {
           tags?: string[] | null
           time_availability?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -260,6 +353,7 @@ export type Database = {
           id: string
           occurred_at: string
           prospect_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -268,6 +362,7 @@ export type Database = {
           id?: string
           occurred_at?: string
           prospect_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -276,6 +371,7 @@ export type Database = {
           id?: string
           occurred_at?: string
           prospect_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
