@@ -17,6 +17,8 @@ const steps = [
   "Open chrome://extensions in your browser",
   "Enable Developer mode (toggle top-right)",
   "Click Load unpacked and select the unzipped folder",
+  "Click the extension icon → open Account → sign in with the SAME email & password you use here",
+  "Open a DM on Instagram/TikTok/X/Facebook → analyse → Save. It syncs straight to your Inbox.",
 ];
 
 type DownloadState = "idle" | "loading" | "success" | "error";
