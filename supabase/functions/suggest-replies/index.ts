@@ -61,7 +61,8 @@ Rules:
 - Match the prospect's energy and communication style
 - If call readiness is high (>70%), include at least one call transition suggestion
 - If prospect has concerns, address them empathetically
-- Never be pushy or manipulative`;
+- Never be pushy or manipulative
+${offerContext}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
