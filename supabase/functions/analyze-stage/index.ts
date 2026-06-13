@@ -1,3 +1,5 @@
+import { loadOfferContext } from "../_shared/offer.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
