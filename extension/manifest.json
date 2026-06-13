@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "DM Setter OS",
-  "version": "1.0.1",
-  "description": "AI co-pilot for DM setters — works on Instagram, TikTok, Twitter/X and Facebook",
+  "version": "2.0.0",
+  "description": "AI co-pilot for DM setters — works on Instagram, TikTok, Twitter/X and Facebook. Syncs to your DM Setter OS dashboard.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "clipboardWrite"],
   "host_permissions": [
     "https://www.instagram.com/*",
@@ -12,11 +12,7 @@
     "https://x.com/*",
     "https://www.facebook.com/*",
     "https://www.messenger.com/*",
-    "https://api.groq.com/*",
-    "https://openrouter.ai/*",
-    "https://api.openai.com/*",
-    "http://localhost/*",
-    "http://127.0.0.1/*"
+    "https://kwqoaqifvccxflaajrjv.supabase.co/*"
   ],
   "action": {
     "default_popup": "popup.html",
