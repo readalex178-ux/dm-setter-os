@@ -1,4 +1,6 @@
-// popup.js
+// popup.js — Cloud-connected
+
+const APP_URL = "https://id-preview--3111d325-1216-4abf-b2fb-cbb0926c6d5c.lovable.app";
 
 const PLATFORM_NAMES = {
   "www.instagram.com": "Instagram",
@@ -20,25 +22,18 @@ const DM_PAGES = {
   "www.messenger.com": /.*/,
 };
 
+function send(type, extra = {}) {
+  return new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type, ...extra }, (res) => resolve(res || { ok: false }));
+  });
+}
+
 async function init() {
-  const s = await chrome.storage.local.get([
-    "ai_mode", "cloud_url", "cloud_model", "cloud_key",
-    "local_model", "app_url", "overlay_enabled",
-  ]);
-
-  // Set settings fields
-  document.getElementById("ai-mode").value = s.ai_mode || "cloud";
-  document.getElementById("cloud-url").value = s.cloud_url || "https://api.groq.com/openai/v1";
-  document.getElementById("cloud-model").value = s.cloud_model || "llama-3.1-8b-instant";
-  document.getElementById("cloud-key").value = s.cloud_key || "";
-  document.getElementById("local-model").value = s.local_model || "";
-  document.getElementById("app-url").value = s.app_url || "http://localhost:8080";
+  const s = await chrome.storage.local.get(["overlay_enabled"]);
   document.getElementById("toggle-overlay").checked = s.overlay_enabled || false;
+  document.getElementById("stat-ai").textContent = "Cloud";
 
-  updateAIMode(s.ai_mode || "cloud");
-  updateStatAI(s.ai_mode || "cloud");
-
-  // Check current tab
+  // Platform detection
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const url = tab?.url ? new URL(tab.url) : null;
   const host = url?.hostname || "";
@@ -62,64 +57,64 @@ async function init() {
     document.getElementById("btn-analyse").disabled = true;
   }
 
-  // Check app connection and load recent
-  const appUrl = s.app_url || "http://localhost:8080";
-  chrome.runtime.sendMessage({ type: "CHECK_HEALTH" }, result => {
-    if (result?.ok) {
-      loadRecent(appUrl);
-    } else {
-      document.getElementById("stat-saved").textContent = "—";
-      document.getElementById("stat-today").textContent = "—";
-      document.getElementById("recent-list").innerHTML = '<div class="empty" style="color:#f85149">App offline — run npm run dev</div>';
-    }
-  });
+  await refreshAccount();
 }
 
-function updateAIMode(mode) {
-  document.getElementById("cloud-fields").style.display = mode === "cloud" ? "block" : "none";
-  document.getElementById("local-fields").style.display = mode === "local" ? "block" : "none";
-}
+async function refreshAccount() {
+  const res = await send("GET_SESSION");
+  const signedIn = !!res?.user;
+  document.getElementById("signed-in").style.display = signedIn ? "block" : "none";
+  document.getElementById("signed-out").style.display = signedIn ? "none" : "block";
 
-function updateStatAI(mode) {
-  const labels = { cloud: "Groq", local: "Local" };
-  document.getElementById("stat-ai").textContent = labels[mode] || "Cloud";
-}
-
-async function loadRecent(appUrl) {
-  try {
-    const base = appUrl.replace(/\/app.*$/, "");
-    const res = await fetch(base + "/api/conversations", { signal: AbortSignal.timeout(2000) });
-    const data = await res.json();
-    const convs = data.conversations || [];
-
-    document.getElementById("stat-saved").textContent = convs.length;
-    const today = new Date().toDateString();
-    const todayCount = convs.filter(c => new Date(c.savedAt).toDateString() === today).length;
-    document.getElementById("stat-today").textContent = todayCount;
-
-    const list = document.getElementById("recent-list");
-    if (!convs.length) {
-      list.innerHTML = '<div class="empty">Nothing saved yet.</div>';
-      return;
-    }
-    list.innerHTML = convs.slice(0, 4).map(c => `
-      <div class="recent-item">
-        <div class="avatar">${(c.prospect.name || "?").split(" ").map(w => w[0]).join("").slice(0, 2)}</div>
-        <div>
-          <div class="recent-name">${c.prospect.name || "Unknown"}</div>
-          <div class="recent-sub">${c.prospect.stage || "New Lead"} · ${c.messages?.length || 0} msgs</div>
-        </div>
-        <span class="recent-score">${c.prospect.leadScore || 0}/10</span>
-      </div>
-    `).join("");
-  } catch {
+  if (signedIn) {
+    document.getElementById("auth-user").textContent = res.user.email || "your account";
+    loadRecent();
+  } else {
+    document.getElementById("account-details").open = true;
     document.getElementById("stat-saved").textContent = "—";
     document.getElementById("stat-today").textContent = "—";
+    document.getElementById("recent-list").innerHTML =
+      '<div class="empty" style="color:#d29922">Sign in below to sync your DMs</div>';
   }
 }
 
+async function loadRecent() {
+  const res = await send("GET_RECENT");
+  if (!res?.ok) {
+    document.getElementById("recent-list").innerHTML =
+      '<div class="empty" style="color:#f85149">' + (res?.error || "Could not load") + "</div>";
+    return;
+  }
+  const rows = res.rows || [];
+  document.getElementById("stat-saved").textContent = rows.length;
+  const today = new Date().toDateString();
+  document.getElementById("stat-today").textContent = rows.filter(
+    (r) => new Date(r.updated_at).toDateString() === today
+  ).length;
+
+  const list = document.getElementById("recent-list");
+  if (!rows.length) {
+    list.innerHTML = '<div class="empty">Nothing saved yet.</div>';
+    return;
+  }
+  list.innerHTML = rows
+    .slice(0, 4)
+    .map(
+      (r) => `
+      <div class="recent-item">
+        <div class="avatar">${(r.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2)}</div>
+        <div>
+          <div class="recent-name">${r.name || "Unknown"}</div>
+          <div class="recent-sub">${r.stage || "New Lead"}</div>
+        </div>
+        <span class="recent-score">${r.lead_score || 0}/10</span>
+      </div>`
+    )
+    .join("");
+}
+
 // Toggle overlay
-document.getElementById("toggle-overlay").onchange = async e => {
+document.getElementById("toggle-overlay").onchange = async (e) => {
   const enabled = e.target.checked;
   await chrome.storage.local.set({ overlay_enabled: enabled });
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -139,31 +134,39 @@ document.getElementById("btn-analyse").onclick = async () => {
 };
 
 // Open app
-document.getElementById("btn-open-app").onclick = async () => {
-  const s = await chrome.storage.local.get("app_url");
-  const base = (s.app_url || "http://localhost:8080").replace(/\/app.*$/, "");
-  chrome.tabs.create({ url: base + "/app/inbox" });
+document.getElementById("btn-open-app").onclick = () => {
+  chrome.tabs.create({ url: APP_URL + "/app/inbox" });
 };
 
-// AI mode switch
-document.getElementById("ai-mode").onchange = e => {
-  updateAIMode(e.target.value);
-  updateStatAI(e.target.value);
+// Sign in
+document.getElementById("btn-signin").onclick = async () => {
+  const email = document.getElementById("auth-email").value.trim();
+  const password = document.getElementById("auth-password").value;
+  const err = document.getElementById("auth-error");
+  err.style.display = "none";
+  if (!email || !password) {
+    err.textContent = "Enter your email and password";
+    err.style.display = "block";
+    return;
+  }
+  const btn = document.getElementById("btn-signin");
+  btn.textContent = "Signing in…";
+  btn.disabled = true;
+  const res = await send("SIGN_IN", { email, password });
+  btn.textContent = "Sign In";
+  btn.disabled = false;
+  if (!res?.ok) {
+    err.textContent = res?.error || "Sign in failed";
+    err.style.display = "block";
+    return;
+  }
+  await refreshAccount();
 };
 
-// Save settings
-document.getElementById("btn-save").onclick = async () => {
-  await chrome.storage.local.set({
-    ai_mode: document.getElementById("ai-mode").value,
-    cloud_url: document.getElementById("cloud-url").value.trim() || "https://api.groq.com/openai/v1",
-    cloud_model: document.getElementById("cloud-model").value.trim() || "llama-3.1-8b-instant",
-    cloud_key: document.getElementById("cloud-key").value.trim(),
-    local_model: document.getElementById("local-model").value.trim(),
-    app_url: document.getElementById("app-url").value.trim() || "http://localhost:8080",
-  });
-  const msg = document.getElementById("saved-msg");
-  msg.style.display = "block";
-  setTimeout(() => { msg.style.display = "none"; }, 2000);
+// Sign out
+document.getElementById("btn-signout").onclick = async () => {
+  await send("SIGN_OUT");
+  await refreshAccount();
 };
 
 init();
