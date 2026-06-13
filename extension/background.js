@@ -201,14 +201,9 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, rows });
           break;
         }
-        case "AI_SUGGEST": {
-          const data = await callEdgeAI("suggest-replies", msg.body);
-          sendResponse({ ok: true, data });
-          break;
-        }
-        case "AI_ANALYZE": {
-          const data = await callEdgeAI("analyze-stage", msg.body);
-          sendResponse({ ok: true, data });
+        case "AI_PROXY": {
+          const data = await callEdgeAI("extension-ai", msg.body);
+          sendResponse({ ok: true, content: data.content });
           break;
         }
         default:
