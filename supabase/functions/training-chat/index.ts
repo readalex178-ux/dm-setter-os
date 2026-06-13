@@ -75,7 +75,8 @@ Rules:
 - Gradually warm up if the setter does well, stay guarded if they don't
 - Include occasional typos, abbreviations, or emojis to feel authentic
 - If the setter asks for a call and you feel the conversation earned it, agree tentatively
-- ONLY respond as the prospect. Do not add narration or commentary.`;
+- ONLY respond as the prospect. Do not add narration or commentary.
+${offerContext ? `\nThe setter is selling this offer (react realistically to it — ask about its price, outcome, and proof; raise objections a real prospect would):\n${offerContext}` : ""}`;
 
     const aiMessages: { role: string; content: string }[] = [
       { role: "system", content: systemPrompt },
