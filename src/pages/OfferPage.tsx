@@ -99,7 +99,7 @@ export default function OfferPage() {
         value_props: offer.value_props.filter((v) => v.trim()),
         proof: offer.proof,
         guarantee: offer.guarantee,
-        objections: offer.objections.filter((o) => o.objection.trim() || o.response.trim()),
+        objections: offer.objections.filter((o) => o.objection.trim() || o.response.trim()) as unknown as never,
         tone: offer.tone,
         cta_goal: offer.cta_goal,
       };
