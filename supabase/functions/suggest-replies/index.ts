@@ -17,6 +17,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { messages, prospect } = await req.json();
+    const offerContext = await loadOfferContext(req);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
