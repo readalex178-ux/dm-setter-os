@@ -1,3 +1,5 @@
+import { loadOfferContext } from "../_shared/offer.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -26,11 +28,13 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
+    const offerContext = await loadOfferContext(req);
+
     const convoText = messages
       .map((m: any) => `${m.sender === "setter" ? "Setter" : "Prospect"}: ${m.content}`)
       .join("\n");
 
-    const systemPrompt = `You are an expert DM sales coach using the BANT framework (Budget, Authority, Need, Timeline). Analyze a conversation between a setter and a prospect to determine the prospect's true pipeline stage. Be honest and evidence-based — quote directly from the conversation when possible.`;
+    const systemPrompt = `You are an expert DM sales coach using the BANT framework (Budget, Authority, Need, Timeline). Analyze a conversation between a setter and a prospect to determine the prospect's true pipeline stage. Be honest and evidence-based — quote directly from the conversation when possible.${offerContext}`;
 
     const userPrompt = `Prospect info:
 - Name: ${prospect.name || "Unknown"}

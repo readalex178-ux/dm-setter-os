@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadOfferContext } from "../_shared/offer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { messages, prospect } = await req.json();
+    const offerContext = await loadOfferContext(req);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -59,7 +61,8 @@ Rules:
 - Match the prospect's energy and communication style
 - If call readiness is high (>70%), include at least one call transition suggestion
 - If prospect has concerns, address them empathetically
-- Never be pushy or manipulative`;
+- Never be pushy or manipulative
+${offerContext}`;
 
     const response = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",

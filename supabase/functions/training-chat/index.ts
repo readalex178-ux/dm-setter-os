@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { loadOfferContext } from "../_shared/offer.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,6 +17,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { messages, scenario } = await req.json();
+    const offerContext = await loadOfferContext(req);
 
     if (!scenario) {
       return new Response(
@@ -73,7 +75,8 @@ Rules:
 - Gradually warm up if the setter does well, stay guarded if they don't
 - Include occasional typos, abbreviations, or emojis to feel authentic
 - If the setter asks for a call and you feel the conversation earned it, agree tentatively
-- ONLY respond as the prospect. Do not add narration or commentary.`;
+- ONLY respond as the prospect. Do not add narration or commentary.
+${offerContext ? `\nThe setter is selling this offer (react realistically to it — ask about its price, outcome, and proof; raise objections a real prospect would):\n${offerContext}` : ""}`;
 
     const aiMessages: { role: string; content: string }[] = [
       { role: "system", content: systemPrompt },

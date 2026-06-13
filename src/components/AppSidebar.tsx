@@ -1,12 +1,13 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
-  GraduationCap, Target, BarChart3, Settings, Activity, Link2, Chrome,
+  GraduationCap, Target, BarChart3, Settings, Activity, Link2, Chrome, Package, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
   SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem,
-  useSidebar,
+  SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
 
 const items = [
@@ -15,6 +16,7 @@ const items = [
   { title: "Inbox", url: "/app/inbox", icon: Inbox },
   { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
   { title: "Prospects", url: "/app/prospects", icon: Users },
+  { title: "My Offer", url: "/app/offer", icon: Package },
   { title: "Scripts Library", url: "/app/scripts", icon: BookOpen },
   { title: "Coaching", url: "/app/coaching", icon: GraduationCap },
   { title: "Training Mode", url: "/app/training", icon: Target },
@@ -27,6 +29,7 @@ const items = [
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
+  const { signOut, user } = useAuth();
 
   return (
     <Sidebar collapsible="icon">
@@ -62,6 +65,20 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton onClick={signOut} className="text-sidebar-foreground hover:bg-sidebar-accent">
+              <LogOut className="h-4 w-4 shrink-0" />
+              {!collapsed && (
+                <span className="truncate">
+                  {user?.email ? `Sign out` : "Sign out"}
+                </span>
+              )}
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }

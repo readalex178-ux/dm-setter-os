@@ -1,57 +1,26 @@
-// ai.js — AI calls via Groq (or any OpenAI-compatible API)
-// No Anthropic fallback — Groq only until you decide otherwise
-
-async function getAISettings() {
-  return chrome.storage.local.get([
-    "ai_mode", "cloud_url", "cloud_model", "cloud_key", "local_model", "app_url"
-  ]);
-}
+// ai.js — AI calls routed through the app's secure Edge Function (free Lovable AI).
+// No user API key needed. The server injects the user's Offer Profile automatically.
 
 async function callAI(systemPrompt, userMessage, maxTokens) {
-  const s = await getAISettings();
-  const mode = s.ai_mode || "cloud";
-
-  if (mode === "local") {
-    const appBase = (s.app_url || "http://localhost:8080").replace(/\/app.*$/, "");
-    const res = await fetch(appBase + "/local/v1/chat/completions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: s.local_model || "llama3",
-        max_tokens: maxTokens || 1024,
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }],
-      }),
-      signal: AbortSignal.timeout(60000),
-    });
-    if (!res.ok) throw new Error("Local AI error " + res.status + " — is LM Studio running?");
-    const data = await res.json();
-    return data.choices?.[0]?.message?.content ?? "";
-  }
-
-  // Cloud mode (Groq / OpenRouter / OpenAI)
-  const url = (s.cloud_url || "https://api.groq.com/openai/v1") + "/chat/completions";
-  const model = s.cloud_model || "llama-3.1-8b-instant";
-  const key = s.cloud_key || "";
-  if (!key) throw new Error("No API key set — open the extension popup, go to Settings, and add your Groq key");
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens || 1024,
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userMessage }],
-    }),
-    signal: AbortSignal.timeout(30000),
+  const result = await new Promise((resolve, reject) => {
+    chrome.runtime.sendMessage(
+      {
+        type: "AI_PROXY",
+        body: { system: systemPrompt, user: userMessage, maxTokens: maxTokens || 1024 },
+      },
+      (res) => {
+        if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
+        else resolve(res);
+      }
+    );
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error("AI error " + res.status + ": " + (err?.error?.message || "check your API key in Settings"));
+  if (!result?.ok) {
+    throw new Error(result?.error || "AI request failed — make sure you're signed in (open the popup).");
   }
-  const data = await res.json();
-  return data.choices?.[0]?.message?.content ?? "";
+  return result.content ?? "";
 }
+
 
 function parseAIResponse(raw) {
   if (!raw?.trim()) throw new Error("Empty response from AI");
