@@ -98,12 +98,7 @@ export default function InboxPage() {
           incomeGoal: sel.incomeGoal, motivation: sel.motivation, concerns: sel.concerns,
         }}
         messages={messages.map((m) => ({ sender: m.sender || "prospect", content: m.content || "" }))}
-        onApply={async (newStage) => {
-          if (useDemo || !selectedId) return;
-          const { error } = await supabase.from("prospects").update({ stage: newStage }).eq("id", selectedId);
-          if (error) throw error;
-          await applyStage(newStage);
-        }}
+        onApply={async (newStage) => { await applyStage(newStage); }}
       />
 
       <ConversationReviewDialog
