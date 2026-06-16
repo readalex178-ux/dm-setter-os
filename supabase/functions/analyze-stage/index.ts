@@ -1,4 +1,5 @@
 import { loadOfferContext } from "../_shared/offer.ts";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -24,9 +25,13 @@ Deno.serve(async (req) => {
   }
 
   try {
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { messages = [], prospect = {} } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
 
     const offerContext = await loadOfferContext(req);
 

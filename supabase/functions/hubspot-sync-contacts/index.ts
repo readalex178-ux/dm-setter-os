@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -68,6 +69,9 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { accountId } = await req.json();
 
     if (!accountId) {
@@ -91,6 +95,12 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Ownership check: caller must own this connected account
+    if (account.user_id !== user.id) {
+      return unauthorized(corsHeaders);
+    }
+
 
     // Refresh token if needed
     const accessToken = await refreshTokenIfNeeded(account, supabase, HUBSPOT_CLIENT_ID, HUBSPOT_CLIENT_SECRET);

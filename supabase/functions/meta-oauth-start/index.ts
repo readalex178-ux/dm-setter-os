@@ -31,7 +31,7 @@ serve(async (req) => {
     }
 
     // Build Meta OAuth URL
-    const state = JSON.stringify({ platform });
+    const state = JSON.stringify({ platform, redirectUri });
     const oauthUrl = new URL('https://www.facebook.com/v19.0/dialog/oauth');
     oauthUrl.searchParams.set('client_id', META_APP_ID);
     oauthUrl.searchParams.set('redirect_uri', redirectUri);

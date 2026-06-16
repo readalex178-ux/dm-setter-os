@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -24,6 +25,9 @@ serve(async (req) => {
       );
     }
 
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { code, state } = await req.json();
 
     if (!code) {
@@ -34,17 +38,27 @@ serve(async (req) => {
     }
 
     let platform = 'instagram';
+    let redirectUri = '';
     try {
       const parsed = JSON.parse(state || '{}');
       platform = parsed.platform || 'instagram';
+      redirectUri = parsed.redirectUri || '';
     } catch {}
+
+    if (!redirectUri) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid state: missing redirect URI.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Exchange code for access token
     const tokenUrl = new URL('https://graph.facebook.com/v19.0/oauth/access_token');
     tokenUrl.searchParams.set('client_id', META_APP_ID);
     tokenUrl.searchParams.set('client_secret', META_APP_SECRET);
-    tokenUrl.searchParams.set('redirect_uri', req.headers.get('origin') + '/app/integrations/callback');
+    tokenUrl.searchParams.set('redirect_uri', redirectUri);
     tokenUrl.searchParams.set('code', code);
+
 
     const tokenRes = await fetch(tokenUrl.toString());
     const tokenData = await tokenRes.json();
@@ -104,6 +118,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('connected_accounts')
       .upsert({
+        user_id: user.id,
         platform,
         platform_user_id: platformUserId,
         platform_username: platformUsername,
