@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { demoTrainingScenarios } from "@/data/demo-data";
 import { Target, Send, Bot, User, Sparkles, Loader2, ArrowLeft, RotateCcw, Mic, MicOff } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
+import { useSaveTrainingAttempt } from "@/hooks/useKnowledge";
+import { useICP } from "@/hooks/useKnowledge";
 
 interface ChatMsg {
   role: "user" | "ai-prospect";
