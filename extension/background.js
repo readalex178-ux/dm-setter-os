@@ -179,6 +179,13 @@ async function analyzeConversation(payload) {
   return await callEdgeFn("extension-analyze", payload);
 }
 
+// Hydrate the panel with stored intelligence about a prospect on chat open.
+async function getProspectContext(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
+  return await callEdgeFn("extension-context", payload);
+}
+
 // Verify the user's account / subscription status is still valid.
 async function verifySession() {
   const session = await getSession();
