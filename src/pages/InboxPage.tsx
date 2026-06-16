@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, MessageCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+
 import { useInbox } from "@/hooks/useInbox";
 import { EmptyState } from "@/components/EmptyState";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
