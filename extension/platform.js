@@ -8,6 +8,8 @@ const PLATFORMS = {
   "x.com":             { id: "twitter",   name: "Twitter/X", emoji: "𝕏",  dmPath: /\/messages/ },
   "www.facebook.com":  { id: "facebook",  name: "Facebook",  emoji: "👤", dmPath: /\/messages/ },
   "www.messenger.com": { id: "facebook",  name: "Messenger", emoji: "💬", dmPath: /.*/ },
+  "www.linkedin.com":  { id: "linkedin", name: "LinkedIn",  emoji: "💼", dmPath: /\/messaging/ },
+  "linkedin.com":      { id: "linkedin", name: "LinkedIn",  emoji: "💼", dmPath: /\/messaging/ },
 };
 
 function getCurrentPlatform() {
