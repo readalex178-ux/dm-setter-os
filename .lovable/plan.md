@@ -1,65 +1,83 @@
-# DM Setter OS — What's Done vs. Your Audit, and What's Left
+# DM Wingman Pro — Audit & Refactor Plan
 
-## What I've actually built so far
+## Audit Report (current real state)
 
-Your prompt has two intertwined asks: (A) **audit & recommend**, and (B) **turn the app into a real Day-1 operating system**. Here's the honest status.
+The platform is more complete than it looks. Most pages are already wired to real Supabase data (`useSetterData`, `useKnowledge`, `useReadiness`). Only `InboxPage` and `TrainingPage` still import demo seeds (used as fallback/scenario lists). All 12 edge functions are real and route AI through the Lovable gateway. The problems are structural and product-depth, not missing features.
 
-### Done — backend & security foundation
-- Real auth + per-user RLS on every table; all AI/OAuth/sync edge functions secured (JWT + ownership checks).
-- **My Offer** (Offer Bible) — real CRUD, injected into every AI call.
-- AI functions live: `suggest-replies` (3 tailored replies + coaching), `analyze-stage` (BANT scoring), `training-chat` (roleplay), `extension-ai`.
-- Chrome extension synced to Cloud.
+### Critical issues
+- `InboxPage.tsx` is **839 lines** — unmaintainable, the single biggest debt.
+- **No code-splitting**: every page is statically imported in `App.tsx`, so the whole app ships in one bundle.
+- **No error boundaries**: one render error white-screens the entire app.
+- **`new QueryClient()` with zero config** — no `staleTime`, retries, or refetch policy; causes duplicate requests and refetch storms.
+- **DB indexing gaps**: no index on `prospects.user_id`, `prospects.stage`, `prospects.last_contact_at`, `messages.user_id`, `daily_kpis(user_id,date)`. Every list query is a full scan per user.
 
-### Done — Phase 1 & 2 (data + metrics made real)
-- Dashboard, Pipeline, Prospects, Inbox wired to the database with real empty states (no more demo fiction).
-- KPI Tracker persists to `daily_kpis` (one record per user/day); benchmark bands (Poor→Elite) and streaks.
-- Analytics computes conversion, pipeline funnel, and objection patterns from live data.
+### High priority
+- Inbox modularization; lazy routes + Suspense; error boundaries; React Query defaults; DB indexes.
+- AI coach layer: conversation scoring, stage detection w/ confidence + manual override, conversation review mode, prospect memory.
 
-### Done — Phase 3 (Knowledge Base) — just shipped
-- New `/app/knowledge` with tabs: **ICP Bible, Objection Bible, FAQ, Wins & Losses**.
-- **Scripts Library** moved from demo data to real DB CRUD with favorites/categories.
-- New `loadContext()` injects Offer + ICP + Objections + FAQ into **all** AI prompts.
+### Medium priority
+- Sidebar grouping (CRM / AI / Performance / System).
+- Empty states already exist via `EmptyState` — extend to remaining pages.
+- Dashboard "focus first" reorg.
+- `.env.example` + startup env validation.
 
-### Mapping to your 17 parts
-| Part | Status |
-|---|---|
-| 3 Day-1 info (Offer/ICP/Market) | Offer ✅, ICP ✅, Market ❌ (no market/competitor fields) |
-| 6 Systems (trackers/DBs) | Lead/notes/KPI/objection/FAQ/offer/wins/losses ✅; booking tracker ⚠ partial |
-| 8 KPI & benchmarks | ✅ (corrective-action hints ⚠ light) |
-| 10 Knowledge Base | Offer/ICP/Objection/FAQ/Wins-Losses ✅; **Conversation DB (winning examples) ❌** |
-| 11 AI & automation | Reply/stage/training ✅; daily AI workflows & review loops ❌ |
-| 1,2,4,5,7,9,12,13,14,15,16,17 (audit/onboarding/coaching/roadmap) | **Not yet built as in-app product — still living in the plan doc, not the app** |
+### Low priority (defer)
+- White-label, agency, team leaderboards, billing — explicitly out of scope per brief.
 
-**Bottom line:** the data layer and knowledge base are real. What's still missing is the *guidance & coaching layer* that makes a brand-new setter perform on Day 1 — onboarding, readiness scoring, real coaching, conversation examples, market context, and daily AI routines.
+### Security findings
+- RLS is correctly `auth.uid() = user_id` on all tables; `connected_accounts` tokens are service-role-only (good).
+- `.env` is committed with publishable/anon keys only (safe), but no `.env.example` or missing-var validation.
+- Will run the security scanner and enable leaked-password protection (already enabled in a prior phase — verify).
 
----
+### Performance findings
+- Missing indexes (above). Default QueryClient. No lazy loading. Inbox re-renders whole tree on each keystroke.
 
-## Proposed remaining plan (pick any subset)
+### UX findings
+- Flat 15-item sidebar; no logical grouping. Dashboard mixes setup, briefing, KPIs without a clear "what now". Some pages lack empty states.
 
-### Phase 4 — Coaching + Training become real (Parts 7, 9, 11)
-- Store training attempts + AI grades in DB; show trend over time on Coaching page (replace hardcoded reviews).
-- Generate training scenarios from the setter's real ICP/objections.
-- Add **Conversation Database** (winning DM examples, taggable) as a 5th Knowledge tab, injected into AI.
+### AI recommendations
+- Move from reply-only to a scoring + coaching assistant grounded in the existing knowledge base (`loadContext`).
 
-### Phase 5 — Onboarding + Day-1 Readiness (Parts 4, 14, 15)
-- Guided first-run checklist: Offer → ICP → Objections → KPI goals → connect platform/extension → first AI reply.
-- **Day-1 Readiness Score** widget (pass/fail across offer, ICP, objections, FAQ, CRM, tracking, scripts) on Dashboard.
-- 30-day ramp plan surfaced as an in-app milestone tracker.
-
-### Phase 6 — Market context + AI daily workflows (Parts 3, 11, 12)
-- Add Market/Competitor fields to Offer (industry, competitors, sophistication, awareness) → into `loadContext`.
-- "Daily AI Briefing": end-of-day review of KPIs + objection patterns + follow-up queue with corrective actions.
-- Follow-up/no-show/reschedule reminder queue (Part 7 recovery systems).
-
-### Phase 7 — Scale & roadmap (Part 16, 17)
-- LinkedIn support in the extension (currently IG/TikTok/X/FB/Messenger only).
-- Team/agency rollups (requires a roles table) — future.
-- Leaked-password (HIBP) protection on signup.
-
-### Note on Parts 1, 2, 13, 17 (the written audit deliverables)
-These are *analysis documents*, not app features. I can deliver them as an in-app "Setter Playbook" page (markdown) or keep them in the plan doc. Tell me which you want.
+### Commercial readiness
+- Schema is already multi-tenant (`user_id` everywhere) — SaaS-ready foundation. Defer roles/teams/billing until core is polished, but keep all new tables `user_id`-scoped so multi-user is a later additive step.
 
 ---
 
-## Recommended next step
-Build **Phase 4 + Phase 5 together**: real coaching/training history + onboarding & Day-1 Readiness Score. This is what most directly delivers your core goal — "perform at the highest level from Day 1." Then Phase 6 (market + daily AI). Confirm and I'll implement.
+## Implementation Plan (priority order)
+
+### Phase 1 — Architecture
+1. **Inbox refactor** — split `InboxPage.tsx` into `src/components/inbox/`:
+   `InboxLayout`, `ConversationList`, `ConversationView`, `ConversationHeader`, `AIReplyPanel`, `ProspectSidebar`, `ConversationInsights`, plus reuse existing `StageAnalysisDialog`. Move data/effects into a `useInbox` hook. No behavior change.
+2. **Lazy routes** — convert page imports in `App.tsx` to `React.lazy` + a `<Suspense>` fallback spinner around `<Outlet/>`.
+3. **Error boundaries** — add a reusable `ErrorBoundary` component wrapping Dashboard, Inbox, AI panels, Knowledge Base, Analytics with a friendly retry fallback.
+
+### Phase 2 — Security & DB
+4. **Migration: indexes** on `prospects(user_id)`, `prospects(stage)`, `prospects(last_contact_at)`, `messages(user_id)`, `messages(prospect_id, sent_at)`, `daily_kpis(user_id, date)`.
+5. **`.env.example`** + a small `src/lib/env.ts` that validates required `VITE_` vars at startup and logs a clear warning if missing.
+6. Run security scanner; fix any findings tied to new tables; confirm leaked-password protection on.
+
+### Phase 3 — React Query
+7. Configure `QueryClient` defaults: `staleTime` 60s, `gcTime` 5m, `retry` 1, `refetchOnWindowFocus` false, with sensible per-query overrides for realtime-backed inbox data.
+
+### Phase 4 — UX
+8. **Sidebar grouping** into CRM / AI / Performance / System using `SidebarGroup` sections.
+9. **Dashboard reorg** to lead with an action panel: Follow-ups due, Hot leads, Active conversations, Booked, Conversion — answering "what should I focus on now?" Keep readiness/briefing below.
+10. Add empty states to any page still missing them.
+
+### Phase 5 — AI coach layer
+11. **Migration**: add scoring fields to `prospects` (`conversation_score int`, `booking_probability int`, `lead_temperature text`, `stage_confidence int`, `stage_suggested text`) and a **`prospect_memory`** table (`prospect_id`, `user_id`, `category` [goal/pain/budget/family/availability/objection/interest], `detail`, `source`, timestamps) with RLS + grants.
+12. **Edge function `score-conversation`** — returns Conversation Score, Booking Probability, Lead Temperature, Stage + confidence, Suggested Action; grounded via `loadContext`. Surface in `ConversationInsights`.
+13. **Stage detection** — extend `analyze-stage` output into the inbox header with confidence and a manual-override dropdown that writes `stage`.
+14. **Conversation Review Mode** — "AI DM Coach" panel/dialog that analyzes the full thread: strengths, weaknesses, missed qualification, missed objections, suggested improvements, alternative responses. Reuse for the Coaching page.
+15. **Prospect memory** — `score-conversation` extracts memory items into `prospect_memory`; inject stored memory into `loadContext` so future replies are personalized; display on `ProspectSidebar`.
+
+### Phase 6 — Product analytics (optional, needs keys)
+16. Integrate PostHog + Microsoft Clarity behind env keys; track feature usage and navigation. Will request keys before wiring.
+
+### Phase 7 — Commercial readiness (doc only)
+17. Written assessment of monetizable features and a multi-user/roles/billing roadmap — no code, per the defer list.
+
+## Technical notes
+- All new tables/columns stay `user_id`-scoped with RLS `auth.uid() = user_id` and explicit GRANTs.
+- Refactors preserve current behavior; each phase is independently shippable.
+- Edge functions reuse `_shared/auth.ts` + `_shared/context.ts` (knowledge grounding) and forced tool-calls for structured JSON, matching existing patterns.
