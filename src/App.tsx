@@ -23,6 +23,7 @@ import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import ExtensionPage from "./pages/ExtensionPage";
 import OfferPage from "./pages/OfferPage";
 import KnowledgeBasePage from "./pages/KnowledgeBasePage";
+import FollowUpsPage from "./pages/FollowUpsPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
