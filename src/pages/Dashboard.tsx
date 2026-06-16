@@ -88,6 +88,9 @@ export default function Dashboard() {
       {/* Day-1 Readiness */}
       <DayOneReadiness />
 
+      {/* Daily AI Briefing */}
+      <DailyBriefing />
+
       {/* Today's Goal Progress */}
       <Card className="border-primary/20">
         <CardContent className="p-4">
