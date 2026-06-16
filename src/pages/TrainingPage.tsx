@@ -178,7 +178,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setError(null);
 
     // Get AI's opening message
-    const sc = demoTrainingScenarios.find((s) => s.id === id);
+    const sc = scenarios.find((s) => s.id === id);
     setAiThinking(true);
     const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
       body: {
@@ -238,7 +238,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
 
       {!activeScenario ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {demoTrainingScenarios.map((s) => (
+          {scenarios.map((s) => (
             <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3">
