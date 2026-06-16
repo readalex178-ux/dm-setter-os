@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 const features = [
   { icon: MessageSquare, title: "Quick Inbox", desc: "See recent DM conversations and unread counts at a glance" },
   { icon: Layout, title: "Full App Access", desc: "Open the complete DM Setter OS dashboard in a new tab" },
-  { icon: Puzzle, title: "Page Overlay", desc: "Floating widget on Instagram, Facebook & Messenger with AI insights" },
+  { icon: Puzzle, title: "Page Overlay", desc: "Floating widget on Instagram, TikTok, X, Facebook & LinkedIn with AI insights" },
   { icon: Bell, title: "Notifications", desc: "Get alerts when hot leads reply or prospects are call-ready" },
 ];
 
