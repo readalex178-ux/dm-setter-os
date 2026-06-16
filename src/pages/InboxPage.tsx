@@ -86,7 +86,8 @@ export default function InboxPage() {
   const [search, setSearch] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [useDemo, setUseDemo] = useState(true);
+  const [useDemo, setUseDemo] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
