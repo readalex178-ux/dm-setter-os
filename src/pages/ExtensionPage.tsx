@@ -57,7 +57,7 @@ export default function ExtensionPage() {
           <h1 className="text-3xl font-bold">Chrome Extension</h1>
         </div>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Take DM Setter OS everywhere — get AI-powered prospect insights right inside Instagram, Facebook & Messenger.
+          Take DM Setter OS everywhere — get AI-powered prospect insights right inside Instagram, TikTok, X, Facebook & LinkedIn.
         </p>
         <Badge variant="secondary" className="text-xs">Works on Chrome, Edge, Brave & Arc</Badge>
       </div>
