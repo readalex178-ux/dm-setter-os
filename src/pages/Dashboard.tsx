@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useProspects, useKPIs, useAddProspect } from "@/hooks/useSetterData";
 import { kpiGoals, getTodayKPI, getStreak } from "@/lib/kpi";
 import { EmptyState } from "@/components/EmptyState";
+import { DayOneReadiness } from "@/components/DayOneReadiness";
 
 const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
