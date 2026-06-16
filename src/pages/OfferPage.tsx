@@ -114,6 +114,10 @@ export default function OfferPage() {
         objections: offer.objections.filter((o) => o.objection.trim() || o.response.trim()) as unknown as never,
         tone: offer.tone,
         cta_goal: offer.cta_goal,
+        industry: offer.industry,
+        competitors: offer.competitors,
+        market_sophistication: offer.market_sophistication,
+        market_awareness: offer.market_awareness,
       };
       let error;
       if (offer.id) {
