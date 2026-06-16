@@ -141,6 +141,23 @@ function getProspectName(platformId) {
     if (el?.textContent?.trim()) return el.textContent.trim();
   }
 
+  // LinkedIn
+  if (platformId === "linkedin") {
+    const selectors = [
+      '.msg-thread__link-to-profile',
+      '.msg-conversation-card__title-row h2',
+      '.msg-overlay-bubble-header__title',
+      'h2.msg-entity-lockup__entity-title',
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      const text = el?.textContent?.trim();
+      if (text && text.length > 0 && text.length < 60 && text !== "LinkedIn") return text;
+    }
+    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Messaging\s*\|?\s*/i, "").trim();
+    if (title && title !== "LinkedIn" && title !== "Messaging" && title.length < 60) return title;
+  }
+
   return null;
 }
 
