@@ -170,6 +170,7 @@ export default function PipelinePage() {
         currentStage={analyzeTarget?.stage || ""}
         prospect={analyzeTarget || {}}
         messages={[]}
+        onApply={(stage) => analyzeId && move(analyzeId, stage)}
       />
     </div>
   );
