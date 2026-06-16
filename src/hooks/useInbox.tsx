@@ -216,7 +216,7 @@ export function useInbox() {
         incomeGoal: sel.incomeGoal,
       };
       const { data, error } = await supabase.functions.invoke("suggest-replies", {
-        body: { messages: msgPayload, prospect: prospectPayload },
+        body: { messages: msgPayload, prospect: prospectPayload, prospectId: useDemo ? undefined : selectedId },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
