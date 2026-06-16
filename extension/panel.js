@@ -467,9 +467,14 @@ chrome.storage.onChanged.addListener((changes) => {
   }
 });
 
-// Toggle from popup / action click.
+// Messages from the popup.
 chrome.runtime.onMessage.addListener((msg) => {
-  if (msg?.type === "TOGGLE_PANEL") togglePanel(msg.show);
+  if (msg?.type === "TOGGLE_OVERLAY") togglePanel(!!msg.visible);
+  if (msg?.type === "TOGGLE_PANEL") togglePanel(!!msg.show);
+  if (msg?.type === "ANALYSE_NOW") {
+    if (!isOpen) openPanel();
+    setTimeout(() => analyse(), 400);
+  }
 });
 
 // Restore last state.
