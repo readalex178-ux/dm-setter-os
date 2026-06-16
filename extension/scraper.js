@@ -243,6 +243,27 @@ function extractMessages(container, platformId) {
     });
   }
 
+  else if (platformId === "linkedin") {
+    // LinkedIn groups messages in event list items; the active speaker has a meta header.
+    const events = container.querySelectorAll('.msg-s-event-listitem, li.msg-s-message-list__event');
+    events.forEach(el => {
+      const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
+      const text = bodyEl?.textContent?.trim();
+      // LinkedIn marks the current user's own messages with this modifier class.
+      const isOwn = el.classList.contains('msg-s-event-listitem--other') === false
+        && (el.querySelector('.msg-s-message-group--other') === null)
+        && detectSender(el) === "setter";
+      const sender = isOwn ? "setter" : (detectSender(el) || "prospect");
+      add(text, sender);
+    });
+    // Fallback: scoped dir="auto" leaves
+    if (msgs.length === 0) {
+      container.querySelectorAll('.msg-s-event-listitem__body').forEach(el => {
+        add(el.textContent?.trim(), detectSender(el) || "prospect");
+      });
+    }
+  }
+
   return msgs;
 }
 
