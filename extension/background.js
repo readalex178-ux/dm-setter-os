@@ -234,6 +234,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, analysis: data });
           break;
         }
+        case "GET_CONTEXT": {
+          const data = await getProspectContext(msg.payload);
+          sendResponse({ ok: true, context: data });
+          break;
+        }
         case "SAVE_CONVERSATION": {
           const r = await saveConversation(msg.payload);
           sendResponse({ ok: true, id: r.id });
