@@ -403,13 +403,56 @@ export type Database = {
         }
         Relationships: []
       }
+      prospect_memory: {
+        Row: {
+          category: string
+          created_at: string
+          detail: string
+          id: string
+          prospect_id: string
+          source: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          detail: string
+          id?: string
+          prospect_id: string
+          source?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          detail?: string
+          id?: string
+          prospect_id?: string
+          source?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prospect_memory_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prospects: {
         Row: {
           avatar_url: string | null
+          booking_probability: number | null
           call_readiness: number | null
           concerns: string | null
           concerns_confidence: number | null
           connected_account_id: string | null
+          conversation_score: number | null
           created_at: string
           current_job: string | null
           handle: string | null
@@ -418,7 +461,9 @@ export type Database = {
           intent_confidence: number | null
           intent_level: string | null
           last_contact_at: string | null
+          last_scored_at: string | null
           lead_score: number | null
+          lead_temperature: string | null
           location: string | null
           motivation: string | null
           motivation_confidence: number | null
@@ -428,6 +473,9 @@ export type Database = {
           platform_thread_id: string | null
           source: string | null
           stage: string
+          stage_confidence: number | null
+          stage_suggested: string | null
+          suggested_action: string | null
           tags: string[] | null
           time_availability: string | null
           updated_at: string
@@ -435,10 +483,12 @@ export type Database = {
         }
         Insert: {
           avatar_url?: string | null
+          booking_probability?: number | null
           call_readiness?: number | null
           concerns?: string | null
           concerns_confidence?: number | null
           connected_account_id?: string | null
+          conversation_score?: number | null
           created_at?: string
           current_job?: string | null
           handle?: string | null
@@ -447,7 +497,9 @@ export type Database = {
           intent_confidence?: number | null
           intent_level?: string | null
           last_contact_at?: string | null
+          last_scored_at?: string | null
           lead_score?: number | null
+          lead_temperature?: string | null
           location?: string | null
           motivation?: string | null
           motivation_confidence?: number | null
@@ -457,6 +509,9 @@ export type Database = {
           platform_thread_id?: string | null
           source?: string | null
           stage?: string
+          stage_confidence?: number | null
+          stage_suggested?: string | null
+          suggested_action?: string | null
           tags?: string[] | null
           time_availability?: string | null
           updated_at?: string
@@ -464,10 +519,12 @@ export type Database = {
         }
         Update: {
           avatar_url?: string | null
+          booking_probability?: number | null
           call_readiness?: number | null
           concerns?: string | null
           concerns_confidence?: number | null
           connected_account_id?: string | null
+          conversation_score?: number | null
           created_at?: string
           current_job?: string | null
           handle?: string | null
@@ -476,7 +533,9 @@ export type Database = {
           intent_confidence?: number | null
           intent_level?: string | null
           last_contact_at?: string | null
+          last_scored_at?: string | null
           lead_score?: number | null
+          lead_temperature?: string | null
           location?: string | null
           motivation?: string | null
           motivation_confidence?: number | null
@@ -486,6 +545,9 @@ export type Database = {
           platform_thread_id?: string | null
           source?: string | null
           stage?: string
+          stage_confidence?: number | null
+          stage_suggested?: string | null
+          suggested_action?: string | null
           tags?: string[] | null
           time_availability?: string | null
           updated_at?: string

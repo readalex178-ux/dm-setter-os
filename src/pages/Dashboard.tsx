@@ -36,6 +36,23 @@ export default function Dashboard() {
   const cold = prospects.filter((p) => p.stage === "Cold Lead").length;
   const conversionRate = prospects.length ? Math.round((booked / prospects.length) * 100) : 0;
 
+  // Follow-ups due: active prospects untouched for 2+ days
+  const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+  const followUpsDue = prospects.filter((p) => {
+    if (["Call Booked", "Not Qualified", "Cold Lead"].includes(p.stage)) return false;
+    if (!p.last_contact_at) return true;
+    return Date.now() - new Date(p.last_contact_at).getTime() > TWO_DAYS;
+  }).length;
+  const hotLeads = prospects.filter((p) => (p.lead_score ?? 0) >= 7).length;
+
+  const focusItems = [
+    { label: "Follow-ups due", value: followUpsDue, icon: Clock, to: "/app/followups", tone: followUpsDue > 0 ? "text-warning" : "text-muted-foreground" },
+    { label: "Hot leads", value: hotLeads, icon: Flame, to: "/app/inbox", tone: hotLeads > 0 ? "text-destructive" : "text-muted-foreground" },
+    { label: "Active conversations", value: activeLeads, icon: MessageSquare, to: "/app/inbox", tone: "text-info" },
+    { label: "Ready for call", value: readyForCall, icon: Phone, to: "/app/pipeline", tone: readyForCall > 0 ? "text-success" : "text-muted-foreground" },
+    { label: "Calls booked", value: booked, icon: PhoneCall, to: "/app/pipeline", tone: "text-success" },
+  ];
+
   const kpiCards = [
     { label: "Total Prospects", value: prospects.length, icon: MessageSquare, color: "text-primary" },
     { label: "Active Leads", value: activeLeads, icon: Users, color: "text-info" },
@@ -85,8 +102,30 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Focus Now — what to act on right now */}
+      {prospects.length > 0 && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              <Target className="h-4 w-4 text-primary" /> Focus Now
+              <span className="text-xs font-normal text-muted-foreground">— what to act on right now</span>
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {focusItems.map((f) => (
+                <Link key={f.label} to={f.to} className="rounded-lg border border-border bg-card p-3 hover:bg-muted/60 transition-colors">
+                  <f.icon className={`h-4 w-4 mb-2 ${f.tone}`} />
+                  <div className="text-2xl font-bold">{f.value}</div>
+                  <div className="text-xs text-muted-foreground">{f.label}</div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Day-1 Readiness */}
       <DayOneReadiness />
+
 
       {/* Daily AI Briefing */}
       <DailyBriefing />

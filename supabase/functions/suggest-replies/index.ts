@@ -20,8 +20,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
-    const { messages, prospect } = await req.json();
-    const offerContext = await loadContext(req);
+    const { messages, prospect, prospectId } = await req.json();
+    const offerContext = await loadContext(req, prospectId ? { prospectId } : undefined);
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(

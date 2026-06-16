@@ -13,7 +13,7 @@ function client(req: Request) {
   });
 }
 
-export async function loadContext(req: Request): Promise<string> {
+export async function loadContext(req: Request, opts?: { prospectId?: string }): Promise<string> {
   try {
     const supabase = client(req);
     if (!supabase) return "";
@@ -50,11 +50,29 @@ export async function loadContext(req: Request): Promise<string> {
     const convos = formatConversations(convRes.data || []);
     if (convos) parts.push(convos);
 
+    // Per-prospect memory (Phase 5) — personalize replies/analysis for this person
+    if (opts?.prospectId) {
+      const { data: mem } = await supabase.from("prospect_memory")
+        .select("category, detail").eq("prospect_id", opts.prospectId)
+        .order("created_at", { ascending: false }).limit(30);
+      const memBlock = formatMemory(mem || []);
+      if (memBlock) parts.push(memBlock);
+    }
+
     return parts.join("\n\n");
   } catch (_e) {
     return "";
   }
 }
+
+function formatMemory(list: any[]): string {
+  if (!list.length) return "";
+  const lines = list.map((m) => `  • [${m.category}] ${m.detail}`).join("\n");
+  return `=== WHAT WE KNOW ABOUT THIS PROSPECT (use to personalize) ===
+${lines}
+=== END PROSPECT MEMORY ===`;
+}
+
 
 function formatICP(i: any): string {
   if (!i) return "";
