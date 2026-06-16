@@ -83,6 +83,7 @@ serve(async (req) => {
       .from('connected_accounts')
       .upsert(
         {
+          user_id: user.id,
           platform: 'hubspot',
           platform_user_id: String(accountData.hub_id || accountData.user_id),
           platform_username: accountData.user || null,
@@ -102,6 +103,7 @@ serve(async (req) => {
       const { error: insertError } = await supabase
         .from('connected_accounts')
         .insert({
+          user_id: user.id,
           platform: 'hubspot',
           platform_user_id: String(accountData.hub_id || accountData.user_id),
           platform_username: accountData.user || null,
