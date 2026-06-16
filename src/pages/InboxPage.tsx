@@ -177,14 +177,12 @@ export default function InboxPage() {
         .select("*")
         .order("last_contact_at", { ascending: false });
 
+      setUseDemo(false);
       if (data && data.length > 0) {
         setDbProspects(data as DBProspect[]);
-        setUseDemo(false);
         setSelectedId(data[0].id);
-      } else {
-        setUseDemo(true);
-        setSelectedId(demoProspects[0].id);
       }
+      setLoaded(true);
     }
     load();
   }, []);
