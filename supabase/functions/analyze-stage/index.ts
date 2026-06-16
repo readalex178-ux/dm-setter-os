@@ -1,4 +1,4 @@
-import { loadOfferContext } from "../_shared/offer.ts";
+import { loadContext } from "../_shared/context.ts";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
 
 
-    const offerContext = await loadOfferContext(req);
+    const offerContext = await loadContext(req);
 
     const convoText = messages
       .map((m: any) => `${m.sender === "setter" ? "Setter" : "Prospect"}: ${m.content}`)

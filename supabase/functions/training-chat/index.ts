@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { loadOfferContext } from "../_shared/offer.ts";
+import { loadContext } from "../_shared/context.ts";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
@@ -21,7 +21,7 @@ serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const { messages, scenario } = await req.json();
-    const offerContext = await loadOfferContext(req);
+    const offerContext = await loadContext(req);
 
     if (!scenario) {
       return new Response(
