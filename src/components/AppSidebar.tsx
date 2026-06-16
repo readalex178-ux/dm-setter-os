@@ -17,6 +17,7 @@ const items = [
   { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
   { title: "Prospects", url: "/app/prospects", icon: Users },
   { title: "My Offer", url: "/app/offer", icon: Package },
+  { title: "Knowledge Base", url: "/app/knowledge", icon: Library },
   { title: "Scripts Library", url: "/app/scripts", icon: BookOpen },
   { title: "Coaching", url: "/app/coaching", icon: GraduationCap },
   { title: "Training Mode", url: "/app/training", icon: Target },
