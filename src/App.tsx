@@ -22,6 +22,7 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import ExtensionPage from "./pages/ExtensionPage";
 import OfferPage from "./pages/OfferPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
