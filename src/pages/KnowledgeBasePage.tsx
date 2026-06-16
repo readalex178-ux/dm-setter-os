@@ -143,7 +143,7 @@ function ObjectionsTab() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{OBJECTION_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
-            <Input placeholder='Objection (e.g. "It\'s too expensive")' value={form.objection} onChange={(e) => setForm({ ...form, objection: e.target.value })} />
+            <Input placeholder="Objection (e.g. too expensive)" value={form.objection} onChange={(e) => setForm({ ...form, objection: e.target.value })} />
             <Input placeholder="Framework (optional, e.g. Feel-Felt-Found)" value={form.framework ?? ""} onChange={(e) => setForm({ ...form, framework: e.target.value })} />
             <Textarea rows={4} placeholder="Your best response..." value={form.response} onChange={(e) => setForm({ ...form, response: e.target.value })} />
           </div>
