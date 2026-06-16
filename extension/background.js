@@ -179,6 +179,13 @@ async function analyzeConversation(payload) {
   return await callEdgeFn("extension-analyze", payload);
 }
 
+// Hydrate the panel with stored intelligence about a prospect on chat open.
+async function getProspectContext(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
+  return await callEdgeFn("extension-context", payload);
+}
+
 // Verify the user's account / subscription status is still valid.
 async function verifySession() {
   const session = await getSession();
@@ -225,6 +232,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "ANALYZE_CONVERSATION": {
           const data = await analyzeConversation(msg.payload);
           sendResponse({ ok: true, analysis: data });
+          break;
+        }
+        case "GET_CONTEXT": {
+          const data = await getProspectContext(msg.payload);
+          sendResponse({ ok: true, context: data });
           break;
         }
         case "SAVE_CONVERSATION": {

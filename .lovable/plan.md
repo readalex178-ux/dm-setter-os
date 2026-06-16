@@ -1,83 +1,63 @@
-# DM Wingman Pro — Audit & Refactor Plan
+# Chrome Extension — Full Rebuild (Thin Interface Layer)
 
-## Audit Report (current real state)
+## Goal
+Rebuild the extension so it is a pure interface: it extracts conversations, calls DM Setter OS, and renders results. All intelligence stays server-side. UI matches the DM Setter OS design system exactly, with a safe error state whenever the OS is unreachable.
 
-The platform is more complete than it looks. Most pages are already wired to real Supabase data (`useSetterData`, `useKnowledge`, `useReadiness`). Only `InboxPage` and `TrainingPage` still import demo seeds (used as fallback/scenario lists). All 12 edge functions are real and route AI through the Lovable gateway. The problems are structural and product-depth, not missing features.
+## What stays vs changes
+- **Keep:** `background.js` session/token model, `scraper.js` extraction selectors, `popup.js` sign-in flow, `manifest.json` permissions and host list (already covers IG, FB/Messenger, LinkedIn, TikTok, X).
+- **Rebuild:** the panel UI + flow (`panel.js`, `panel.css`) to a strict 4-panel layout matched to the app design system, plus a connection/error state machine.
+- **Add:** a backend prospect-context endpoint so the extension can pull history/objections/approach on chat open.
 
-### Critical issues
-- `InboxPage.tsx` is **839 lines** — unmaintainable, the single biggest debt.
-- **No code-splitting**: every page is statically imported in `App.tsx`, so the whole app ships in one bundle.
-- **No error boundaries**: one render error white-screens the entire app.
-- **`new QueryClient()` with zero config** — no `staleTime`, retries, or refetch policy; causes duplicate requests and refetch storms.
-- **DB indexing gaps**: no index on `prospects.user_id`, `prospects.stage`, `prospects.last_contact_at`, `messages.user_id`, `daily_kpis(user_id,date)`. Every list query is a full scan per user.
+## Architecture (single connected system)
+```text
+Social platform DOM
+  -> scraper.js (extract only: name, handle, messages, sender)
+  -> panel.js  (UI render only)
+  -> background.js (auth + REST/edge bridge)
+  -> DM Setter OS edge functions (ALL intelligence)
+        - extension-analyze   (score, stage, objections, next action, replies)
+        - extension-context    (NEW: prior history summary + approach)
+  -> structured JSON back to panel.js -> render
+```
+If any OS call fails or the user is signed out, the panel enters a **safe error state**: no cached intelligence is shown as fresh, a clear status banner appears, and action buttons disable.
 
-### High priority
-- Inbox modularization; lazy routes + Suspense; error boundaries; React Query defaults; DB indexes.
-- AI coach layer: conversation scoring, stage detection w/ confidence + manual override, conversation review mode, prospect memory.
+## Backend changes
+1. **New edge function `extension-context`** (`supabase/functions/extension-context/index.ts`)
+   - Auth-gated (reuse `_shared/auth.ts`). Input: `{ platform, name, handle }`.
+   - Looks up an existing prospect for this `user_id` (match by handle, then name). Returns:
+     `{ found, prospect: { name, stage, conversation_score, booking_probability, lead_temperature, suggested_action }, history_summary, objections, prospect_memory[], recommended_approach }`.
+   - Pulls recent `messages`, `prospect_memory`, and `concerns`; summarises via Lovable AI (`google/gemini-3-flash-preview`) using `loadContext` for offer/ICP grounding. Returns empty/`found:false` cleanly for brand-new prospects.
+2. **`extension-analyze`** — unchanged contract; reused as the analysis engine.
+3. **`background.js`** — add `GET_CONTEXT` message type that calls `extension-context`; keep existing `ANALYZE_CONVERSATION`, `SAVE_CONVERSATION`, `VERIFY_SESSION`, `GET_RECENT`.
 
-### Medium priority
-- Sidebar grouping (CRM / AI / Performance / System).
-- Empty states already exist via `EmptyState` — extend to remaining pages.
-- Dashboard "focus first" reorg.
-- `.env.example` + startup env validation.
+## Extension UI rebuild (matches DM Setter OS)
+Rewrite `panel.css` to use the app tokens (no GitHub palette):
+- Font `Inter` (headings/body) + `JetBrains Mono` for metric numbers.
+- Dark surface `hsl(222 30% 7%)` bg, cards `hsl(222 25% 10%)`, border `hsl(222 18% 16%)`, primary cyan `hsl(186 100% 50%)`, success/warning/destructive matching `--success/--warning/--destructive`, radius `0.625rem`, same button styles (primary/ghost/sm) and card components as the app.
 
-### Low priority (defer)
-- White-label, agency, team leaderboards, billing — explicitly out of scope per brief.
+Rewrite `panel.js` into the required 4-panel layout:
+- **Connection bar** — live status dot: Connected / Not signed in / OS unreachable (safe error).
+- **Panel 1 — Prospect Overview:** name, platform, stage, score.
+- **Panel 2 — AI Insights:** objections, intent/temperature + summary, recommended next action.
+- **Panel 3 — Replies:** 3–5 suggestions with copy, regenerate (new OS call), and insert-into-message-box (writes into the platform composer where a target exists; copy fallback otherwise).
+- **Panel 4 — CRM Actions:** save / sync, update stage (stage list sent to `extension-analyze`/save). Keep manual-paste fallback as a collapsed utility.
 
-### Security findings
-- RLS is correctly `auth.uid() = user_id` on all tables; `connected_accounts` tokens are service-role-only (good).
-- `.env` is committed with publishable/anon keys only (safe), but no `.env.example` or missing-var validation.
-- Will run the security scanner and enable leaked-password protection (already enabled in a prior phase — verify).
+## Real-time behaviour (event-driven, no polling loops)
+- On panel open and on detected **thread change** (URL/path change + header name change via a lightweight `MutationObserver` debounced ~800ms), the extension:
+  1. extracts the conversation,
+  2. calls `GET_CONTEXT` to hydrate Panels 1–2 instantly with stored history,
+  3. leaves full Analyse/Replies as an explicit action (and a "re-analyse" on thread change) to control AI credit usage.
+- Replace the current 2.5s `setInterval` preview scan with the observer-driven model to satisfy the "no continuous polling" rule.
 
-### Performance findings
-- Missing indexes (above). Default QueryClient. No lazy loading. Inbox re-renders whole tree on each keystroke.
+## Safe error state rules
+- Every OS call wrapped; on `401` -> "Sign in via popup"; on network/`5xx` -> "DM Setter OS unreachable — retry"; on `402`/`429` -> credit/rate messages. Action buttons disable while disconnected; no stale intelligence rendered as current.
 
-### UX findings
-- Flat 15-item sidebar; no logical grouping. Dashboard mixes setup, briefing, KPIs without a clear "what now". Some pages lack empty states.
+## Packaging
+- Repackage to `public/dm-setter-os-extension.zip` via `nix run nixpkgs#zip`. Bump `manifest.json` to `4.0.0`. Update `src/pages/ExtensionPage.tsx` feature copy to reflect the 4-panel layout + context hydration.
 
-### AI recommendations
-- Move from reply-only to a scoring + coaching assistant grounded in the existing knowledge base (`loadContext`).
+## Files
+- New: `supabase/functions/extension-context/index.ts`
+- Edit: `extension/panel.js`, `extension/panel.css`, `extension/background.js`, `extension/manifest.json`, `extension/popup.js` (insert-into-composer plumbing if needed), `public/dm-setter-os-extension.zip`, `src/pages/ExtensionPage.tsx`
 
-### Commercial readiness
-- Schema is already multi-tenant (`user_id` everywhere) — SaaS-ready foundation. Defer roles/teams/billing until core is polished, but keep all new tables `user_id`-scoped so multi-user is a later additive step.
-
----
-
-## Implementation Plan (priority order)
-
-### Phase 1 — Architecture
-1. **Inbox refactor** — split `InboxPage.tsx` into `src/components/inbox/`:
-   `InboxLayout`, `ConversationList`, `ConversationView`, `ConversationHeader`, `AIReplyPanel`, `ProspectSidebar`, `ConversationInsights`, plus reuse existing `StageAnalysisDialog`. Move data/effects into a `useInbox` hook. No behavior change.
-2. **Lazy routes** — convert page imports in `App.tsx` to `React.lazy` + a `<Suspense>` fallback spinner around `<Outlet/>`.
-3. **Error boundaries** — add a reusable `ErrorBoundary` component wrapping Dashboard, Inbox, AI panels, Knowledge Base, Analytics with a friendly retry fallback.
-
-### Phase 2 — Security & DB
-4. **Migration: indexes** on `prospects(user_id)`, `prospects(stage)`, `prospects(last_contact_at)`, `messages(user_id)`, `messages(prospect_id, sent_at)`, `daily_kpis(user_id, date)`.
-5. **`.env.example`** + a small `src/lib/env.ts` that validates required `VITE_` vars at startup and logs a clear warning if missing.
-6. Run security scanner; fix any findings tied to new tables; confirm leaked-password protection on.
-
-### Phase 3 — React Query
-7. Configure `QueryClient` defaults: `staleTime` 60s, `gcTime` 5m, `retry` 1, `refetchOnWindowFocus` false, with sensible per-query overrides for realtime-backed inbox data.
-
-### Phase 4 — UX
-8. **Sidebar grouping** into CRM / AI / Performance / System using `SidebarGroup` sections.
-9. **Dashboard reorg** to lead with an action panel: Follow-ups due, Hot leads, Active conversations, Booked, Conversion — answering "what should I focus on now?" Keep readiness/briefing below.
-10. Add empty states to any page still missing them.
-
-### Phase 5 — AI coach layer
-11. **Migration**: add scoring fields to `prospects` (`conversation_score int`, `booking_probability int`, `lead_temperature text`, `stage_confidence int`, `stage_suggested text`) and a **`prospect_memory`** table (`prospect_id`, `user_id`, `category` [goal/pain/budget/family/availability/objection/interest], `detail`, `source`, timestamps) with RLS + grants.
-12. **Edge function `score-conversation`** — returns Conversation Score, Booking Probability, Lead Temperature, Stage + confidence, Suggested Action; grounded via `loadContext`. Surface in `ConversationInsights`.
-13. **Stage detection** — extend `analyze-stage` output into the inbox header with confidence and a manual-override dropdown that writes `stage`.
-14. **Conversation Review Mode** — "AI DM Coach" panel/dialog that analyzes the full thread: strengths, weaknesses, missed qualification, missed objections, suggested improvements, alternative responses. Reuse for the Coaching page.
-15. **Prospect memory** — `score-conversation` extracts memory items into `prospect_memory`; inject stored memory into `loadContext` so future replies are personalized; display on `ProspectSidebar`.
-
-### Phase 6 — Product analytics (optional, needs keys)
-16. Integrate PostHog + Microsoft Clarity behind env keys; track feature usage and navigation. Will request keys before wiring.
-
-### Phase 7 — Commercial readiness (doc only)
-17. Written assessment of monetizable features and a multi-user/roles/billing roadmap — no code, per the defer list.
-
-## Technical notes
-- All new tables/columns stay `user_id`-scoped with RLS `auth.uid() = user_id` and explicit GRANTs.
-- Refactors preserve current behavior; each phase is independently shippable.
-- Edge functions reuse `_shared/auth.ts` + `_shared/context.ts` (knowledge grounding) and forced tool-calls for structured JSON, matching existing patterns.
+## Out of scope
+- No new AI/scoring logic inside the extension. No CRM logic in the extension. No changes to web-app intelligence beyond the new context endpoint.
