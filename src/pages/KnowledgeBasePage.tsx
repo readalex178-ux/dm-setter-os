@@ -18,10 +18,11 @@ import {
   useObjections, useSaveObjection, useDeleteObjection,
   useFAQs, useSaveFAQ, useDeleteFAQ,
   useWinLoss, useSaveWinLoss, useDeleteWinLoss,
-  OBJECTION_CATEGORIES,
-  type ObjectionEntry, type FAQEntry, type WinLossLog,
+  useConversations, useSaveConversation, useDeleteConversation,
+  OBJECTION_CATEGORIES, CONVERSATION_CATEGORIES,
+  type ObjectionEntry, type FAQEntry, type WinLossLog, type ConversationExample,
 } from "@/hooks/useKnowledge";
-import { Plus, Pencil, Trash2, Target, MessageSquareWarning, HelpCircle, Trophy } from "lucide-react";
+import { Plus, Pencil, Trash2, Target, MessageSquareWarning, HelpCircle, Trophy, MessagesSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export default function KnowledgeBasePage() {
@@ -38,11 +39,13 @@ export default function KnowledgeBasePage() {
           <TabsTrigger value="icp"><Target className="h-4 w-4 mr-1" /> ICP Bible</TabsTrigger>
           <TabsTrigger value="objections"><MessageSquareWarning className="h-4 w-4 mr-1" /> Objections</TabsTrigger>
           <TabsTrigger value="faq"><HelpCircle className="h-4 w-4 mr-1" /> FAQ</TabsTrigger>
+          <TabsTrigger value="conversations"><MessagesSquare className="h-4 w-4 mr-1" /> Conversations</TabsTrigger>
           <TabsTrigger value="wins"><Trophy className="h-4 w-4 mr-1" /> Wins & Losses</TabsTrigger>
         </TabsList>
         <TabsContent value="icp" className="mt-4"><ICPTab /></TabsContent>
         <TabsContent value="objections" className="mt-4"><ObjectionsTab /></TabsContent>
         <TabsContent value="faq" className="mt-4"><FAQTab /></TabsContent>
+        <TabsContent value="conversations" className="mt-4"><ConversationsTab /></TabsContent>
         <TabsContent value="wins" className="mt-4"><WinsTab /></TabsContent>
       </Tabs>
     </div>
@@ -267,6 +270,73 @@ function WinsTab() {
             <Input placeholder="Prospect name (optional)" value={form.prospect_name ?? ""} onChange={(e) => setForm({ ...form, prospect_name: e.target.value })} />
             <Textarea rows={3} placeholder="What happened?" value={form.summary ?? ""} onChange={(e) => setForm({ ...form, summary: e.target.value })} />
             <Textarea rows={2} placeholder="Lesson learned..." value={form.lesson ?? ""} onChange={(e) => setForm({ ...form, lesson: e.target.value })} />
+          </div>
+          <DialogFooter><Button onClick={handleSave} disabled={save.isPending}>Save</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ConversationsTab() {
+  const { data: list = [], isLoading } = useConversations();
+  const save = useSaveConversation();
+  const del = useDeleteConversation();
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState<any>({ title: "", category: "booking", transcript: "", notes: "" });
+
+  const handleSave = async () => {
+    if (!form.title.trim() || !form.transcript.trim()) { toast.error("Title and transcript are required"); return; }
+    await save.mutateAsync(form);
+    toast.success("Example saved — the AI will model these conversations");
+    setOpen(false);
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground max-w-md">
+          Paste your best real conversations (booked calls, great objection handling). The AI studies their tone and structure.
+        </p>
+        <Button size="sm" onClick={() => { setForm({ title: "", category: "booking", transcript: "", notes: "" }); setOpen(true); }}>
+          <Plus className="h-4 w-4 mr-1" /> Add Example
+        </Button>
+      </div>
+      {!isLoading && list.length === 0 ? (
+        <EmptyState icon={MessagesSquare} title="No conversation examples" description="Save winning DM threads so the AI mirrors your proven openers, transitions, and closes." />
+      ) : (
+        <div className="grid gap-3">
+          {list.map((c: ConversationExample) => (
+            <Card key={c.id}>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-[10px]">{c.category}</Badge>
+                    <span className="font-medium text-sm">{c.title}</span>
+                  </div>
+                  <div className="flex gap-1 shrink-0">
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setForm(c); setOpen(true); }}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => del.mutate(c.id)}><Trash2 className="h-3.5 w-3.5 text-destructive" /></Button>
+                  </div>
+                </div>
+                <p className="text-xs bg-muted/50 rounded-lg p-3 whitespace-pre-wrap font-mono leading-relaxed">{c.transcript}</p>
+                {c.notes && <p className="text-xs text-muted-foreground">Note: {c.notes}</p>}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{form.id ? "Edit" : "Add"} Conversation Example</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <Input placeholder="Title (e.g. Booked a call from a cold follower)" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>{CONVERSATION_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
+            </Select>
+            <Textarea rows={8} placeholder={"Paste the conversation, one line per message, e.g.\nProspect: hey saw your post\nSetter: love that — what made it resonate?"} value={form.transcript} onChange={(e) => setForm({ ...form, transcript: e.target.value })} />
+            <Input placeholder="Why this worked (optional)" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={save.isPending}>Save</Button></DialogFooter>
         </DialogContent>

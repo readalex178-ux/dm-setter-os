@@ -68,6 +68,42 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_examples: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          tags: string[] | null
+          title: string
+          transcript: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          tags?: string[] | null
+          title: string
+          transcript: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          tags?: string[] | null
+          title?: string
+          transcript?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_kpis: {
         Row: {
           calls_booked: number | null
@@ -523,6 +559,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      training_attempts: {
+        Row: {
+          created_at: string
+          difficulty: string | null
+          grade: string | null
+          id: string
+          improvements: Json
+          scenario_name: string
+          strengths: Json
+          summary: string | null
+          transcript: Json
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          difficulty?: string | null
+          grade?: string | null
+          id?: string
+          improvements?: Json
+          scenario_name: string
+          strengths?: Json
+          summary?: string | null
+          transcript?: Json
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          difficulty?: string | null
+          grade?: string | null
+          id?: string
+          improvements?: Json
+          scenario_name?: string
+          strengths?: Json
+          summary?: string | null
+          transcript?: Json
+          user_id?: string
+        }
+        Relationships: []
       }
       win_loss_logs: {
         Row: {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { demoTrainingScenarios } from "@/data/demo-data";
 import { Target, Send, Bot, User, Sparkles, Loader2, ArrowLeft, RotateCcw, Mic, MicOff } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
+import { useSaveTrainingAttempt } from "@/hooks/useKnowledge";
+import { useICP } from "@/hooks/useKnowledge";
 
 interface ChatMsg {
   role: "user" | "ai-prospect";
@@ -29,8 +31,24 @@ export default function TrainingPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
+  const saveAttempt = useSaveTrainingAttempt();
+  const { data: icp } = useICP();
 
-  const scenario = demoTrainingScenarios.find((s) => s.id === activeScenario);
+  const scenarios = useMemo(() => {
+    const list = [...demoTrainingScenarios];
+    if (icp && (icp.pains || icp.goals)) {
+      list.unshift({
+        id: "icp-custom",
+        name: `Your Ideal Client: ${icp.name || "Custom"}`,
+        description: `A realistic prospect matching your ICP. Pains: ${icp.pains || "n/a"}. Goals: ${icp.goals || "n/a"}. They raise your common objections: ${icp.objections_common || "typical hesitations"}.`,
+        difficulty: "Intermediate",
+        personaType: "Ideal Client",
+      } as any);
+    }
+    return list;
+  }, [icp]);
+
+  const scenario = scenarios.find((s) => s.id === activeScenario);
 
   async function getAiReply(conversationHistory: ChatMsg[]) {
     setAiThinking(true);
@@ -121,22 +139,33 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
       });
 
       if (fbData?.reply) {
+        let fb: { grade: string; strengths: string[]; improvements: string[]; summary: string };
         try {
           // Try to parse JSON from the reply, handling potential markdown code blocks
           let jsonStr = fbData.reply.trim();
           if (jsonStr.startsWith("```")) {
             jsonStr = jsonStr.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
           }
-          const parsed = JSON.parse(jsonStr);
-          setFeedback(parsed);
+          fb = JSON.parse(jsonStr);
         } catch {
-          setFeedback({
+          fb = {
             grade: "B",
             strengths: ["Completed the conversation"],
             improvements: ["Keep practicing to improve"],
             summary: fbData.reply,
-          });
+          };
         }
+        setFeedback(fb);
+        // Persist the attempt for the Coaching history
+        saveAttempt.mutate({
+          scenario_name: scenario?.name || "Practice",
+          difficulty: scenario?.difficulty || null,
+          grade: fb.grade,
+          strengths: fb.strengths || [],
+          improvements: fb.improvements || [],
+          summary: fb.summary || null,
+          transcript: conversationHistory as any,
+        });
       }
     } catch (e) {
       console.error("Feedback error:", e);
@@ -160,7 +189,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setError(null);
 
     // Get AI's opening message
-    const sc = demoTrainingScenarios.find((s) => s.id === id);
+    const sc = scenarios.find((s) => s.id === id);
     setAiThinking(true);
     const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
       body: {
@@ -220,7 +249,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
 
       {!activeScenario ? (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {demoTrainingScenarios.map((s) => (
+          {scenarios.map((s) => (
             <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
               <CardContent className="p-5">
                 <div className="flex items-center gap-2 mb-3">
