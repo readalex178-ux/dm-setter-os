@@ -15,6 +15,7 @@ const items = [
   { title: "KPI Tracker", url: "/app/kpi", icon: Activity },
   { title: "Inbox", url: "/app/inbox", icon: Inbox },
   { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
+  { title: "Follow-Ups", url: "/app/followups", icon: Clock },
   { title: "Prospects", url: "/app/prospects", icon: Users },
   { title: "My Offer", url: "/app/offer", icon: Package },
   { title: "Knowledge Base", url: "/app/knowledge", icon: Library },
