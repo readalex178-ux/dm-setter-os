@@ -39,11 +39,13 @@ export default function KnowledgeBasePage() {
           <TabsTrigger value="icp"><Target className="h-4 w-4 mr-1" /> ICP Bible</TabsTrigger>
           <TabsTrigger value="objections"><MessageSquareWarning className="h-4 w-4 mr-1" /> Objections</TabsTrigger>
           <TabsTrigger value="faq"><HelpCircle className="h-4 w-4 mr-1" /> FAQ</TabsTrigger>
+          <TabsTrigger value="conversations"><MessagesSquare className="h-4 w-4 mr-1" /> Conversations</TabsTrigger>
           <TabsTrigger value="wins"><Trophy className="h-4 w-4 mr-1" /> Wins & Losses</TabsTrigger>
         </TabsList>
         <TabsContent value="icp" className="mt-4"><ICPTab /></TabsContent>
         <TabsContent value="objections" className="mt-4"><ObjectionsTab /></TabsContent>
         <TabsContent value="faq" className="mt-4"><FAQTab /></TabsContent>
+        <TabsContent value="conversations" className="mt-4"><ConversationsTab /></TabsContent>
         <TabsContent value="wins" className="mt-4"><WinsTab /></TabsContent>
       </Tabs>
     </div>
