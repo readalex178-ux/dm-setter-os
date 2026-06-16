@@ -125,6 +125,81 @@ export type Database = {
         }
         Relationships: []
       }
+      faq_entries: {
+        Row: {
+          answer: string
+          created_at: string
+          id: string
+          question: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answer: string
+          created_at?: string
+          id?: string
+          question: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answer?: string
+          created_at?: string
+          id?: string
+          question?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      icp_profiles: {
+        Row: {
+          buying_triggers: string | null
+          created_at: string
+          demographics: string | null
+          goals: string | null
+          id: string
+          is_active: boolean
+          language_patterns: string | null
+          name: string
+          objections_common: string | null
+          pains: string | null
+          updated_at: string
+          user_id: string
+          where_they_hang_out: string | null
+        }
+        Insert: {
+          buying_triggers?: string | null
+          created_at?: string
+          demographics?: string | null
+          goals?: string | null
+          id?: string
+          is_active?: boolean
+          language_patterns?: string | null
+          name?: string
+          objections_common?: string | null
+          pains?: string | null
+          updated_at?: string
+          user_id: string
+          where_they_hang_out?: string | null
+        }
+        Update: {
+          buying_triggers?: string | null
+          created_at?: string
+          demographics?: string | null
+          goals?: string | null
+          id?: string
+          is_active?: boolean
+          language_patterns?: string | null
+          name?: string
+          objections_common?: string | null
+          pains?: string | null
+          updated_at?: string
+          user_id?: string
+          where_they_hang_out?: string | null
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
@@ -165,6 +240,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      objection_entries: {
+        Row: {
+          category: string
+          created_at: string
+          framework: string | null
+          id: string
+          objection: string
+          response: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          framework?: string | null
+          id?: string
+          objection: string
+          response: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          framework?: string | null
+          id?: string
+          objection?: string
+          response?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       offer_profiles: {
         Row: {
@@ -345,6 +453,39 @@ export type Database = {
           },
         ]
       }
+      scripts: {
+        Row: {
+          body: string
+          category: string
+          created_at: string
+          id: string
+          is_favorite: boolean
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_favorite?: boolean
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       timeline_events: {
         Row: {
           created_at: string
@@ -382,6 +523,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      win_loss_logs: {
+        Row: {
+          created_at: string
+          id: string
+          lesson: string | null
+          outcome: string
+          prospect_name: string | null
+          summary: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson?: string | null
+          outcome?: string
+          prospect_name?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson?: string | null
+          outcome?: string
+          prospect_name?: string | null
+          summary?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
     }
     Views: {

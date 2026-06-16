@@ -1,4 +1,4 @@
-import { loadOfferContext } from "../_shared/offer.ts";
+import { loadContext } from "../_shared/context.ts";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const offerContext = includeOffer ? await loadOfferContext(req) : "";
+    const offerContext = includeOffer ? await loadContext(req) : "";
     const systemPrompt = offerContext ? `${system}\n${offerContext}` : system;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {

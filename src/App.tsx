@@ -22,6 +22,7 @@ import IntegrationsPage from "./pages/IntegrationsPage";
 import OAuthCallbackPage from "./pages/OAuthCallbackPage";
 import ExtensionPage from "./pages/ExtensionPage";
 import OfferPage from "./pages/OfferPage";
+import KnowledgeBasePage from "./pages/KnowledgeBasePage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -51,6 +52,7 @@ const App = () => (
               <Route path="prospects" element={<ProspectsPage />} />
               <Route path="scripts" element={<ScriptsPage />} />
               <Route path="offer" element={<OfferPage />} />
+              <Route path="knowledge" element={<KnowledgeBasePage />} />
               <Route path="analytics" element={<AnalyticsPage />} />
               <Route path="coaching" element={<CoachingPage />} />
               <Route path="training" element={<TrainingPage />} />
