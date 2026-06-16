@@ -297,6 +297,25 @@ export default function InboxPage() {
     return name.includes(search.toLowerCase()) || handle.includes(search.toLowerCase());
   });
 
+  if (!loaded) {
+    return <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!useDemo && dbProspects.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Inbox</h1>
+        <EmptyState
+          icon={MessageCircle}
+          title="No conversations yet"
+          description="Connect Instagram/Facebook, sync with the Chrome extension, or add a prospect from the Dashboard. Your live conversations and AI reply suggestions will appear here."
+          actionLabel="Go to Dashboard"
+          actionTo="/app"
+        />
+      </div>
+    );
+  }
+
   if (!selected) return null;
 
   // Normalize selected fields for both demo and DB
