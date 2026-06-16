@@ -46,12 +46,38 @@ export interface WinLossLog {
   created_at: string;
 }
 
+export interface ConversationExample {
+  id: string;
+  title: string;
+  category: string;
+  tags: string[] | null;
+  transcript: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface TrainingAttempt {
+  id: string;
+  scenario_name: string;
+  difficulty: string | null;
+  grade: string | null;
+  strengths: string[];
+  improvements: string[];
+  summary: string | null;
+  transcript: any[];
+  created_at: string;
+}
+
 export const OBJECTION_CATEGORIES = [
   "price", "time", "trust", "partner", "thinking", "bad-experience", "not-interested", "other",
 ] as const;
 
 export const SCRIPT_CATEGORIES = [
   "opener", "follow-up", "qualifying", "objection", "booking", "re-engage", "other",
+] as const;
+
+export const CONVERSATION_CATEGORIES = [
+  "opener", "discovery", "qualifying", "objection", "booking", "follow-up", "other",
 ] as const;
 
 // ---- ICP (single active profile) ----
