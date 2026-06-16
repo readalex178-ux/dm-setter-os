@@ -8,6 +8,7 @@ function getCurrentPlatform() {
   if (h.includes("tiktok.com"))    return { id: "tiktok",    name: "TikTok",    emoji: "🎵" };
   if (h.includes("twitter.com") || h.includes("x.com")) return { id: "twitter", name: "Twitter/X", emoji: "𝕏" };
   if (h.includes("facebook.com") || h.includes("messenger.com")) return { id: "facebook", name: "Facebook", emoji: "👤" };
+  if (h.includes("linkedin.com")) return { id: "linkedin", name: "LinkedIn", emoji: "💼" };
   return null;
 }
 
