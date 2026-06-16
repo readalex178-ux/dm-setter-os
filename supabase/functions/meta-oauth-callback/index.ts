@@ -118,6 +118,7 @@ serve(async (req) => {
     const { error: dbError } = await supabase
       .from('connected_accounts')
       .upsert({
+        user_id: user.id,
         platform,
         platform_user_id: platformUserId,
         platform_username: platformUsername,
