@@ -10,6 +10,8 @@ const PLATFORM_NAMES = {
   "x.com": "Twitter/X",
   "www.facebook.com": "Facebook",
   "www.messenger.com": "Messenger",
+  "www.linkedin.com": "LinkedIn",
+  "linkedin.com": "LinkedIn",
 };
 
 const DM_PAGES = {
@@ -20,6 +22,8 @@ const DM_PAGES = {
   "x.com": /\/messages/,
   "www.facebook.com": /\/messages/,
   "www.messenger.com": /.*/,
+  "www.linkedin.com": /\/messaging/,
+  "linkedin.com": /\/messaging/,
 };
 
 function send(type, extra = {}) {
