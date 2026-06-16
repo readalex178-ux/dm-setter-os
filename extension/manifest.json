@@ -34,7 +34,7 @@
         "https://www.linkedin.com/*",
         "https://linkedin.com/*"
       ],
-      "js": ["platform.js", "scraper.js", "ai.js", "panel.js"],
+      "js": ["platform.js", "scraper.js", "panel.js"],
       "css": ["panel.css"],
       "run_at": "document_idle"
     }
