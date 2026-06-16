@@ -36,6 +36,23 @@ export default function Dashboard() {
   const cold = prospects.filter((p) => p.stage === "Cold Lead").length;
   const conversionRate = prospects.length ? Math.round((booked / prospects.length) * 100) : 0;
 
+  // Follow-ups due: active prospects untouched for 2+ days
+  const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+  const followUpsDue = prospects.filter((p) => {
+    if (["Call Booked", "Not Qualified", "Cold Lead"].includes(p.stage)) return false;
+    if (!p.last_contact_at) return true;
+    return Date.now() - new Date(p.last_contact_at).getTime() > TWO_DAYS;
+  }).length;
+  const hotLeads = prospects.filter((p) => (p.lead_score ?? 0) >= 7).length;
+
+  const focusItems = [
+    { label: "Follow-ups due", value: followUpsDue, icon: Clock, to: "/app/followups", tone: followUpsDue > 0 ? "text-warning" : "text-muted-foreground" },
+    { label: "Hot leads", value: hotLeads, icon: Flame, to: "/app/inbox", tone: hotLeads > 0 ? "text-destructive" : "text-muted-foreground" },
+    { label: "Active conversations", value: activeLeads, icon: MessageSquare, to: "/app/inbox", tone: "text-info" },
+    { label: "Ready for call", value: readyForCall, icon: Phone, to: "/app/pipeline", tone: readyForCall > 0 ? "text-success" : "text-muted-foreground" },
+    { label: "Calls booked", value: booked, icon: PhoneCall, to: "/app/pipeline", tone: "text-success" },
+  ];
+
   const kpiCards = [
     { label: "Total Prospects", value: prospects.length, icon: MessageSquare, color: "text-primary" },
     { label: "Active Leads", value: activeLeads, icon: Users, color: "text-info" },
