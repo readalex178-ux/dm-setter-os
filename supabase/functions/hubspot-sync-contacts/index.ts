@@ -96,6 +96,12 @@ serve(async (req) => {
       );
     }
 
+    // Ownership check: caller must own this connected account
+    if (account.user_id !== user.id) {
+      return unauthorized(corsHeaders);
+    }
+
+
     // Refresh token if needed
     const accessToken = await refreshTokenIfNeeded(account, supabase, HUBSPOT_CLIENT_ID, HUBSPOT_CLIENT_SECRET);
 
