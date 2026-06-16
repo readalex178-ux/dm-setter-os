@@ -18,10 +18,11 @@ import {
   useObjections, useSaveObjection, useDeleteObjection,
   useFAQs, useSaveFAQ, useDeleteFAQ,
   useWinLoss, useSaveWinLoss, useDeleteWinLoss,
-  OBJECTION_CATEGORIES,
-  type ObjectionEntry, type FAQEntry, type WinLossLog,
+  useConversations, useSaveConversation, useDeleteConversation,
+  OBJECTION_CATEGORIES, CONVERSATION_CATEGORIES,
+  type ObjectionEntry, type FAQEntry, type WinLossLog, type ConversationExample,
 } from "@/hooks/useKnowledge";
-import { Plus, Pencil, Trash2, Target, MessageSquareWarning, HelpCircle, Trophy } from "lucide-react";
+import { Plus, Pencil, Trash2, Target, MessageSquareWarning, HelpCircle, Trophy, MessagesSquare } from "lucide-react";
 import { toast } from "sonner";
 
 export default function KnowledgeBasePage() {
