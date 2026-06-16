@@ -216,6 +216,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, user: s?.user || null });
           break;
         }
+        case "VERIFY_SESSION": {
+          const r = await verifySession();
+          sendResponse(r);
+          break;
+        }
+        case "ANALYZE_CONVERSATION": {
+          const data = await analyzeConversation(msg.payload);
+          sendResponse({ ok: true, analysis: data });
+          break;
+        }
         case "SAVE_CONVERSATION": {
           const r = await saveConversation(msg.payload);
           sendResponse({ ok: true, id: r.id });
@@ -224,11 +234,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "GET_RECENT": {
           const rows = await getRecent();
           sendResponse({ ok: true, rows });
-          break;
-        }
-        case "AI_PROXY": {
-          const data = await callEdgeAI("extension-ai", msg.body);
-          sendResponse({ ok: true, content: data.content });
           break;
         }
         default:
