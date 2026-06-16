@@ -139,22 +139,33 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
       });
 
       if (fbData?.reply) {
+        let fb: { grade: string; strengths: string[]; improvements: string[]; summary: string };
         try {
           // Try to parse JSON from the reply, handling potential markdown code blocks
           let jsonStr = fbData.reply.trim();
           if (jsonStr.startsWith("```")) {
             jsonStr = jsonStr.replace(/```json?\n?/g, "").replace(/```/g, "").trim();
           }
-          const parsed = JSON.parse(jsonStr);
-          setFeedback(parsed);
+          fb = JSON.parse(jsonStr);
         } catch {
-          setFeedback({
+          fb = {
             grade: "B",
             strengths: ["Completed the conversation"],
             improvements: ["Keep practicing to improve"],
             summary: fbData.reply,
-          });
+          };
         }
+        setFeedback(fb);
+        // Persist the attempt for the Coaching history
+        saveAttempt.mutate({
+          scenario_name: scenario?.name || "Practice",
+          difficulty: scenario?.difficulty || null,
+          grade: fb.grade,
+          strengths: fb.strengths || [],
+          improvements: fb.improvements || [],
+          summary: fb.summary || null,
+          transcript: conversationHistory as any,
+        });
       }
     } catch (e) {
       console.error("Feedback error:", e);
