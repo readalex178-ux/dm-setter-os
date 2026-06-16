@@ -17,6 +17,9 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const { prospectId, content } = await req.json();
 
     if (!prospectId || !content) {
@@ -39,6 +42,12 @@ serve(async (req) => {
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Ownership check: caller must own this prospect
+    if (prospect.user_id !== user.id) {
+      return unauthorized(corsHeaders);
+    }
+
 
     const account = prospect.connected_accounts;
     let platformMessageId: string | null = null;
