@@ -18,6 +18,7 @@ import {
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 import { toast } from "@/hooks/use-toast";
+import { EmptyState } from "@/components/EmptyState";
 
 interface DBProspect {
   id: string;
@@ -86,7 +87,8 @@ export default function InboxPage() {
   const [search, setSearch] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
-  const [useDemo, setUseDemo] = useState(true);
+  const [useDemo, setUseDemo] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
@@ -176,14 +178,12 @@ export default function InboxPage() {
         .select("*")
         .order("last_contact_at", { ascending: false });
 
+      setUseDemo(false);
       if (data && data.length > 0) {
         setDbProspects(data as DBProspect[]);
-        setUseDemo(false);
         setSelectedId(data[0].id);
-      } else {
-        setUseDemo(true);
-        setSelectedId(demoProspects[0].id);
       }
+      setLoaded(true);
     }
     load();
   }, []);
@@ -297,6 +297,25 @@ export default function InboxPage() {
     const handle = ("handle" in p ? (p.handle || "") : "").toLowerCase();
     return name.includes(search.toLowerCase()) || handle.includes(search.toLowerCase());
   });
+
+  if (!loaded) {
+    return <div className="flex items-center justify-center h-full"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
+
+  if (!useDemo && dbProspects.length === 0) {
+    return (
+      <div className="p-6">
+        <h1 className="text-2xl font-bold mb-4">Inbox</h1>
+        <EmptyState
+          icon={MessageCircle}
+          title="No conversations yet"
+          description="Connect Instagram/Facebook, sync with the Chrome extension, or add a prospect from the Dashboard. Your live conversations and AI reply suggestions will appear here."
+          actionLabel="Go to Dashboard"
+          actionTo="/app"
+        />
+      </div>
+    );
+  }
 
   if (!selected) return null;
 

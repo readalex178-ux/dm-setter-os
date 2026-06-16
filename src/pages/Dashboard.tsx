@@ -4,39 +4,70 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { dashboardStats, demoProspects } from "@/data/demo-data";
-import { demoKPIs, kpiGoals, getStreak } from "@/data/kpi-data";
 import {
   MessageSquare, Users, UserCheck, Phone, PhoneCall,
   Snowflake, TrendingUp, Clock, ArrowRight, AlertCircle,
-  RefreshCw, Flame, Plus, Send, UserPlus, CheckCircle2,
-  Target, Activity,
+  Flame, Plus, UserPlus, CheckCircle2,
+  Target, Activity, Loader2, Inbox as InboxIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "@/hooks/use-toast";
+import { useProspects, useKPIs, useAddProspect } from "@/hooks/useSetterData";
+import { kpiGoals, getTodayKPI, getStreak } from "@/lib/kpi";
+import { EmptyState } from "@/components/EmptyState";
 
-const kpis = [
-  { label: "Total Conversations", value: dashboardStats.totalConversations, icon: MessageSquare, color: "text-primary" },
-  { label: "Active Leads", value: dashboardStats.activeLeads, icon: Users, color: "text-info" },
-  { label: "Qualified Prospects", value: dashboardStats.qualifiedProspects, icon: UserCheck, color: "text-success" },
-  { label: "Ready for Call", value: dashboardStats.readyForCall, icon: Phone, color: "text-warning" },
-  { label: "Calls Booked", value: dashboardStats.callsBooked, icon: PhoneCall, color: "text-success" },
-  { label: "Cold Leads", value: dashboardStats.coldLeads, icon: Snowflake, color: "text-muted-foreground" },
-  { label: "Conversion Rate", value: `${dashboardStats.conversionRate}%`, icon: TrendingUp, color: "text-primary" },
-  { label: "Follow-Ups Due", value: dashboardStats.followUpsDue, icon: Clock, color: "text-warning" },
-];
-
-const actions = [
-  { icon: AlertCircle, label: "Respond to new leads", count: 4, color: "text-info", link: "/app/inbox" },
-  { icon: Flame, label: "Follow up warm prospects", count: 3, color: "text-warning", link: "/app/inbox" },
-  { icon: Phone, label: "Transition qualified leads to call", count: 2, color: "text-success", link: "/app/pipeline" },
-  { icon: RefreshCw, label: "Re-engage cold leads", count: 5, color: "text-muted-foreground", link: "/app/prospects" },
-];
+const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
 export default function Dashboard() {
   const [quickName, setQuickName] = useState("");
   const [quickHandle, setQuickHandle] = useState("");
-  const hotProspects = demoProspects.filter(p => p.leadScore >= 7).slice(0, 4);
-  const today = demoKPIs[0];
+  const { data: prospects = [], isLoading } = useProspects();
+  const { data: kpis = [] } = useKPIs();
+  const addProspect = useAddProspect();
+
+  const today = getTodayKPI(kpis);
+
+  const activeLeads = prospects.filter((p) => !["Call Booked", "Not Qualified", "Cold Lead"].includes(p.stage)).length;
+  const qualified = prospects.filter((p) => QUALIFIED_STAGES.includes(p.stage)).length;
+  const readyForCall = prospects.filter((p) => p.stage === "Ready for Call").length;
+  const booked = prospects.filter((p) => p.stage === "Call Booked").length;
+  const cold = prospects.filter((p) => p.stage === "Cold Lead").length;
+  const conversionRate = prospects.length ? Math.round((booked / prospects.length) * 100) : 0;
+
+  const kpiCards = [
+    { label: "Total Prospects", value: prospects.length, icon: MessageSquare, color: "text-primary" },
+    { label: "Active Leads", value: activeLeads, icon: Users, color: "text-info" },
+    { label: "Qualified", value: qualified, icon: UserCheck, color: "text-success" },
+    { label: "Ready for Call", value: readyForCall, icon: Phone, color: "text-warning" },
+    { label: "Calls Booked", value: booked, icon: PhoneCall, color: "text-success" },
+    { label: "Cold Leads", value: cold, icon: Snowflake, color: "text-muted-foreground" },
+    { label: "Conversion Rate", value: `${conversionRate}%`, icon: TrendingUp, color: "text-primary" },
+    { label: "DMs Today", value: today.dms_sent, icon: Clock, color: "text-warning" },
+  ];
+
+  const hotProspects = [...prospects]
+    .filter((p) => (p.lead_score ?? 0) >= 7)
+    .sort((a, b) => (b.lead_score ?? 0) - (a.lead_score ?? 0))
+    .slice(0, 4);
+
+  const newLeadCount = prospects.filter((p) => p.stage === "New Lead").length;
+  const readyCount = prospects.filter((p) => p.stage === "Ready for Call").length;
+
+  async function handleQuickAdd() {
+    if (!quickName.trim()) return;
+    try {
+      await addProspect.mutateAsync({ name: quickName.trim(), handle: quickHandle.trim() || undefined });
+      toast({ title: "Prospect added", description: `${quickName} added to New Leads.` });
+      setQuickName("");
+      setQuickHandle("");
+    } catch (e) {
+      toast({ title: "Could not add prospect", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    }
+  }
+
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
+  }
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6 max-w-[1600px] mx-auto">
@@ -52,7 +83,7 @@ export default function Dashboard() {
         </Link>
       </div>
 
-      {/* Today's Goal Progress — compact */}
+      {/* Today's Goal Progress */}
       <Card className="border-primary/20">
         <CardContent className="p-4">
           <div className="flex items-center justify-between mb-3">
@@ -68,7 +99,7 @@ export default function Dashboard() {
               const val = today[goal.metric] as number;
               const pct = Math.min((val / goal.dailyTarget) * 100, 100);
               const hit = val >= goal.dailyTarget;
-              const streak = getStreak(demoKPIs, goal.metric, goal.dailyTarget);
+              const streak = getStreak(kpis, goal.metric, goal.dailyTarget);
               return (
                 <div key={goal.metric}>
                   <div className="flex items-center justify-between mb-1">
@@ -94,7 +125,7 @@ export default function Dashboard() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-3 lg:gap-4">
-        {kpis.map((kpi) => (
+        {kpiCards.map((kpi) => (
           <Card key={kpi.label}>
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-2">
@@ -114,18 +145,18 @@ export default function Dashboard() {
             <CardTitle className="text-lg">Today's Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {actions.map((a) => (
-              <Link key={a.label} to={a.link} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors">
-                <div className="flex items-center gap-3">
-                  <a.icon className={`h-4 w-4 ${a.color}`} />
-                  <span className="text-sm font-medium">{a.label}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary">{a.count}</Badge>
-                  <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                </div>
-              </Link>
-            ))}
+            <Link to="/app/inbox" className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3"><AlertCircle className="h-4 w-4 text-info" /><span className="text-sm font-medium">Respond to new leads</span></div>
+              <div className="flex items-center gap-2"><Badge variant="secondary">{newLeadCount}</Badge><ArrowRight className="h-3 w-3 text-muted-foreground" /></div>
+            </Link>
+            <Link to="/app/pipeline" className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3"><Phone className="h-4 w-4 text-success" /><span className="text-sm font-medium">Transition to call</span></div>
+              <div className="flex items-center gap-2"><Badge variant="secondary">{readyCount}</Badge><ArrowRight className="h-3 w-3 text-muted-foreground" /></div>
+            </Link>
+            <Link to="/app/prospects" className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors">
+              <div className="flex items-center gap-3"><Snowflake className="h-4 w-4 text-muted-foreground" /><span className="text-sm font-medium">Re-engage cold leads</span></div>
+              <div className="flex items-center gap-2"><Badge variant="secondary">{cold}</Badge><ArrowRight className="h-3 w-3 text-muted-foreground" /></div>
+            </Link>
           </CardContent>
         </Card>
 
@@ -135,21 +166,24 @@ export default function Dashboard() {
             <CardTitle className="text-lg">Hot Prospects</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
+            {hotProspects.length === 0 && (
+              <p className="text-sm text-muted-foreground py-4 text-center">No hot prospects yet. Score climbs as conversations progress.</p>
+            )}
             {hotProspects.map((p) => (
               <Link key={p.id} to="/app/inbox" className="flex items-center justify-between p-3 rounded-lg hover:bg-muted transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
-                    {p.avatar}
+                    {p.name.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
                     <div className="text-sm font-medium">{p.name}</div>
-                    <div className="text-xs text-muted-foreground">{p.handle} • {p.stage}</div>
+                    <div className="text-xs text-muted-foreground">{p.handle || "—"} • {p.stage}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="score">{p.leadScore}/10</Badge>
-                  <Badge variant={p.callReadiness >= 70 ? "success" : p.callReadiness >= 40 ? "warning" : "secondary"}>
-                    {p.callReadiness}%
+                  <Badge variant="score">{p.lead_score}/10</Badge>
+                  <Badge variant={p.call_readiness >= 70 ? "success" : p.call_readiness >= 40 ? "warning" : "secondary"}>
+                    {p.call_readiness}%
                   </Badge>
                 </div>
               </Link>
@@ -167,29 +201,28 @@ export default function Dashboard() {
           <CardContent className="space-y-3">
             <div>
               <label className="text-xs text-muted-foreground">Name</label>
-              <Input
-                placeholder="e.g. Sarah Mitchell"
-                value={quickName}
-                onChange={(e) => setQuickName(e.target.value)}
-                className="mt-1"
-              />
+              <Input placeholder="e.g. Sarah Mitchell" value={quickName} onChange={(e) => setQuickName(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Instagram Handle</label>
-              <Input
-                placeholder="e.g. @sarahmitchell_fit"
-                value={quickHandle}
-                onChange={(e) => setQuickHandle(e.target.value)}
-                className="mt-1"
-              />
+              <label className="text-xs text-muted-foreground">Handle</label>
+              <Input placeholder="e.g. @sarahmitchell_fit" value={quickHandle} onChange={(e) => setQuickHandle(e.target.value)} className="mt-1" />
             </div>
-            <Button className="w-full" size="sm" disabled={!quickName.trim()}>
-              <Plus className="h-4 w-4 mr-1" /> Add to New Leads
+            <Button className="w-full" size="sm" disabled={!quickName.trim() || addProspect.isPending} onClick={handleQuickAdd}>
+              {addProspect.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Add to New Leads
             </Button>
-            <p className="text-xs text-muted-foreground text-center">Opens in inbox for conversation paste</p>
           </CardContent>
         </Card>
       </div>
+
+      {prospects.length === 0 && (
+        <EmptyState
+          icon={InboxIcon}
+          title="No prospects yet"
+          description="Add your first prospect above, connect a platform, or use the Chrome extension to sync conversations. Then set up your Offer so the AI can ground every reply."
+          actionLabel="Set up My Offer"
+          actionTo="/app/offer"
+        />
+      )}
     </div>
   );
 }
