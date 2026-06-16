@@ -154,20 +154,45 @@ async function getRecent() {
   return await res.json();
 }
 
-// ── AI via Edge Functions (uses the user's offer profile server-side) ─────────
+// ── Edge Function bridge (all AI / business logic lives server-side) ──────────
 
-async function callEdgeAI(fn, body) {
+async function callEdgeFn(fn, body) {
   const res = await authedFetch(`/functions/v1/${fn}`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(body || {}),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) throw new Error("Session expired — please sign in again.");
     if (res.status === 429) throw new Error("Rate limit — try again in a moment.");
     if (res.status === 402) throw new Error("AI credits exhausted. Add credits in the app.");
-    throw new Error(data.error || "AI request failed");
+    throw new Error(data.error || `Request failed (${res.status})`);
   }
   return data;
+}
+
+// Analyse the active conversation via the DM Setter OS engine.
+async function analyzeConversation(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
+  return await callEdgeFn("extension-analyze", payload);
+}
+
+// Verify the user's account / subscription status is still valid.
+async function verifySession() {
+  const session = await getSession();
+  if (!session?.access_token) return { ok: true, signedIn: false };
+  try {
+    const res = await authedFetch(
+      "/rest/v1/profiles?select=id,display_name&limit=1",
+      { method: "GET" }
+    );
+    if (!res.ok) return { ok: true, signedIn: false };
+    const rows = await res.json().catch(() => []);
+    return { ok: true, signedIn: true, user: session.user || null, profile: rows?.[0] || null };
+  } catch {
+    return { ok: true, signedIn: false };
+  }
 }
 
 // ── Message router ───────────────────────────────────────────────────────────
