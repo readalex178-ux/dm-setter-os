@@ -102,8 +102,30 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Focus Now — what to act on right now */}
+      {prospects.length > 0 && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+          <CardContent className="p-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
+              <Target className="h-4 w-4 text-primary" /> Focus Now
+              <span className="text-xs font-normal text-muted-foreground">— what to act on right now</span>
+            </h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              {focusItems.map((f) => (
+                <Link key={f.label} to={f.to} className="rounded-lg border border-border bg-card p-3 hover:bg-muted/60 transition-colors">
+                  <f.icon className={`h-4 w-4 mb-2 ${f.tone}`} />
+                  <div className="text-2xl font-bold">{f.value}</div>
+                  <div className="text-xs text-muted-foreground">{f.label}</div>
+                </Link>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Day-1 Readiness */}
       <DayOneReadiness />
+
 
       {/* Daily AI Briefing */}
       <DailyBriefing />
