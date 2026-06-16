@@ -92,3 +92,13 @@ function formatFAQ(list: any[]): string {
 ${lines}
 === END FAQ ===`;
 }
+
+function formatConversations(list: any[]): string {
+  if (!list.length) return "";
+  const lines = list.map((c) =>
+    `  • ${c.title}${c.category ? ` [${c.category}]` : ""}:\n${String(c.transcript).split("\n").map((l: string) => `    ${l}`).join("\n")}`
+  ).join("\n\n");
+  return `=== WINNING CONVERSATION EXAMPLES (model the tone, pacing, and structure of these) ===
+${lines}
+=== END EXAMPLES ===`;
+}
