@@ -68,6 +68,12 @@ function getChatContainer(platformId) {
       '[aria-label*="Messages"][role="main"]',
       '[data-testid*="message"]',
     ],
+    linkedin: [
+      '.msg-s-message-list-container',
+      '.msg-s-message-list',
+      '.scaffold-layout__detail .msg-thread',
+      '.msg-conversation-card__content',
+    ],
   };
 
   const selectors = candidates[platformId] || [];
