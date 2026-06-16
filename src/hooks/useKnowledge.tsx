@@ -173,3 +173,35 @@ export const useDeleteScript = () => useDelete("scripts");
 export const useWinLoss = () => useList<WinLossLog>("win_loss_logs");
 export const useSaveWinLoss = () => useUpsert("win_loss_logs");
 export const useDeleteWinLoss = () => useDelete("win_loss_logs");
+
+export const useConversations = () => useList<ConversationExample>("conversation_examples");
+export const useSaveConversation = () => useUpsert("conversation_examples");
+export const useDeleteConversation = () => useDelete("conversation_examples");
+
+// ---- Training attempts ----
+export function useTrainingAttempts() {
+  return useQuery({
+    queryKey: ["training_attempts"],
+    queryFn: async (): Promise<TrainingAttempt[]> => {
+      const { data, error } = await supabase
+        .from("training_attempts")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      return (data ?? []) as unknown as TrainingAttempt[];
+    },
+  });
+}
+
+export function useSaveTrainingAttempt() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: Partial<TrainingAttempt>) => {
+      const { error } = await supabase.from("training_attempts").insert({ ...input, user_id: user!.id } as any);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["training_attempts"] }),
+  });
+}
