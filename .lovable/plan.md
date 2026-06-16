@@ -1,95 +1,65 @@
-# DM Setter OS — Audit & Improvement Plan
+# DM Setter OS — What's Done vs. Your Audit, and What's Left
 
-## Executive Summary
-The app's foundation is genuinely strong: auth, RLS, secured edge functions, the Offer Profile system, the AI suggest/analyze/training functions, and the Chrome extension sync are all real and working. The problem is that **most of the user-facing pages are demo shells** — they render hardcoded fake data from `src/data/` and never touch the database. A real setter signing in on Day 1 sees fabricated prospects, fake KPIs, fake coaching reviews, and a fake profile. The backend is ready; the front end is not wired to it.
+## What I've actually built so far
 
-This plan turns the demo into a real operating system, in priority order.
+Your prompt has two intertwined asks: (A) **audit & recommend**, and (B) **turn the app into a real Day-1 operating system**. Here's the honest status.
+
+### Done — backend & security foundation
+- Real auth + per-user RLS on every table; all AI/OAuth/sync edge functions secured (JWT + ownership checks).
+- **My Offer** (Offer Bible) — real CRUD, injected into every AI call.
+- AI functions live: `suggest-replies` (3 tailored replies + coaching), `analyze-stage` (BANT scoring), `training-chat` (roleplay), `extension-ai`.
+- Chrome extension synced to Cloud.
+
+### Done — Phase 1 & 2 (data + metrics made real)
+- Dashboard, Pipeline, Prospects, Inbox wired to the database with real empty states (no more demo fiction).
+- KPI Tracker persists to `daily_kpis` (one record per user/day); benchmark bands (Poor→Elite) and streaks.
+- Analytics computes conversion, pipeline funnel, and objection patterns from live data.
+
+### Done — Phase 3 (Knowledge Base) — just shipped
+- New `/app/knowledge` with tabs: **ICP Bible, Objection Bible, FAQ, Wins & Losses**.
+- **Scripts Library** moved from demo data to real DB CRUD with favorites/categories.
+- New `loadContext()` injects Offer + ICP + Objections + FAQ into **all** AI prompts.
+
+### Mapping to your 17 parts
+| Part | Status |
+|---|---|
+| 3 Day-1 info (Offer/ICP/Market) | Offer ✅, ICP ✅, Market ❌ (no market/competitor fields) |
+| 6 Systems (trackers/DBs) | Lead/notes/KPI/objection/FAQ/offer/wins/losses ✅; booking tracker ⚠ partial |
+| 8 KPI & benchmarks | ✅ (corrective-action hints ⚠ light) |
+| 10 Knowledge Base | Offer/ICP/Objection/FAQ/Wins-Losses ✅; **Conversation DB (winning examples) ❌** |
+| 11 AI & automation | Reply/stage/training ✅; daily AI workflows & review loops ❌ |
+| 1,2,4,5,7,9,12,13,14,15,16,17 (audit/onboarding/coaching/roadmap) | **Not yet built as in-app product — still living in the plan doc, not the app** |
+
+**Bottom line:** the data layer and knowledge base are real. What's still missing is the *guidance & coaching layer* that makes a brand-new setter perform on Day 1 — onboarding, readiness scoring, real coaching, conversation examples, market context, and daily AI routines.
 
 ---
 
-## Application Audit Summary (actual state)
+## Proposed remaining plan (pick any subset)
 
-### Real / working
-- **Auth + RLS** — `/auth`, `ProtectedRoute`, owner-scoped policies, secured edge functions (JWT + ownership checks).
-- **My Offer** (`OfferPage.tsx`) — real CRUD against `offer_profiles`; injected into all AI functions via `_shared/offer.ts`.
-- **Inbox** (`InboxPage.tsx`) — reads real `prospects`/`messages` but **falls back to demo data**, so real users still see fakes until rows exist.
-- **Training** (`TrainingPage.tsx`) — real AI roleplay, but scenarios are hardcoded (`demoTrainingScenarios`).
-- **Edge functions + extension** — real Meta/HubSpot OAuth/sync, `extension-ai`, cloud sync.
+### Phase 4 — Coaching + Training become real (Parts 7, 9, 11)
+- Store training attempts + AI grades in DB; show trend over time on Coaching page (replace hardcoded reviews).
+- Generate training scenarios from the setter's real ICP/objections.
+- Add **Conversation Database** (winning DM examples, taggable) as a 5th Knowledge tab, injected into AI.
 
-### Demo shells (no DB — fabricated data)
-- **Dashboard** — `dashboardStats`, `demoProspects`, `demoKPIs` (line 7-8). Quick-add does nothing real.
-- **KPI Tracker** — `demoKPIs` only; "Log" form doesn't persist (`daily_kpis` table is empty/unused).
-- **Analytics** — 100% hardcoded chart arrays (lines 9-36).
-- **Pipeline** — `demoProspects`; no DB, no real stage moves/drag.
-- **Prospects** — `demoProspects` + `demoTimeline`.
-- **Scripts Library** — `demoScripts`; favorites are local-only, no DB, no create/edit.
-- **Coaching** — hardcoded review objects; no link to real training/conversations.
-- **Settings** — hardcoded "Alex Morgan / alex@dmsetter.co"; nothing saves.
+### Phase 5 — Onboarding + Day-1 Readiness (Parts 4, 14, 15)
+- Guided first-run checklist: Offer → ICP → Objections → KPI goals → connect platform/extension → first AI reply.
+- **Day-1 Readiness Score** widget (pass/fail across offer, ICP, objections, FAQ, CRM, tracking, scripts) on Dashboard.
+- 30-day ramp plan surfaced as an in-app milestone tracker.
 
-### Critical weaknesses
-1. **Data integrity** — 8 of 13 pages show fake data to authenticated users. This is the #1 issue; everything downstream (KPIs, analytics, coaching) is fiction.
-2. **No write-back loop** — sending/booking/qualifying doesn't update KPIs or analytics, so metrics can never be real.
-3. **No knowledge base** — the offer system exists, but no ICP Bible, Objection Bible, FAQ, Scripts-in-DB, or Wins/Losses store. These are core setter assets.
-4. **Onboarding gap** — no guided Day-1 setup (offer → ICP → KPI goals → connect platform), so a new setter doesn't know where to start.
+### Phase 6 — Market context + AI daily workflows (Parts 3, 11, 12)
+- Add Market/Competitor fields to Offer (industry, competitors, sophistication, awareness) → into `loadContext`.
+- "Daily AI Briefing": end-of-day review of KPIs + objection patterns + follow-up queue with corrective actions.
+- Follow-up/no-show/reschedule reminder queue (Part 7 recovery systems).
 
----
-
-## Improvement Plan (phased — approve all or pick a phase)
-
-### Phase 1 — Make the data real (Critical)
-Wire the demo pages to the database and add a clean empty state everywhere.
-- **Dashboard**: compute stats from real `prospects`/`messages`/`daily_kpis`; real quick-add inserts a prospect; empty state with onboarding CTA when DB is empty.
-- **Pipeline**: load real `prospects`, group by `stage`, allow stage changes that persist (write to `prospects.stage` + `timeline_events`).
-- **Prospects**: real list + real `timeline_events`; editable notes/fields.
-- **Inbox**: default to real data, remove the demo fallback (keep a real empty state).
-- **Settings**: load/save `profiles` (name, prefs); remove hardcoded identity.
-- Move all `src/data/*` demo content behind a single "Load sample data" dev toggle so it's never shown to real users by accident.
-
-### Phase 2 — Real KPI + Analytics loop (High impact)
-- Make **KPI Tracker** persist to `daily_kpis` (manual log + auto-increment from real sends/bookings via edge functions).
-- Add a `kpi_goals` concept (daily/weekly targets) the setter sets once.
-- Rewrite **Analytics** to query real data: stage funnel, objection breakdown (from `analyze-stage`), weekly conversations vs. booked, show rate.
-- Add benchmark bands (Poor / Average / Good / Elite) and "corrective action" hints when a metric drops.
-
-### Phase 3 — Knowledge Base system (High impact)
-New tables (with GRANTs + owner RLS) and pages, all injected into AI prompts like the Offer is:
-- **ICP Bible** — demographics, goals, pains, buying triggers, language patterns.
-- **Objection Bible** — objection → framework → example response (price/time/trust/partner/thinking/bad-experience/not-interested).
-- **FAQ Database** — common questions + approved answers.
-- **Scripts Library** → move to DB (CRUD, categories, favorites, AI-personalize using offer+ICP).
-- **Wins & Losses** — logged outcomes with lessons; feeds coaching.
-Extend `_shared/offer.ts` → a `loadContext()` that bundles offer + ICP + objections + FAQ into every AI call so suggestions are fully grounded.
-
-### Phase 4 — Coaching + Training upgrades (Medium impact)
-- **Coaching**: replace hardcoded reviews with real training-session grades + real conversation reviews stored in DB; trend over time.
-- **Training**: store scenarios in DB, generate scenarios from the setter's actual ICP/objections, save attempt history + scores.
-
-### Phase 5 — Onboarding + Day-1 readiness (Medium impact)
-- Guided first-run checklist: set Offer → ICP → KPI goals → connect a platform/extension → first AI suggestion.
-- **Day-1 Readiness Score** widget on Dashboard (pass/fail across offer, ICP, objections, CRM, tracking, scripts).
-
-### Phase 6 — Nice-to-have / roadmap
-- LinkedIn support in the extension (manifest currently covers IG/TikTok/X/FB/Messenger only — no LinkedIn).
-- Follow-up/no-show/reschedule reminders and re-engagement queue.
-- Team/agency view (multi-setter rollups) — future, requires roles table.
+### Phase 7 — Scale & roadmap (Part 16, 17)
+- LinkedIn support in the extension (currently IG/TikTok/X/FB/Messenger only).
+- Team/agency rollups (requires a roles table) — future.
 - Leaked-password (HIBP) protection on signup.
 
----
-
-## Prioritised Backlog (top items)
-| Pri | Item | Setter impact | Effort |
-|-----|------|---------------|--------|
-| P0 | Wire Dashboard/Pipeline/Prospects/Inbox/Settings to DB + empty states | Stops fiction; app becomes usable | M |
-| P0 | Persist + auto-increment KPIs; real Analytics | Real performance visibility | M |
-| P1 | Knowledge Base (ICP/Objection/FAQ/Scripts/Wins-Losses) + AI injection | Day-1 grounding, better replies | L |
-| P1 | Real Coaching from real sessions | Real improvement loop | M |
-| P2 | Onboarding checklist + Day-1 Readiness Score | Fast ramp, no confusion | M |
-| P3 | LinkedIn extension, reminders, team view, HIBP | Scale + safety | L |
-
-## Day-1 Readiness Score (today): ~3/10
-Strong backend, but a setter can't track real work, see real metrics, or rely on knowledge assets yet.
+### Note on Parts 1, 2, 13, 17 (the written audit deliverables)
+These are *analysis documents*, not app features. I can deliver them as an in-app "Setter Playbook" page (markdown) or keep them in the plan doc. Tell me which you want.
 
 ---
 
-## Recommended start
-Begin with **Phase 1 + Phase 2** in one pass (real data + real KPI/analytics loop) — this is the highest ROI and unblocks everything else. Then Phase 3 (knowledge base) to maximize AI quality. Tell me if you'd rather start with the knowledge base (Phase 3) instead.
+## Recommended next step
+Build **Phase 4 + Phase 5 together**: real coaching/training history + onboarding & Day-1 Readiness Score. This is what most directly delivers your core goal — "perform at the highest level from Day 1." Then Phase 6 (market + daily AI). Confirm and I'll implement.
