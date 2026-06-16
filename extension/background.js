@@ -88,7 +88,7 @@ async function saveConversation(payload) {
   const session = await getSession();
   if (!session?.user?.id) throw new Error("Please sign in to the extension first (open the popup).");
   const userId = session.user.id;
-  const { prospect, messages, bantScore } = payload;
+  const { prospect, messages, analysis } = payload;
 
   const platform = PLATFORM_ENUM.includes(prospect.platform) ? prospect.platform : null;
   const prospectId = crypto.randomUUID();
@@ -98,18 +98,19 @@ async function saveConversation(payload) {
     user_id: userId,
     name: prospect.name || "Unknown",
     handle: prospect.handle || null,
-    stage: prospect.stage || "New Lead",
-    lead_score: prospect.leadScore || 0,
-    call_readiness: prospect.callReadiness || 0,
-    intent_level: prospect.intentLevel || "Curious",
-    intent_confidence: prospect.intentConfidence || 0,
-    motivation: prospect.motivation || null,
-    concerns: prospect.concerns || null,
-    income_goal: prospect.incomeGoal || null,
-    source: prospect.source || (prospect.platform + " (Extension)"),
+    stage: analysis?.stage || prospect.stage || "New Lead",
+    conversation_score: analysis?.conversation_score ?? null,
+    booking_probability: analysis?.booking_probability ?? null,
+    lead_temperature: analysis?.temperature || null,
+    suggested_action: analysis?.next_action || null,
+    concerns: Array.isArray(analysis?.objections) && analysis.objections.length
+      ? analysis.objections.join("; ")
+      : (prospect.concerns || null),
+    source: prospect.source || ((prospect.platform || "Extension") + " (Extension)"),
     platform,
     last_contact_at: new Date().toISOString(),
   };
+
 
   const pRes = await authedFetch("/rest/v1/prospects", {
     method: "POST",
