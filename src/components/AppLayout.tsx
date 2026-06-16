@@ -14,7 +14,7 @@ export default function AppLayout() {
           <header className="h-12 flex items-center border-b border-border px-4 shrink-0">
             <SidebarTrigger className="mr-4 hidden lg:flex" />
             <span className="text-xs font-medium text-muted-foreground">
-              DM Wingman Pro
+              DM Setter OS
             </span>
           </header>
           <main className="flex-1 overflow-auto pb-16 lg:pb-0">

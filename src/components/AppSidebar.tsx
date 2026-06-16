@@ -66,11 +66,11 @@ export function AppSidebar() {
         <div className="px-2 py-1">
           {!collapsed ? (
             <span className="text-sm font-bold tracking-tight">
-              <span className="gradient-text">DM Wingman</span>{" "}
-              <span className="text-muted-foreground">Pro</span>
+              <span className="gradient-text">DM Setter</span>{" "}
+              <span className="text-muted-foreground">OS</span>
             </span>
           ) : (
-            <span className="gradient-text font-bold">DW</span>
+            <span className="gradient-text font-bold">OS</span>
           )}
         </div>
       </SidebarHeader>

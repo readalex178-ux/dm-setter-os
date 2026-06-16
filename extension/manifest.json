@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "DM Setter OS",
-  "version": "2.1.0",
-  "description": "AI co-pilot for DM setters — works on Instagram, TikTok, Twitter/X, Facebook and LinkedIn. Syncs to your DM Setter OS dashboard.",
+  "version": "3.0.0",
+  "description": "Lightweight companion for DM Setter OS — extract conversations on Instagram, TikTok, X, Facebook & LinkedIn and analyse, reply & sync via your DM Setter OS account.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "clipboardWrite"],
   "host_permissions": [
     "https://www.instagram.com/*",
@@ -34,7 +34,7 @@
         "https://www.linkedin.com/*",
         "https://linkedin.com/*"
       ],
-      "js": ["platform.js", "scraper.js", "ai.js", "panel.js"],
+      "js": ["platform.js", "scraper.js", "panel.js"],
       "css": ["panel.css"],
       "run_at": "document_idle"
     }

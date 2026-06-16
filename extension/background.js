@@ -88,7 +88,7 @@ async function saveConversation(payload) {
   const session = await getSession();
   if (!session?.user?.id) throw new Error("Please sign in to the extension first (open the popup).");
   const userId = session.user.id;
-  const { prospect, messages, bantScore } = payload;
+  const { prospect, messages, analysis } = payload;
 
   const platform = PLATFORM_ENUM.includes(prospect.platform) ? prospect.platform : null;
   const prospectId = crypto.randomUUID();
@@ -98,18 +98,19 @@ async function saveConversation(payload) {
     user_id: userId,
     name: prospect.name || "Unknown",
     handle: prospect.handle || null,
-    stage: prospect.stage || "New Lead",
-    lead_score: prospect.leadScore || 0,
-    call_readiness: prospect.callReadiness || 0,
-    intent_level: prospect.intentLevel || "Curious",
-    intent_confidence: prospect.intentConfidence || 0,
-    motivation: prospect.motivation || null,
-    concerns: prospect.concerns || null,
-    income_goal: prospect.incomeGoal || null,
-    source: prospect.source || (prospect.platform + " (Extension)"),
+    stage: analysis?.stage || prospect.stage || "New Lead",
+    conversation_score: analysis?.conversation_score ?? null,
+    booking_probability: analysis?.booking_probability ?? null,
+    lead_temperature: analysis?.temperature || null,
+    suggested_action: analysis?.next_action || null,
+    concerns: Array.isArray(analysis?.objections) && analysis.objections.length
+      ? analysis.objections.join("; ")
+      : (prospect.concerns || null),
+    source: prospect.source || ((prospect.platform || "Extension") + " (Extension)"),
     platform,
     last_contact_at: new Date().toISOString(),
   };
+
 
   const pRes = await authedFetch("/rest/v1/prospects", {
     method: "POST",
@@ -154,20 +155,45 @@ async function getRecent() {
   return await res.json();
 }
 
-// ── AI via Edge Functions (uses the user's offer profile server-side) ─────────
+// ── Edge Function bridge (all AI / business logic lives server-side) ──────────
 
-async function callEdgeAI(fn, body) {
+async function callEdgeFn(fn, body) {
   const res = await authedFetch(`/functions/v1/${fn}`, {
     method: "POST",
-    body: JSON.stringify(body),
+    body: JSON.stringify(body || {}),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401) throw new Error("Session expired — please sign in again.");
     if (res.status === 429) throw new Error("Rate limit — try again in a moment.");
     if (res.status === 402) throw new Error("AI credits exhausted. Add credits in the app.");
-    throw new Error(data.error || "AI request failed");
+    throw new Error(data.error || `Request failed (${res.status})`);
   }
   return data;
+}
+
+// Analyse the active conversation via the DM Setter OS engine.
+async function analyzeConversation(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
+  return await callEdgeFn("extension-analyze", payload);
+}
+
+// Verify the user's account / subscription status is still valid.
+async function verifySession() {
+  const session = await getSession();
+  if (!session?.access_token) return { ok: true, signedIn: false };
+  try {
+    const res = await authedFetch(
+      "/rest/v1/profiles?select=id,display_name&limit=1",
+      { method: "GET" }
+    );
+    if (!res.ok) return { ok: true, signedIn: false };
+    const rows = await res.json().catch(() => []);
+    return { ok: true, signedIn: true, user: session.user || null, profile: rows?.[0] || null };
+  } catch {
+    return { ok: true, signedIn: false };
+  }
 }
 
 // ── Message router ───────────────────────────────────────────────────────────
@@ -191,6 +217,16 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, user: s?.user || null });
           break;
         }
+        case "VERIFY_SESSION": {
+          const r = await verifySession();
+          sendResponse(r);
+          break;
+        }
+        case "ANALYZE_CONVERSATION": {
+          const data = await analyzeConversation(msg.payload);
+          sendResponse({ ok: true, analysis: data });
+          break;
+        }
         case "SAVE_CONVERSATION": {
           const r = await saveConversation(msg.payload);
           sendResponse({ ok: true, id: r.id });
@@ -199,11 +235,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         case "GET_RECENT": {
           const rows = await getRecent();
           sendResponse({ ok: true, rows });
-          break;
-        }
-        case "AI_PROXY": {
-          const data = await callEdgeAI("extension-ai", msg.body);
-          sendResponse({ ok: true, content: data.content });
           break;
         }
         default:

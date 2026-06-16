@@ -212,3 +212,55 @@
 .dms-save-btn:hover { opacity: 0.9; }
 .dms-save-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .dms-save-msg { font-size: 11px; text-align: center; padding: 0 14px 10px; }
+
+/* Connection status bar */
+.dms-conn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px;
+  font-size: 11px; color: #8b949e;
+  background: #0d1117;
+  border-bottom: 1px solid #21262d;
+}
+.dms-dot { width: 8px; height: 8px; border-radius: 50%; background: #484f58; flex-shrink: 0; }
+.dms-dot.ok { background: #3fb950; box-shadow: 0 0 6px #3fb95088; }
+.dms-dot.warn { background: #d29922; }
+.dms-dot.err { background: #f85149; }
+
+/* Text-style small buttons (auto width) */
+#dms-regen, #dms-paste-toggle {
+  width: auto; height: auto; padding: 3px 8px; font-size: 10px;
+}
+
+/* Metrics */
+.dms-metrics { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 8px; }
+.dms-metric { text-align: center; background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 10px 4px; }
+.dms-metric-val { font-size: 22px; font-weight: 700; line-height: 1; }
+.dms-metric-suffix { font-size: 11px; font-weight: 600; opacity: 0.7; margin-left: 1px; }
+.dms-metric-lbl { font-size: 10px; color: #8b949e; margin-top: 4px; }
+.dms-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dms-badge { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 10px; letter-spacing: 0.4px; }
+.dms-summary { width: 100%; font-size: 11px; color: #c9d1d9; line-height: 1.5; margin-top: 6px; }
+
+/* Objections */
+.dms-objection {
+  font-size: 11px; color: #f0c674; background: #d2992212;
+  border: 1px solid #d2992233; border-radius: 6px;
+  padding: 6px 9px; margin-bottom: 5px;
+}
+
+/* Next action */
+.dms-action {
+  font-size: 12px; line-height: 1.5; color: #e6edf3;
+  background: #1f6feb14; border: 1px solid #1f6feb33;
+  border-radius: 8px; padding: 9px 11px;
+}
+
+/* Inputs */
+.dms-input {
+  width: 100%; background: #161b22; border: 1px solid #30363d;
+  border-radius: 5px; color: #e6edf3; padding: 6px 8px;
+  font-size: 11px; box-sizing: border-box; margin-bottom: 6px;
+  font-family: inherit; resize: vertical;
+}
+.dms-copy.done { background: #3fb950; color: white; border-color: #3fb950; }
+.dms-save-btn.done { opacity: 1; }
