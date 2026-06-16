@@ -28,6 +28,10 @@ interface OfferProfile {
   objections: Objection[];
   tone: string;
   cta_goal: string;
+  industry: string;
+  competitors: string;
+  market_sophistication: string;
+  market_awareness: string;
 }
 
 const EMPTY: OfferProfile = {
@@ -42,6 +46,10 @@ const EMPTY: OfferProfile = {
   objections: [{ objection: "", response: "" }],
   tone: "casual",
   cta_goal: "book a call",
+  industry: "",
+  competitors: "",
+  market_sophistication: "",
+  market_awareness: "",
 };
 
 export default function OfferPage() {
