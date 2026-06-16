@@ -31,8 +31,24 @@ export default function TrainingPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
+  const saveAttempt = useSaveTrainingAttempt();
+  const { data: icp } = useICP();
 
-  const scenario = demoTrainingScenarios.find((s) => s.id === activeScenario);
+  const scenarios = useMemo(() => {
+    const list = [...demoTrainingScenarios];
+    if (icp && (icp.pains || icp.goals)) {
+      list.unshift({
+        id: "icp-custom",
+        name: `Your Ideal Client: ${icp.name || "Custom"}`,
+        description: `A realistic prospect matching your ICP. Pains: ${icp.pains || "n/a"}. Goals: ${icp.goals || "n/a"}. They raise your common objections: ${icp.objections_common || "typical hesitations"}.`,
+        difficulty: "Intermediate",
+        personaType: "Ideal Client",
+      } as any);
+    }
+    return list;
+  }, [icp]);
+
+  const scenario = scenarios.find((s) => s.id === activeScenario);
 
   async function getAiReply(conversationHistory: ChatMsg[]) {
     setAiThinking(true);
