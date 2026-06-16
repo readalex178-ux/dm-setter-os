@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "DM Setter OS",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Lightweight companion for DM Setter OS — extract conversations on Instagram, TikTok, X, Facebook & LinkedIn and analyse, reply & sync via your DM Setter OS account.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "clipboardWrite"],
   "host_permissions": [
