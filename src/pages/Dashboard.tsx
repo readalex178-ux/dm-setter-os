@@ -84,6 +84,9 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Day-1 Readiness */}
+      <DayOneReadiness />
+
       {/* Today's Goal Progress */}
       <Card className="border-primary/20">
         <CardContent className="p-4">
