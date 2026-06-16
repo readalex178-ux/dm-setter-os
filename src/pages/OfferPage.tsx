@@ -28,6 +28,10 @@ interface OfferProfile {
   objections: Objection[];
   tone: string;
   cta_goal: string;
+  industry: string;
+  competitors: string;
+  market_sophistication: string;
+  market_awareness: string;
 }
 
 const EMPTY: OfferProfile = {
@@ -42,6 +46,10 @@ const EMPTY: OfferProfile = {
   objections: [{ objection: "", response: "" }],
   tone: "casual",
   cta_goal: "book a call",
+  industry: "",
+  competitors: "",
+  market_sophistication: "",
+  market_awareness: "",
 };
 
 export default function OfferPage() {
@@ -74,6 +82,10 @@ export default function OfferPage() {
             : [{ objection: "", response: "" }]),
           tone: data.tone || "casual",
           cta_goal: data.cta_goal || "book a call",
+          industry: (data as any).industry || "",
+          competitors: (data as any).competitors || "",
+          market_sophistication: (data as any).market_sophistication || "",
+          market_awareness: (data as any).market_awareness || "",
         });
       }
       setLoading(false);
@@ -102,6 +114,10 @@ export default function OfferPage() {
         objections: offer.objections.filter((o) => o.objection.trim() || o.response.trim()) as unknown as never,
         tone: offer.tone,
         cta_goal: offer.cta_goal,
+        industry: offer.industry,
+        competitors: offer.competitors,
+        market_sophistication: offer.market_sophistication,
+        market_awareness: offer.market_awareness,
       };
       let error;
       if (offer.id) {
@@ -260,6 +276,52 @@ export default function OfferPage() {
               />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Market Context</CardTitle>
+          <CardDescription>Helps the AI position your offer against the competition.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Industry / niche</Label>
+              <Input value={offer.industry} onChange={(e) => set("industry", e.target.value)} placeholder="e.g. Online fitness coaching" />
+            </div>
+            <div className="space-y-1">
+              <Label>Main competitors</Label>
+              <Input value={offer.competitors} onChange={(e) => set("competitors", e.target.value)} placeholder="e.g. Generic gym memberships, other coaches" />
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1">
+              <Label>Market sophistication</Label>
+              <Select value={offer.market_sophistication || undefined} onValueChange={(v) => set("market_sophistication", v)}>
+                <SelectTrigger><SelectValue placeholder="How saturated is the market?" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New — few competitors, simple claims work</SelectItem>
+                  <SelectItem value="growing">Growing — claims need proof</SelectItem>
+                  <SelectItem value="saturated">Saturated — needs unique mechanism</SelectItem>
+                  <SelectItem value="jaded">Jaded — skeptical, needs strong differentiation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Market awareness</Label>
+              <Select value={offer.market_awareness || undefined} onValueChange={(v) => set("market_awareness", v)}>
+                <SelectTrigger><SelectValue placeholder="How aware is your prospect?" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="unaware">Unaware — doesn't know they have the problem</SelectItem>
+                  <SelectItem value="problem-aware">Problem-aware — knows the problem, not the solution</SelectItem>
+                  <SelectItem value="solution-aware">Solution-aware — knows solutions exist</SelectItem>
+                  <SelectItem value="product-aware">Product-aware — knows your offer</SelectItem>
+                  <SelectItem value="most-aware">Most aware — ready to buy</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         </CardContent>
       </Card>
 

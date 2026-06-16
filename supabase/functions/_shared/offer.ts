@@ -60,6 +60,10 @@ ${valueProps}
 Proof / results: ${o.proof || "(not provided)"}
 Guarantee: ${o.guarantee || "(not provided)"}
 ${objections ? `Preferred objection handling:\n${objections}` : ""}
+Industry / niche: ${o.industry || "(not provided)"}
+Main competitors: ${o.competitors || "(not provided)"}
+Market sophistication: ${o.market_sophistication || "(not provided)"}
+Market awareness: ${o.market_awareness || "(not provided)"}
 Preferred tone/voice: ${o.tone || "casual"}
 Call-to-action goal: ${o.cta_goal || "book a call"}
 === END OFFER ===

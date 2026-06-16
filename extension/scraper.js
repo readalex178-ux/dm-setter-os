@@ -8,6 +8,7 @@ function getCurrentPlatform() {
   if (h.includes("tiktok.com"))    return { id: "tiktok",    name: "TikTok",    emoji: "🎵" };
   if (h.includes("twitter.com") || h.includes("x.com")) return { id: "twitter", name: "Twitter/X", emoji: "𝕏" };
   if (h.includes("facebook.com") || h.includes("messenger.com")) return { id: "facebook", name: "Facebook", emoji: "👤" };
+  if (h.includes("linkedin.com")) return { id: "linkedin", name: "LinkedIn", emoji: "💼" };
   return null;
 }
 
@@ -66,6 +67,12 @@ function getChatContainer(platformId) {
       '[role="main"] [class*="message"]',
       '[aria-label*="Messages"][role="main"]',
       '[data-testid*="message"]',
+    ],
+    linkedin: [
+      '.msg-s-message-list-container',
+      '.msg-s-message-list',
+      '.scaffold-layout__detail .msg-thread',
+      '.msg-conversation-card__content',
     ],
   };
 
@@ -132,6 +139,23 @@ function getProspectName(platformId) {
   if (platformId === "facebook") {
     const el = document.querySelector('h4[dir="auto"], [aria-label*="conversation"] h4');
     if (el?.textContent?.trim()) return el.textContent.trim();
+  }
+
+  // LinkedIn
+  if (platformId === "linkedin") {
+    const selectors = [
+      '.msg-thread__link-to-profile',
+      '.msg-conversation-card__title-row h2',
+      '.msg-overlay-bubble-header__title',
+      'h2.msg-entity-lockup__entity-title',
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      const text = el?.textContent?.trim();
+      if (text && text.length > 0 && text.length < 60 && text !== "LinkedIn") return text;
+    }
+    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Messaging\s*\|?\s*/i, "").trim();
+    if (title && title !== "LinkedIn" && title !== "Messaging" && title.length < 60) return title;
   }
 
   return null;
@@ -217,6 +241,27 @@ function extractMessages(container, platformId) {
       const sender = detectSender(el);
       add(text, sender);
     });
+  }
+
+  else if (platformId === "linkedin") {
+    // LinkedIn groups messages in event list items; the active speaker has a meta header.
+    const events = container.querySelectorAll('.msg-s-event-listitem, li.msg-s-message-list__event');
+    events.forEach(el => {
+      const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
+      const text = bodyEl?.textContent?.trim();
+      // LinkedIn marks the current user's own messages with this modifier class.
+      const isOwn = el.classList.contains('msg-s-event-listitem--other') === false
+        && (el.querySelector('.msg-s-message-group--other') === null)
+        && detectSender(el) === "setter";
+      const sender = isOwn ? "setter" : (detectSender(el) || "prospect");
+      add(text, sender);
+    });
+    // Fallback: scoped dir="auto" leaves
+    if (msgs.length === 0) {
+      container.querySelectorAll('.msg-s-event-listitem__body').forEach(el => {
+        add(el.textContent?.trim(), detectSender(el) || "prospect");
+      });
+    }
   }
 
   return msgs;

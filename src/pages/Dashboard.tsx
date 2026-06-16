@@ -16,6 +16,7 @@ import { useProspects, useKPIs, useAddProspect } from "@/hooks/useSetterData";
 import { kpiGoals, getTodayKPI, getStreak } from "@/lib/kpi";
 import { EmptyState } from "@/components/EmptyState";
 import { DayOneReadiness } from "@/components/DayOneReadiness";
+import { DailyBriefing } from "@/components/DailyBriefing";
 
 const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
@@ -86,6 +87,9 @@ export default function Dashboard() {
 
       {/* Day-1 Readiness */}
       <DayOneReadiness />
+
+      {/* Daily AI Briefing */}
+      <DailyBriefing />
 
       {/* Today's Goal Progress */}
       <Card className="border-primary/20">

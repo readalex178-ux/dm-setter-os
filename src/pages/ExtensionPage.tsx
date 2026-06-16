@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 const features = [
   { icon: MessageSquare, title: "Quick Inbox", desc: "See recent DM conversations and unread counts at a glance" },
   { icon: Layout, title: "Full App Access", desc: "Open the complete DM Setter OS dashboard in a new tab" },
-  { icon: Puzzle, title: "Page Overlay", desc: "Floating widget on Instagram, Facebook & Messenger with AI insights" },
+  { icon: Puzzle, title: "Page Overlay", desc: "Floating widget on Instagram, TikTok, X, Facebook & LinkedIn with AI insights" },
   { icon: Bell, title: "Notifications", desc: "Get alerts when hot leads reply or prospects are call-ready" },
 ];
 
@@ -57,7 +57,7 @@ export default function ExtensionPage() {
           <h1 className="text-3xl font-bold">Chrome Extension</h1>
         </div>
         <p className="text-muted-foreground max-w-lg mx-auto">
-          Take DM Setter OS everywhere — get AI-powered prospect insights right inside Instagram, Facebook & Messenger.
+          Take DM Setter OS everywhere — get AI-powered prospect insights right inside Instagram, TikTok, X, Facebook & LinkedIn.
         </p>
         <Badge variant="secondary" className="text-xs">Works on Chrome, Edge, Brave & Arc</Badge>
       </div>

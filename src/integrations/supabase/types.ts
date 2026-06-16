@@ -312,6 +312,7 @@ export type Database = {
       }
       offer_profiles: {
         Row: {
+          competitors: string
           core_promise: string
           created_at: string
           cta_goal: string
@@ -319,7 +320,10 @@ export type Database = {
           guarantee: string
           id: string
           ideal_client: string
+          industry: string
           is_active: boolean
+          market_awareness: string
+          market_sophistication: string
           objections: Json
           offer_name: string
           price: string
@@ -330,6 +334,7 @@ export type Database = {
           value_props: string[]
         }
         Insert: {
+          competitors?: string
           core_promise?: string
           created_at?: string
           cta_goal?: string
@@ -337,7 +342,10 @@ export type Database = {
           guarantee?: string
           id?: string
           ideal_client?: string
+          industry?: string
           is_active?: boolean
+          market_awareness?: string
+          market_sophistication?: string
           objections?: Json
           offer_name?: string
           price?: string
@@ -348,6 +356,7 @@ export type Database = {
           value_props?: string[]
         }
         Update: {
+          competitors?: string
           core_promise?: string
           created_at?: string
           cta_goal?: string
@@ -355,7 +364,10 @@ export type Database = {
           guarantee?: string
           id?: string
           ideal_client?: string
+          industry?: string
           is_active?: boolean
+          market_awareness?: string
+          market_sophistication?: string
           objections?: Json
           offer_name?: string
           price?: string

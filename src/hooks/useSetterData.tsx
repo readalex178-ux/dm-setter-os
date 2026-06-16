@@ -171,6 +171,33 @@ export function useUpdateProspectStage() {
   });
 }
 
+export function useMarkContacted() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      const ts = new Date().toISOString();
+      const { error } = await supabase
+        .from("prospects")
+        .update({ last_contact_at: ts })
+        .eq("id", id);
+      if (error) throw error;
+      await supabase.from("timeline_events").insert({
+        user_id: user!.id,
+        prospect_id: id,
+        event_type: "follow_up",
+        description: note || "Followed up",
+        occurred_at: ts,
+      });
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prospects"] });
+      qc.invalidateQueries({ queryKey: ["timeline"] });
+    },
+  });
+}
+
+
 export function useLogKPI() {
   const qc = useQueryClient();
   const { user } = useAuth();
