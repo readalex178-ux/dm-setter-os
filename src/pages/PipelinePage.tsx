@@ -1,15 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { demoProspects, demoMessages, type PipelineStage } from "@/data/demo-data";
-import { Phone, Sparkles } from "lucide-react";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Phone, Sparkles, GitBranch, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
-
-const stages: PipelineStage[] = [
-  "New Lead", "Discovery", "Qualification", "Interested",
-  "Objection Handling", "Ready for Call", "Call Booked", "Not Qualified", "Cold Lead",
-];
+import { useProspects, useUpdateProspectStage, PIPELINE_STAGES } from "@/hooks/useSetterData";
+import { EmptyState } from "@/components/EmptyState";
+import { toast } from "@/hooks/use-toast";
 
 const stageColors: Record<string, string> = {
   "New Lead": "bg-muted",
@@ -26,8 +26,19 @@ const stageColors: Record<string, string> = {
 export default function PipelinePage() {
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [analyzeId, setAnalyzeId] = useState<string | null>(null);
-  const analyzeTarget = analyzeId ? demoProspects.find((p) => p.id === analyzeId) : null;
-  const analyzeMessages = analyzeId ? (demoMessages[analyzeId] || []).map((m) => ({ sender: m.sender, content: m.content })) : [];
+  const { data: prospects = [], isLoading } = useProspects();
+  const updateStage = useUpdateProspectStage();
+
+  const analyzeTarget = analyzeId ? prospects.find((p) => p.id === analyzeId) : null;
+
+  async function move(id: string, stage: string) {
+    try {
+      await updateStage.mutateAsync({ id, stage });
+      toast({ title: "Stage updated", description: `Moved to ${stage}.` });
+    } catch (e) {
+      toast({ title: "Update failed", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    }
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -42,51 +53,59 @@ export default function PipelinePage() {
         </div>
       </div>
 
-      {view === "kanban" ? (
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : prospects.length === 0 ? (
+        <EmptyState
+          icon={GitBranch}
+          title="Your pipeline is empty"
+          description="Add prospects from the Dashboard, connect a platform, or sync via the Chrome extension. They'll flow through your pipeline stages here."
+          actionLabel="Go to Dashboard"
+          actionTo="/app"
+        />
+      ) : view === "kanban" ? (
         <div className="flex gap-4 overflow-x-auto pb-4">
-          {stages.map((stage) => {
-            const prospects = demoProspects.filter((p) => p.stage === stage);
+          {PIPELINE_STAGES.map((stage) => {
+            const list = prospects.filter((p) => p.stage === stage);
             return (
               <div key={stage} className="min-w-[240px] flex flex-col">
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-semibold">{stage}</h3>
-                  <Badge variant="secondary" className="text-xs">{prospects.length}</Badge>
+                  <Badge variant="secondary" className="text-xs">{list.length}</Badge>
                 </div>
                 <div className="space-y-2 flex-1">
-                  {prospects.map((p) => (
+                  {list.map((p) => (
                     <Card key={p.id} className={`${stageColors[stage]} border group relative`}>
                       <CardContent className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
-                            {p.avatar}
+                            {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium truncate">{p.name}</div>
-                            <div className="text-[10px] text-muted-foreground truncate">{p.handle}</div>
+                            <div className="text-[10px] text-muted-foreground truncate">{p.handle || "—"}</div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                            title="AI: Analyze stage"
-                            onClick={() => setAnalyzeId(p.id)}
-                          >
+                          <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" title="AI: Analyze stage" onClick={() => setAnalyzeId(p.id)}>
                             <Sparkles className="h-3 w-3 text-primary" />
                           </Button>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <Badge variant="score" className="text-[10px]">{p.leadScore}/10</Badge>
-                          <Badge variant={p.callReadiness >= 70 ? "success" : "secondary"} className="text-[10px]">
-                            <Phone className="h-2.5 w-2.5 mr-0.5" />{p.callReadiness}%
+                        <div className="flex items-center gap-1.5 mb-2">
+                          <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
+                          <Badge variant={p.call_readiness >= 70 ? "success" : "secondary"} className="text-[10px]">
+                            <Phone className="h-2.5 w-2.5 mr-0.5" />{p.call_readiness}%
                           </Badge>
                         </div>
+                        <Select value={p.stage} onValueChange={(v) => move(p.id, v)}>
+                          <SelectTrigger className="h-7 text-[10px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            {PIPELINE_STAGES.map((s) => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
                       </CardContent>
                     </Card>
                   ))}
-                  {prospects.length === 0 && (
-                    <div className="text-xs text-muted-foreground text-center py-8 border border-dashed border-border rounded-lg">
-                      No prospects
-                    </div>
+                  {list.length === 0 && (
+                    <div className="text-xs text-muted-foreground text-center py-8 border border-dashed border-border rounded-lg">No prospects</div>
                   )}
                 </div>
               </div>
@@ -104,27 +123,32 @@ export default function PipelinePage() {
                   <th className="text-left p-3 text-xs font-medium text-muted-foreground">Score</th>
                   <th className="text-left p-3 text-xs font-medium text-muted-foreground">Call Ready</th>
                   <th className="text-left p-3 text-xs font-medium text-muted-foreground">Intent</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Last Contact</th>
                   <th className="text-left p-3 text-xs font-medium text-muted-foreground"></th>
                 </tr>
               </thead>
               <tbody>
-                {demoProspects.map((p) => (
+                {prospects.map((p) => (
                   <tr key={p.id} className="border-b border-border hover:bg-muted/50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
-                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{p.avatar}</div>
+                        <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{p.name.slice(0, 2).toUpperCase()}</div>
                         <div>
                           <div className="font-medium">{p.name}</div>
-                          <div className="text-xs text-muted-foreground">{p.handle}</div>
+                          <div className="text-xs text-muted-foreground">{p.handle || "—"}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3"><Badge variant="outline" className="text-xs">{p.stage}</Badge></td>
-                    <td className="p-3"><Badge variant="score">{p.leadScore}/10</Badge></td>
-                    <td className="p-3"><Badge variant={p.callReadiness >= 70 ? "success" : "secondary"}>{p.callReadiness}%</Badge></td>
-                    <td className="p-3">{p.intentLevel} {p.intentConfidence}%</td>
-                    <td className="p-3 text-muted-foreground">{p.lastContact}</td>
+                    <td className="p-3">
+                      <Select value={p.stage} onValueChange={(v) => move(p.id, v)}>
+                        <SelectTrigger className="h-8 text-xs w-[160px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {PIPELINE_STAGES.map((s) => <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-3"><Badge variant="score">{p.lead_score}/10</Badge></td>
+                    <td className="p-3"><Badge variant={p.call_readiness >= 70 ? "success" : "secondary"}>{p.call_readiness}%</Badge></td>
+                    <td className="p-3">{p.intent_level || "—"} {p.intent_confidence ? `${p.intent_confidence}%` : ""}</td>
                     <td className="p-3">
                       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAnalyzeId(p.id)}>
                         <Sparkles className="h-3 w-3 mr-1 text-primary" /> Analyze
@@ -145,7 +169,7 @@ export default function PipelinePage() {
         prospectName={analyzeTarget?.name || ""}
         currentStage={analyzeTarget?.stage || ""}
         prospect={analyzeTarget || {}}
-        messages={analyzeMessages}
+        messages={[]}
       />
     </div>
   );
