@@ -82,6 +82,10 @@ export default function OfferPage() {
             : [{ objection: "", response: "" }]),
           tone: data.tone || "casual",
           cta_goal: data.cta_goal || "book a call",
+          industry: (data as any).industry || "",
+          competitors: (data as any).competitors || "",
+          market_sophistication: (data as any).market_sophistication || "",
+          market_awareness: (data as any).market_awareness || "",
         });
       }
       setLoading(false);
