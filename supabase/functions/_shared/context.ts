@@ -47,6 +47,9 @@ export async function loadContext(req: Request): Promise<string> {
     const faq = formatFAQ(faqRes.data || []);
     if (faq) parts.push(faq);
 
+    const convos = formatConversations(convRes.data || []);
+    if (convos) parts.push(convos);
+
     return parts.join("\n\n");
   } catch (_e) {
     return "";
