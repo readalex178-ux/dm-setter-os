@@ -21,7 +21,7 @@ export async function loadContext(req: Request): Promise<string> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return "";
 
-    const [offerRes, icpRes, objRes, faqRes] = await Promise.all([
+    const [offerRes, icpRes, objRes, faqRes, convRes] = await Promise.all([
       supabase.from("offer_profiles").select("*").eq("user_id", user.id)
         .eq("is_active", true).order("updated_at", { ascending: false }).limit(1).maybeSingle(),
       supabase.from("icp_profiles").select("*").eq("user_id", user.id)
@@ -30,6 +30,8 @@ export async function loadContext(req: Request): Promise<string> {
         .order("category", { ascending: true }).limit(50),
       supabase.from("faq_entries").select("*").eq("user_id", user.id)
         .order("created_at", { ascending: true }).limit(50),
+      supabase.from("conversation_examples").select("*").eq("user_id", user.id)
+        .order("created_at", { ascending: false }).limit(10),
     ]);
 
     const parts: string[] = [];
