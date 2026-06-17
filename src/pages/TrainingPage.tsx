@@ -123,6 +123,11 @@ export default function TrainingPage() {
                 description: scenario.description,
                 difficulty: scenario.difficulty,
                 personaType: scenario.personaType,
+                personaName: persona?.name,
+                personaAge: persona?.age,
+                personaJob: persona?.job,
+                personaTrait: persona?.trait,
+                personaContext: persona?.context,
               }
             : null,
         },
