@@ -330,6 +330,22 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
               </CardHeader>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
+                  {messages.length === 0 && (
+                    <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3 text-sm">
+                      <div>
+                        <p className="font-semibold">{scenario?.name}</p>
+                        <p className="text-muted-foreground">Your goal is to get them to book a call.</p>
+                      </div>
+                      {persona && (
+                        <div className="rounded-md bg-background/60 border border-border p-3">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Your prospect</p>
+                          <p className="font-medium">{persona.name}, {persona.age} · {persona.job}</p>
+                          <p className="text-muted-foreground text-xs mt-1">{persona.trait}. They {persona.context}.</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-primary font-medium">Send your first message.</p>
+                    </div>
+                  )}
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div className={`flex items-start gap-2 max-w-[80%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
