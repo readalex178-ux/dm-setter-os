@@ -240,37 +240,18 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     }
   }
 
-  async function startScenario(id: string) {
+  function startScenario(id: string) {
     setActiveScenario(id);
     setMessages([]);
+    setInput("");
     setCompleted(false);
     setFeedback(null);
     setTurnCount(0);
     setError(null);
-
-    // Get AI's opening message
-    const sc = scenarios.find((s) => s.id === id);
-    setAiThinking(true);
-    const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
-      body: {
-        messages: [],
-        scenario: sc
-          ? {
-              name: sc.name,
-              description: sc.description,
-              difficulty: sc.difficulty,
-              personaType: sc.personaType,
-            }
-          : null,
-      },
-    });
     setAiThinking(false);
-
-    if (data?.reply) {
-      setMessages([{ role: "ai-prospect", content: data.reply }]);
-    } else {
-      setError(fnError?.message || data?.error || "Failed to start scenario");
-    }
+    // Generate a fresh random prospect persona. The AI never sends the first
+    // message — the user must initiate the conversation.
+    setPersona(generatePersona());
   }
 
   async function sendMessage() {
