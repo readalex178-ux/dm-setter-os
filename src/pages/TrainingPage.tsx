@@ -16,6 +16,60 @@ interface ChatMsg {
   content: string;
 }
 
+interface Persona {
+  name: string;
+  age: string;
+  job: string;
+  trait: string;
+  context: string;
+}
+
+const NAMES = [
+  "Jamie", "Alex", "Taylor", "Jordan", "Casey", "Morgan", "Riley", "Sam",
+  "Chris", "Dana", "Priya", "Liam", "Noah", "Maya", "Sofia", "Leo",
+  "Ethan", "Olivia", "Marcus", "Hannah", "Devon", "Naomi", "Tariq", "Elena",
+];
+const AGES = ["22-26", "27-31", "32-36", "37-42", "43-49", "50-55"];
+const JOBS = [
+  "marketing manager", "nurse", "freelance designer", "warehouse supervisor",
+  "personal trainer", "teacher", "real estate agent", "barista",
+  "software developer", "stay-at-home parent", "retail assistant",
+  "small business owner", "accountant", "delivery driver", "hairdresser",
+  "customer support rep", "electrician", "recent graduate",
+];
+const TRAITS = [
+  "slightly sceptical but curious", "friendly but cautious", "blunt and to-the-point",
+  "easily distracted and busy", "enthusiastic but indecisive", "guarded and short with replies",
+  "warm and chatty", "analytical, wants proof", "polite but non-committal",
+  "tired of being sold to",
+];
+const CONTEXTS = [
+  "followed after seeing a TikTok about passive income",
+  "downloaded your free guide last week",
+  "commented on one of your reels",
+  "replied to your story poll",
+  "DM'd asking how it works",
+  "saw a friend's results and got curious",
+  "has been lurking on your content for a while",
+  "clicked an ad about side income",
+  "joined your free community recently",
+  "replied to your thank-you message after opting in",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generatePersona(): Persona {
+  return {
+    name: pick(NAMES),
+    age: pick(AGES),
+    job: pick(JOBS),
+    trait: pick(TRAITS),
+    context: pick(CONTEXTS),
+  };
+}
+
 export default function TrainingPage() {
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -31,6 +85,7 @@ export default function TrainingPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
+  const [persona, setPersona] = useState<Persona | null>(null);
   const saveAttempt = useSaveTrainingAttempt();
   const { data: icp } = useICP();
 
@@ -68,6 +123,11 @@ export default function TrainingPage() {
                 description: scenario.description,
                 difficulty: scenario.difficulty,
                 personaType: scenario.personaType,
+                personaName: persona?.name,
+                personaAge: persona?.age,
+                personaJob: persona?.job,
+                personaTrait: persona?.trait,
+                personaContext: persona?.context,
               }
             : null,
         },
@@ -180,37 +240,18 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     }
   }
 
-  async function startScenario(id: string) {
+  function startScenario(id: string) {
     setActiveScenario(id);
     setMessages([]);
+    setInput("");
     setCompleted(false);
     setFeedback(null);
     setTurnCount(0);
     setError(null);
-
-    // Get AI's opening message
-    const sc = scenarios.find((s) => s.id === id);
-    setAiThinking(true);
-    const { data, error: fnError } = await supabase.functions.invoke("training-chat", {
-      body: {
-        messages: [],
-        scenario: sc
-          ? {
-              name: sc.name,
-              description: sc.description,
-              difficulty: sc.difficulty,
-              personaType: sc.personaType,
-            }
-          : null,
-      },
-    });
     setAiThinking(false);
-
-    if (data?.reply) {
-      setMessages([{ role: "ai-prospect", content: data.reply }]);
-    } else {
-      setError(fnError?.message || data?.error || "Failed to start scenario");
-    }
+    // Generate a fresh random prospect persona. The AI never sends the first
+    // message — the user must initiate the conversation.
+    setPersona(generatePersona());
   }
 
   async function sendMessage() {
@@ -289,6 +330,22 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
               </CardHeader>
               <ScrollArea className="flex-1 p-4">
                 <div className="space-y-3">
+                  {messages.length === 0 && (
+                    <div className="rounded-lg border border-border bg-muted/40 p-4 space-y-3 text-sm">
+                      <div>
+                        <p className="font-semibold">{scenario?.name}</p>
+                        <p className="text-muted-foreground">Your goal is to get them to book a call.</p>
+                      </div>
+                      {persona && (
+                        <div className="rounded-md bg-background/60 border border-border p-3">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Your prospect</p>
+                          <p className="font-medium">{persona.name}, {persona.age} · {persona.job}</p>
+                          <p className="text-muted-foreground text-xs mt-1">{persona.trait}. They {persona.context}.</p>
+                        </div>
+                      )}
+                      <p className="text-xs text-primary font-medium">Send your first message.</p>
+                    </div>
+                  )}
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
                       <div className={`flex items-start gap-2 max-w-[80%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>

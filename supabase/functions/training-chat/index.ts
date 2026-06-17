@@ -39,7 +39,7 @@ serve(async (req) => {
     const systemPrompt = `You are role-playing as a prospect in a DM conversation for training purposes. You are helping a DM setter practice their sales/outreach skills.
 
 Your character:
-- Name: ${scenario.personaName || "Alex"}
+- Name: ${scenario.personaName || "Alex"}${scenario.personaAge ? `\n- Age: ${scenario.personaAge}` : ""}${scenario.personaJob ? `\n- Job / situation: ${scenario.personaJob}` : ""}${scenario.personaTrait ? `\n- Personality: ${scenario.personaTrait}` : ""}${scenario.personaContext ? `\n- Context (why you followed/downloaded/replied): ${scenario.personaContext}` : ""}
 - Type: ${scenario.personaType} prospect
 - Scenario: ${scenario.name} — ${scenario.description}
 - Difficulty: ${scenario.difficulty}
@@ -87,7 +87,8 @@ ${offerContext ? `\nThe setter is selling this offer (react realistically to it 
     ];
 
     if (messages && messages.length > 0) {
-      // Add conversation history
+      // Add conversation history. The AI only ever RESPONDS — the setter always
+      // sends the first message. We never generate an opener.
       for (const m of messages) {
         aiMessages.push({
           role: m.role === "user" ? "user" : "assistant",
@@ -95,11 +96,11 @@ ${offerContext ? `\nThe setter is selling this offer (react realistically to it 
         });
       }
     } else {
-      // First message — prospect initiates or responds to opener
-      aiMessages.push({
-        role: "user",
-        content: "The setter has just sent you an initial DM or you're responding to their first outreach. Send your opening response as the prospect.",
-      });
+      // No user message yet — the AI must never initiate the conversation.
+      return new Response(
+        JSON.stringify({ error: "The setter must send the first message. The AI only responds." }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const response = await fetch(
