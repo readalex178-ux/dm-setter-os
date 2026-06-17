@@ -39,7 +39,7 @@ serve(async (req) => {
     const systemPrompt = `You are role-playing as a prospect in a DM conversation for training purposes. You are helping a DM setter practice their sales/outreach skills.
 
 Your character:
-- Name: ${scenario.personaName || "Alex"}
+- Name: ${scenario.personaName || "Alex"}${scenario.personaAge ? `\n- Age: ${scenario.personaAge}` : ""}${scenario.personaJob ? `\n- Job / situation: ${scenario.personaJob}` : ""}${scenario.personaTrait ? `\n- Personality: ${scenario.personaTrait}` : ""}${scenario.personaContext ? `\n- Context (why you followed/downloaded/replied): ${scenario.personaContext}` : ""}
 - Type: ${scenario.personaType} prospect
 - Scenario: ${scenario.name} — ${scenario.description}
 - Difficulty: ${scenario.difficulty}
