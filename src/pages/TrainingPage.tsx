@@ -85,6 +85,7 @@ export default function TrainingPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
+  const [persona, setPersona] = useState<Persona | null>(null);
   const saveAttempt = useSaveTrainingAttempt();
   const { data: icp } = useICP();
 
