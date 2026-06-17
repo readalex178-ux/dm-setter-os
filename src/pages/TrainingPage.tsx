@@ -16,6 +16,60 @@ interface ChatMsg {
   content: string;
 }
 
+interface Persona {
+  name: string;
+  age: string;
+  job: string;
+  trait: string;
+  context: string;
+}
+
+const NAMES = [
+  "Jamie", "Alex", "Taylor", "Jordan", "Casey", "Morgan", "Riley", "Sam",
+  "Chris", "Dana", "Priya", "Liam", "Noah", "Maya", "Sofia", "Leo",
+  "Ethan", "Olivia", "Marcus", "Hannah", "Devon", "Naomi", "Tariq", "Elena",
+];
+const AGES = ["22-26", "27-31", "32-36", "37-42", "43-49", "50-55"];
+const JOBS = [
+  "marketing manager", "nurse", "freelance designer", "warehouse supervisor",
+  "personal trainer", "teacher", "real estate agent", "barista",
+  "software developer", "stay-at-home parent", "retail assistant",
+  "small business owner", "accountant", "delivery driver", "hairdresser",
+  "customer support rep", "electrician", "recent graduate",
+];
+const TRAITS = [
+  "slightly sceptical but curious", "friendly but cautious", "blunt and to-the-point",
+  "easily distracted and busy", "enthusiastic but indecisive", "guarded and short with replies",
+  "warm and chatty", "analytical, wants proof", "polite but non-committal",
+  "tired of being sold to",
+];
+const CONTEXTS = [
+  "followed after seeing a TikTok about passive income",
+  "downloaded your free guide last week",
+  "commented on one of your reels",
+  "replied to your story poll",
+  "DM'd asking how it works",
+  "saw a friend's results and got curious",
+  "has been lurking on your content for a while",
+  "clicked an ad about side income",
+  "joined your free community recently",
+  "replied to your thank-you message after opting in",
+];
+
+function pick<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function generatePersona(): Persona {
+  return {
+    name: pick(NAMES),
+    age: pick(AGES),
+    job: pick(JOBS),
+    trait: pick(TRAITS),
+    context: pick(CONTEXTS),
+  };
+}
+
 export default function TrainingPage() {
   const [activeScenario, setActiveScenario] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
