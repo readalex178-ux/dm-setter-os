@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 import { loadContext } from "../_shared/context.ts";
 
@@ -12,7 +11,7 @@ const corsHeaders = {
 const STALE_DAYS = 3;
 const ACTIVE_STAGES = ["New Lead", "Discovery", "Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
