@@ -16,8 +16,8 @@ Deno.serve(async (req) => {
     const { user: authUser } = await getAuthUser(req);
     if (!authUser) return unauthorized(corsHeaders);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const { system, user, maxTokens, includeOffer = true } = await req.json();
     if (!system || !user) {
@@ -30,14 +30,14 @@ Deno.serve(async (req) => {
     const offerContext = includeOffer ? await loadContext(req) : "";
     const systemPrompt = offerContext ? `${system}\n${offerContext}` : system;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-flash-1.5",
         max_tokens: maxTokens || 800,
         messages: [
           { role: "system", content: systemPrompt },
