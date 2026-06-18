@@ -1,6 +1,6 @@
 // Shared helper: loads the caller's full knowledge base (offer + ICP + objections + FAQ)
 // and formats it for AI prompts. Falls back gracefully to empty strings.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { formatOffer } from "./offer.ts";
 
 function client(req: Request) {
