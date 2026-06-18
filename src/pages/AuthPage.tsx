@@ -75,6 +75,22 @@ export default function AuthPage() {
     }
   }
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      toast({ title: "Enter your email first", description: "We need your email address to send a reset link.", variant: "destructive" });
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/reset-password",
+      });
+      if (error) throw error;
+      toast({ title: "Reset email sent", description: "Check your inbox for a password reset link." });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md border-border">
@@ -148,6 +164,15 @@ export default function AuthPage() {
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {mode === "signin" ? "Sign in" : "Create account"}
             </Button>
+          {mode === 'signin' && (
+            <button
+              type="button"
+              onClick={handleForgotPassword}
+              className="text-sm text-muted-foreground hover:text-primary underline-offset-4 hover:underline mt-1"
+            >
+              Forgot password?
+            </button>
+          )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
