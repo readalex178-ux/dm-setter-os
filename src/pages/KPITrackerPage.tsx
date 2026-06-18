@@ -81,7 +81,7 @@ export default function KPITrackerPage() {
       toast({ title: "Could not delete entry", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Entry deleted" });
-      qc.invalidateQueries({ queryKey: ["kpis"] });
+      qc.invalidateQueries({ queryKey: ["daily_kpis"] });
     }
   }
 
