@@ -56,6 +56,7 @@ export function useInbox() {
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [useDemo, setUseDemo] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
@@ -213,9 +214,14 @@ export function useInbox() {
     setSending(false);
   }
 
-  async function deleteProspect() {
+  function deleteProspect() {
     if (!selectedId || useDemo || !sel) return;
-    if (!window.confirm(`Delete "${sel.name}"? This cannot be undone.`)) return;
+    setShowDeleteConfirm(true);
+  }
+
+  async function confirmDelete() {
+    if (!selectedId || !sel) return;
+    setShowDeleteConfirm(false);
     setDeleting(true);
     const { error } = await supabase.from("prospects").delete().eq("id", selectedId);
     setDeleting(false);
@@ -227,6 +233,10 @@ export function useInbox() {
       setSelectedId(null);
       if (isMobile) setShowChat(false);
     }
+  }
+
+  function cancelDelete() {
+    setShowDeleteConfirm(false);
   }
 
   async function fetchAiSuggestions() {
@@ -298,6 +308,6 @@ export function useInbox() {
     sending, deleting, useDemo, loaded, aiSuggestions, aiLoading, aiError, scoring,
     messagesEndRef, selectedId, selectProspect, prospects, filtered, sel, messages, replies,
     dbProspectsEmpty: !useDemo && dbProspects.length === 0,
-    handleSend, deleteProspect, fetchAiSuggestions, scoreConversation, applyStage,
+    handleSend, deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm, fetchAiSuggestions, scoreConversation, applyStage,
   };
 }
