@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   Send, MessageSquare, UserPlus, Phone, Clock,
   Flame, Target, Plus, ChevronUp,
-  CheckCircle2, Trophy, Loader2, Save,
+  CheckCircle2, Trophy, Loader2, Save, Trash2,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
@@ -20,6 +20,8 @@ import {
   benchmark, benchmarkColor, correctiveTip,
 } from "@/lib/kpi";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 const metricIcons: Record<string, React.ElementType> = {
   dms_sent: Send,
@@ -34,8 +36,10 @@ type FormState = Omit<DBDailyKPI, "id" | "date">;
 export default function KPITrackerPage() {
   const { data: kpis = [], isLoading } = useKPIs();
   const logKPI = useLogKPI();
+  const qc = useQueryClient();
   const [showLogForm, setShowLogForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_KPI);
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
   const today = getTodayKPI(kpis);
 
@@ -67,6 +71,20 @@ export default function KPITrackerPage() {
     }
   }
 
+  async function deleteKPI(id: string, date: string) {
+    const label = date === todayStr() ? "today's entry" : `entry for ${new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+    setDeletingIds((prev) => new Set(prev).add(id));
+    const { error } = await supabase.from("daily_kpis").delete().eq("id", id);
+    setDeletingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    if (error) {
+      toast({ title: "Could not delete entry", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Entry deleted" });
+      qc.invalidateQueries({ queryKey: ["kpis"] });
+    }
+  }
+
   const numField = (k: keyof FormState) => ({
     value: (form[k] as number) ?? 0,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -90,7 +108,6 @@ export default function KPITrackerPage() {
         </Button>
       </div>
 
-      {/* Quick Log Form */}
       {showLogForm && (
         <Card className="border-primary/30">
           <CardHeader className="pb-3"><CardTitle className="text-sm">Log Today's Numbers</CardTitle></CardHeader>
@@ -133,7 +150,6 @@ export default function KPITrackerPage() {
         </Card>
       )}
 
-      {/* Daily Goal Progress + benchmark */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {kpiGoals.map((goal) => {
           const todayVal = today[goal.metric] as number;
@@ -169,7 +185,6 @@ export default function KPITrackerPage() {
         })}
       </div>
 
-      {/* Key Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Today's Conversion</p><p className="text-2xl font-bold">{conversionRate}%</p><p className="text-xs text-muted-foreground">DM → Call</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Weekly Conversion</p><p className="text-2xl font-bold">{weekConversion}%</p><p className="text-xs text-muted-foreground">{weekCallsBooked} calls / {weekDmsSent} DMs</p></CardContent></Card>
@@ -185,7 +200,6 @@ export default function KPITrackerPage() {
         </Card>
       ) : (
         <>
-          {/* Charts */}
           <div className="grid lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">DMs & Follow-Ups (7 days)</CardTitle></CardHeader>
@@ -219,7 +233,6 @@ export default function KPITrackerPage() {
             </Card>
           </div>
 
-          {/* Daily Log Table */}
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">Daily Log (Last 30 Days)</CardTitle></CardHeader>
             <CardContent>
@@ -236,13 +249,15 @@ export default function KPITrackerPage() {
                       <th className="text-center py-2 px-2">No-Shows</th>
                       <th className="text-center py-2 px-2">Hours</th>
                       <th className="text-left py-2 pl-4">Notes</th>
+                      <th className="py-2 pl-2"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {kpis.map((k) => {
                       const isToday = k.date === todayStr();
+                      const isDeleting = deletingIds.has(k.id);
                       return (
-                        <tr key={k.id} className={`border-b border-border/50 ${isToday ? "bg-primary/5" : ""}`}>
+                        <tr key={k.id} className={`border-b border-border/50 group ${isToday ? "bg-primary/5" : ""}`}>
                           <td className="py-2 pr-4 whitespace-nowrap font-medium">
                             {isToday ? <Badge variant="outline" className="text-xs">Today</Badge> : new Date(k.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </td>
@@ -254,6 +269,16 @@ export default function KPITrackerPage() {
                           <td className="text-center py-2 px-2">{k.no_shows > 0 ? <span className="text-destructive font-medium">{k.no_shows}</span> : <span className="text-muted-foreground">0</span>}</td>
                           <td className="text-center py-2 px-2">{k.hours_worked}h</td>
                           <td className="py-2 pl-4 text-muted-foreground text-xs max-w-[200px] truncate">{k.notes}</td>
+                          <td className="py-2 pl-2">
+                            <button
+                              onClick={() => deleteKPI(k.id, k.date)}
+                              disabled={isDeleting}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50"
+                              title="Delete this entry"
+                            >
+                              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                            </button>
+                          </td>
                         </tr>
                       );
                     })}
@@ -263,7 +288,6 @@ export default function KPITrackerPage() {
             </CardContent>
           </Card>
 
-          {/* Weekly Totals */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
