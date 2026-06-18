@@ -4,11 +4,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import {
   Send, MessageSquare, UserPlus, Phone, Clock,
-  Flame, Target, Plus, ChevronUp,
+  Flame, Target, Plus, ChevronUp, Download, Settings2,
   CheckCircle2, Trophy, Loader2, Save, Trash2,
 } from "lucide-react";
 import {
@@ -34,6 +35,29 @@ const metricIcons: Record<string, React.ElementType> = {
 type FormState = Omit<DBDailyKPI, "id" | "date">;
 
 export default function KPITrackerPage() {
+  // Custom targets (localStorage-backed)
+  const [customTargets, setCustomTargets] = useState<Record<string, { dailyTarget: number; weeklyTarget: number }>>(() => {
+    try { return JSON.parse(localStorage.getItem("kpiTargets") || "{}"); } catch { return {}; }
+  });
+  const [editTargetsOpen, setEditTargetsOpen] = useState(false);
+  const [targetDraft, setTargetDraft] = useState<typeof customTargets>({});
+
+  const goalList = goalList.map((g) => ({
+    ...g,
+    dailyTarget: customTargets[g.metric]?.dailyTarget ?? g.dailyTarget,
+    weeklyTarget: customTargets[g.metric]?.weeklyTarget ?? g.weeklyTarget,
+  }));
+
+  function openEditTargets() {
+    setTargetDraft(Object.fromEntries(goalList.map((g) => [g.metric, { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }])));
+    setEditTargetsOpen(true);
+  }
+
+  function saveTargets() {
+    setCustomTargets(targetDraft);
+    localStorage.setItem("kpiTargets", JSON.stringify(targetDraft));
+    setEditTargetsOpen(false);
+  }
   const { data: kpis = [], isLoading } = useKPIs();
   const logKPI = useLogKPI();
   const qc = useQueryClient();
@@ -95,12 +119,29 @@ export default function KPITrackerPage() {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
 
+  function exportKPICSV() {
+    if (!kpis) return;
+    const rows = [
+      ["Date", ...goalList.map((g) => g.label)],
+      ...kpis.map((k) => [k.date, ...goalList.map((g) => String(k[g.metric] ?? ""))])
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "kpi-tracker.csv";
+    a.click();
+  }
+
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">KPI Tracker</h1>
           <p className="text-sm text-muted-foreground">Track your daily numbers and hit your targets</p>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline" size="sm" onClick={openEditTargets} className="flex items-center gap-1"><Settings2 className="h-4 w-4" />Edit Targets</Button>
+            <Button variant="outline" size="sm" onClick={exportKPICSV} className="flex items-center gap-1"><Download className="h-4 w-4" />Export CSV</Button>
+          </div>
         </div>
         <Button onClick={() => setShowLogForm(!showLogForm)} size="sm">
           {showLogForm ? <ChevronUp className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
@@ -151,7 +192,7 @@ export default function KPITrackerPage() {
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {kpiGoals.map((goal) => {
+        {goalList.map((goal) => {
           const todayVal = today[goal.metric] as number;
           const pct = Math.min((todayVal / goal.dailyTarget) * 100, 100);
           const hit = todayVal >= goal.dailyTarget;
@@ -297,7 +338,7 @@ export default function KPITrackerPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {kpiGoals.map((goal) => {
+                {goalList.map((goal) => {
                   const weekVal = getWeekTotal(kpis, goal.metric);
                   const pct = Math.min((weekVal / goal.weeklyTarget) * 100, 100);
                   const hit = weekVal >= goal.weeklyTarget;
@@ -315,6 +356,33 @@ export default function KPITrackerPage() {
           </Card>
         </>
       )}
+      {/* Edit Targets Modal */}
+      <Dialog open={editTargetsOpen} onOpenChange={setEditTargetsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Edit Daily Targets</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {goalList.map((g) => (
+              <div key={g.metric} className="grid grid-cols-3 gap-3 items-center">
+                <Label className="text-sm font-medium">{g.label}</Label>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Daily</p>
+                  <Input type="number" min={0} className="h-8" value={targetDraft[g.metric]?.dailyTarget ?? g.dailyTarget}
+                    onChange={(e) => setTargetDraft((d) => ({ ...d, [g.metric]: { ...(d[g.metric] ?? { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }), dailyTarget: Number(e.target.value) } }))} />
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1">Weekly</p>
+                  <Input type="number" min={0} className="h-8" value={targetDraft[g.metric]?.weeklyTarget ?? g.weeklyTarget}
+                    onChange={(e) => setTargetDraft((d) => ({ ...d, [g.metric]: { ...(d[g.metric] ?? { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }), weeklyTarget: Number(e.target.value) } }))} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditTargetsOpen(false)}>Cancel</Button>
+            <Button onClick={saveTargets}>Save Targets</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
