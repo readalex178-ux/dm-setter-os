@@ -28,6 +28,13 @@ export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState<"7d" | "30d" | "all">("30d");
   const { data: prospects = [], isLoading } = useProspects();
   const { data: kpis = [] } = useKPIs();
+  const filteredKpis = kpis.filter((k) => {
+    if (dateRange === "all") return true;
+    const days = dateRange === "7d" ? 7 : 30;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    return new Date(k.date) >= cutoff;
+  });
 
   const totalConversations = prospects.length;
   const qualified = prospects.filter((p) => QUALIFIED_STAGES.includes(p.stage)).length;
