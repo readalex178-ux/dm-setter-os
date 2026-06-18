@@ -1,7 +1,10 @@
-// panel.js — DM Setter OS companion panel.
-// RESPONSIBILITY: interface layer ONLY. Extract conversation -> send to DM Setter OS ->
-// render results. NO local AI, scoring, CRM, or business logic. If DM Setter OS is
-// unreachable or the user is signed out, the panel shows a safe error state.
+// panel.js — DM Setter OS in-page panel
+// RESPONSIBILITY: Interface layer ONLY.
+//   1. Extract conversation from the page (via scraper.js)
+//   2. Send to DM Setter OS (via background.js)
+//   3. Render results — NEVER generate or decide anything locally
+//
+// If DM Setter OS is unreachable → safe error state. No fallback AI.
 
 let panelEl = null;
 let isOpen = false;
@@ -19,65 +22,79 @@ const STAGES = [
   "Objection Handling", "Call Booking", "Booked", "Lost",
 ];
 
-// ── Build panel HTML (4 panels) ─────────────────────────────────────────────
+// ── Build panel HTML ─────────────────────────────────────────────────────────
 
 function buildPanel() {
   const div = document.createElement("div");
   div.id = "dms-root";
+
   div.innerHTML = `
     <div class="dms-panel">
 
+      <!-- Header -->
       <div class="dms-head">
-        <span class="dms-logo">⚡ DM Setter OS</span>
+        <div class="dms-logo">
+          <div class="dms-logo-icon">⚡</div>
+          DM Setter OS
+        </div>
         <span class="dms-platform-tag" id="dms-platform">—</span>
         <div class="dms-head-btns">
-          <button class="dms-btn-sm" id="dms-refresh" title="Re-scan & refresh">↻</button>
-          <button class="dms-btn-sm" id="dms-close" title="Close">✕</button>
+          <button class="dms-btn-icon" id="dms-refresh" title="Re-scan conversation">↻</button>
+          <button class="dms-btn-icon" id="dms-close" title="Close panel">✕</button>
         </div>
       </div>
 
+      <!-- Connection status -->
       <div class="dms-conn" id="dms-conn">
-        <span class="dms-dot" id="dms-dot"></span>
-        <span id="dms-conn-text">Checking connection…</span>
+        <span class="dms-dot idle" id="dms-dot"></span>
+        <span id="dms-conn-text">Connecting to DM Setter OS…</span>
       </div>
 
       <!-- Panel 1: Prospect Overview -->
       <div class="dms-prospect">
         <div class="dms-prospect-name" id="dms-name">—</div>
         <div class="dms-prospect-sub" id="dms-sub">Open a DM conversation to get started</div>
-        <div class="dms-overview" id="dms-overview" style="display:none">
-          <div class="dms-ov-item"><div class="dms-ov-lbl">Stage</div><div class="dms-ov-val" id="dms-ov-stage">—</div></div>
-          <div class="dms-ov-item"><div class="dms-ov-lbl">Conv. Score</div><div class="dms-ov-val" id="dms-ov-score">—</div></div>
+        <div class="dms-overview" id="dms-overview">
+          <div class="dms-ov-card">
+            <div class="dms-ov-lbl">Stage</div>
+            <div class="dms-ov-val" id="dms-ov-stage">—</div>
+          </div>
+          <div class="dms-ov-card">
+            <div class="dms-ov-lbl">Score</div>
+            <div class="dms-ov-val" id="dms-ov-score">—</div>
+          </div>
         </div>
       </div>
 
+      <!-- Scroll body -->
       <div class="dms-body">
 
+        <!-- Status message -->
         <div id="dms-status" class="dms-status"></div>
 
+        <!-- Analyse button -->
         <div class="dms-stack">
           <button class="dms-btn-primary" id="dms-analyse-btn">⚡ Analyse Conversation</button>
         </div>
 
-        <!-- Metrics -->
-        <div class="dms-section" id="dms-metrics-section" style="display:none">
-          <div class="dms-metrics" id="dms-metrics"></div>
-          <div class="dms-meta" id="dms-meta"></div>
-        </div>
-
-        <!-- Panel 2: AI Insights -->
+        <!-- Panel 2: AI Insights (FROM DM SETTER OS) -->
         <div class="dms-section" id="dms-insights-section" style="display:none">
-          <div class="dms-section-head">AI Insights</div>
+          <div class="dms-section-head">
+            AI Insights
+          </div>
+          <div class="dms-metrics" id="dms-metrics"></div>
+          <div class="dms-badges" id="dms-badges"></div>
+          <div id="dms-summary"></div>
           <div id="dms-objections"></div>
-          <div id="dms-action" class="dms-action" style="display:none"></div>
-          <div id="dms-approach" class="dms-approach" style="display:none"></div>
+          <div id="dms-next-action"></div>
+          <div id="dms-approach"></div>
         </div>
 
-        <!-- Panel 3: Replies -->
+        <!-- Panel 3: Reply Suggestions (FROM DM SETTER OS) -->
         <div class="dms-section" id="dms-replies-section" style="display:none">
           <div class="dms-section-head">
-            AI Reply Suggestions
-            <button class="dms-btn-sm" id="dms-regen" title="Regenerate">↻ Regenerate</button>
+            Reply Suggestions
+            <button class="dms-btn-sm" id="dms-regen">↻ Regenerate</button>
           </div>
           <div id="dms-replies"></div>
         </div>
@@ -91,14 +108,14 @@ function buildPanel() {
           <select class="dms-select" id="dms-stage-select">
             ${STAGES.map((s) => `<option value="${s}">${s}</option>`).join("")}
           </select>
-          <div id="dms-save-msg" class="dms-save-msg"></div>
+          <div class="dms-save-msg" id="dms-save-msg"></div>
         </div>
 
         <!-- Captured messages -->
         <div class="dms-section">
           <div class="dms-section-head">
             Captured Messages
-            <span id="dms-msg-count">0 messages</span>
+            <span id="dms-msg-count" style="font-weight:400;text-transform:none;letter-spacing:0">0 messages</span>
           </div>
           <div id="dms-conv" class="dms-conv">
             <div class="dms-hint">Open a DM and scroll through it, then click Analyse.</div>
@@ -108,14 +125,16 @@ function buildPanel() {
         <!-- Manual paste fallback -->
         <div class="dms-section">
           <div class="dms-section-head">
-            📋 Paste Conversation
+            Paste Conversation
             <button id="dms-paste-toggle" class="dms-btn-sm">Show</button>
           </div>
-          <div id="dms-paste-area" style="display:none">
-            <p class="dms-hint" style="text-align:left">Format: <b>Name: message</b> per line, or alternate lines.</p>
+          <div id="dms-paste-area" style="display:none;margin-top:8px">
+            <p class="dms-hint" style="text-align:left;margin-bottom:8px">Format: <strong>Name: message</strong> per line</p>
             <input id="dms-paste-name" type="text" placeholder="Prospect name" class="dms-input" />
-            <textarea id="dms-paste-text" rows="5" placeholder="Sarah: Hey I saw your post&#10;You: Hey Sarah! Thanks for reaching out..." class="dms-input"></textarea>
-            <button id="dms-paste-load" class="dms-btn-ghost" style="width:100%">Load Pasted Conversation</button>
+            <textarea id="dms-paste-text" rows="5"
+              placeholder="Sarah: Hey I saw your post&#10;You: Hey Sarah! Thanks for reaching out..."
+              class="dms-input"></textarea>
+            <button id="dms-paste-load" class="dms-btn-ghost">Load Pasted Conversation</button>
           </div>
         </div>
 
@@ -125,18 +144,25 @@ function buildPanel() {
   return div;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function $(id) { return document.getElementById(id); }
+
+function escHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
 
 function showStatus(msg, type) {
   const el = $("dms-status");
   if (!el) return;
-  el.className = "dms-status" + (msg ? " " + (type || "info") : "");
-  el.textContent = msg || "";
+  if (!msg) { el.className = "dms-status"; el.textContent = ""; return; }
+  el.className = "dms-status " + (type || "info");
+  el.textContent = msg;
 }
 
-function setConnection(state, text) {
+function setConn(state, text) {
   const dot = $("dms-dot");
   const t = $("dms-conn-text");
   if (!dot || !t) return;
@@ -144,27 +170,15 @@ function setConnection(state, text) {
   t.textContent = text;
 }
 
-function sendBg(message) {
+function sendBg(msg) {
   return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(message, (res) => {
+    chrome.runtime.sendMessage(msg, (res) => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
       else resolve(res);
     });
   });
 }
 
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-}
-
-function tempColor(t) {
-  return t === "hot" ? "var(--dms-destructive)" : t === "warm" ? "var(--dms-warning)" : "var(--dms-info)";
-}
-function scoreColor(n) {
-  return n >= 70 ? "var(--dms-success)" : n >= 40 ? "var(--dms-warning)" : "var(--dms-fg-muted)";
-}
-
-// Disable AI/CRM actions when DM Setter OS is unreachable (safe error state).
 function setActionsEnabled(enabled) {
   ["dms-analyse-btn", "dms-regen", "dms-save-btn", "dms-stage-select"].forEach((id) => {
     const el = $(id);
@@ -172,7 +186,17 @@ function setActionsEnabled(enabled) {
   });
 }
 
-// ── Connection / context hydration ──────────────────────────────────────────
+function scoreColor(n) {
+  return n >= 70 ? "var(--dms-success)" : n >= 40 ? "var(--dms-warning)" : "var(--dms-error)";
+}
+
+function tempColor(t) {
+  if (t === "hot") return "var(--dms-error)";
+  if (t === "warm") return "var(--dms-warning)";
+  return "var(--dms-info)";
+}
+
+// ── Connection / session ─────────────────────────────────────────────────────
 
 async function refreshConnection() {
   try {
@@ -181,144 +205,164 @@ async function refreshConnection() {
     connOk = true;
     if (signedIn) {
       const who = res?.profile?.display_name || res?.user?.email || "your account";
-      setConnection("ok", `Connected · ${who}`);
+      setConn("ok", `Connected · ${who}`);
       setActionsEnabled(true);
     } else {
-      setConnection("warn", "Not signed in — open the extension popup to log in");
+      setConn("warn", "Not signed in — open the extension popup to log in");
       setActionsEnabled(false);
     }
   } catch {
     signedIn = false;
     connOk = false;
-    setConnection("err", "DM Setter OS unreachable — retry");
+    setConn("err", "DM Setter OS unreachable — check connection");
     setActionsEnabled(false);
   }
 }
 
-// Pull stored intelligence for this prospect the moment a thread opens.
+// ── Context hydration (on thread open) ──────────────────────────────────────
+
 async function hydrateContext(conv) {
-  if (!signedIn || !connOk) return;
-  if (!conv?.name && !conv?.handle) return;
+  if (!signedIn || !connOk || (!conv?.name && !conv?.handle)) return;
   try {
     const res = await sendBg({
       type: "GET_CONTEXT",
-      payload: { platform: conv.platformName, name: conv.name || "", handle: conv.handle || "" },
+      payload: {
+        platform: conv.platformName || conv.platformId || "unknown",
+        name: conv.name || "",
+        handle: conv.handle || "",
+      },
     });
     if (!res?.ok) return;
     lastContext = res.context;
     renderContext(res.context);
   } catch (e) {
-    console.warn("[DM Setter OS] context hydrate failed:", e);
+    console.warn("[DM Setter OS] Context hydrate failed:", e);
   }
 }
 
 function renderContext(ctx) {
-  if (!ctx) return;
+  if (!ctx?.found || !ctx.prospect) return;
+
   const ov = $("dms-overview");
-  if (ctx.found && ctx.prospect) {
-    ov.style.display = "grid";
-    $("dms-ov-stage").textContent = ctx.prospect.stage || "New Lead";
-    $("dms-ov-score").textContent = ctx.prospect.conversation_score != null ? ctx.prospect.conversation_score + "/100" : "—";
-    if (ctx.prospect.stage) $("dms-stage-select").value = ctx.prospect.stage;
+  ov.classList.add("visible");
+  $("dms-ov-stage").textContent = ctx.prospect.stage || "New Lead";
+  const score = ctx.prospect.conversation_score;
+  $("dms-ov-score").textContent = score != null ? score + "/100" : "—";
+  if (ctx.prospect.stage) {
+    const sel = $("dms-stage-select");
+    if (sel) sel.value = ctx.prospect.stage;
   }
 
-  // Show prior history + recommended approach in the insights panel.
-  const sec = $("dms-insights-section");
-  if (ctx.history_summary || ctx.recommended_approach) {
-    sec.style.display = "block";
-    if (ctx.recommended_approach) {
-      const ap = $("dms-approach");
-      ap.style.display = "block";
-      ap.innerHTML = `<b>Recommended approach:</b> ${escapeHtml(ctx.recommended_approach)}`;
-    }
+  if (ctx.recommended_approach) {
+    $("dms-insights-section").style.display = "block";
+    $("dms-approach").innerHTML = `<div class="dms-approach"><strong>Recommended approach:</strong> ${escHtml(ctx.recommended_approach)}</div>`;
   }
 }
 
-// ── Render: conversation preview ────────────────────────────────────────────
+// ── Render conversation preview ──────────────────────────────────────────────
 
 function renderConvPreview(conv) {
-  const platform = (typeof getCurrentPlatform === "function" && getCurrentPlatform()) || null;
-  $("dms-platform").textContent = platform ? platform.emoji + " " + platform.name : "—";
+  const platform = (typeof getCurrentPlatform === "function") ? getCurrentPlatform() : null;
+  $("dms-platform").textContent = platform ? `${platform.emoji} ${platform.name}` : "—";
   $("dms-name").textContent = conv.name || "Unknown Prospect";
-  $("dms-sub").textContent = conv.lines.length + " messages captured";
+  $("dms-sub").textContent = conv.lines.length
+    ? `${conv.lines.length} messages captured on ${conv.platformName || platform?.name || "this platform"}`
+    : "No messages captured yet";
   $("dms-msg-count").textContent = conv.lines.length + " messages";
 
   const el = $("dms-conv");
   if (!conv.lines.length) {
-    const debugText = conv.debug ? `<div class="dms-hint" style="text-align:left;font-family:monospace;font-size:10px;white-space:pre-wrap">${conv.debug}</div>` : "";
-    el.innerHTML = '<div class="dms-hint">No messages found — scroll through the conversation then re-scan.</div>' + debugText;
+    const debug = conv.debug
+      ? `<div class="dms-hint" style="text-align:left;font-family:monospace;font-size:10px;white-space:pre-wrap;margin-top:8px">${escHtml(conv.debug)}</div>`
+      : "";
+    el.innerHTML = '<div class="dms-hint">No messages found — scroll through the conversation then re-scan.</div>' + debug;
     return;
   }
-  el.innerHTML = conv.lines.slice(-6).map((line) => {
+
+  el.innerHTML = conv.lines.slice(-8).map((line) => {
     const isYou = line.startsWith("You:");
-    return `<div class="dms-msg ${isYou ? "you" : "them"}">${escapeHtml(line)}</div>`;
+    return `<div class="dms-msg ${isYou ? "you" : "them"}">${escHtml(line)}</div>`;
   }).join("");
 }
 
-// ── Render: analysis ────────────────────────────────────────────────────────
+// ── Render analysis (FROM DM SETTER OS) ─────────────────────────────────────
 
 function renderAnalysis(a) {
   lastAnalysis = a;
 
-  // Metrics
-  $("dms-metrics-section").style.display = "block";
-  const metrics = [
+  // Show insights section
+  const insightsSec = $("dms-insights-section");
+  insightsSec.style.display = "block";
+
+  // Metrics: score + booking probability
+  $("dms-metrics").innerHTML = [
     ["Conv. Score", a.conversation_score, scoreColor(a.conversation_score), "/100"],
-    ["Booking", a.booking_probability, scoreColor(a.booking_probability), "%"],
-  ];
-  $("dms-metrics").innerHTML = metrics.map(([label, v, c, suffix]) => `
+    ["Booking %", a.booking_probability, scoreColor(a.booking_probability), "%"],
+  ].map(([lbl, v, c, sfx]) => `
     <div class="dms-metric">
-      <div class="dms-metric-val" style="color:${c}">${v}<span class="dms-metric-suffix">${suffix}</span></div>
-      <div class="dms-metric-lbl">${label}</div>
+      <div class="dms-metric-val" style="color:${c}">${v ?? "—"}<span class="dms-metric-suffix">${sfx}</span></div>
+      <div class="dms-metric-lbl">${lbl}</div>
     </div>
   `).join("");
 
-  const tc = tempColor(a.temperature);
-  $("dms-meta").innerHTML = `
-    <span class="dms-badge" style="color:${tc};background:hsl(0 0% 50% / .12)">${(a.temperature || "").toUpperCase()}</span>
-    <span class="dms-badge" style="color:var(--dms-info);background:hsl(210 100% 60% / .12)">${escapeHtml(a.stage || "—")}</span>
-    ${a.summary ? `<div class="dms-summary">${escapeHtml(a.summary)}</div>` : ""}
-  `;
+  // Badges: temperature + stage
+  $("dms-badges").innerHTML = [
+    a.temperature && `<span class="dms-badge" style="color:${tempColor(a.temperature)}">${a.temperature.toUpperCase()}</span>`,
+    a.stage && `<span class="dms-badge" style="color:var(--dms-info)">${escHtml(a.stage)}</span>`,
+  ].filter(Boolean).join("");
 
-  // Panel 2 — Insights (objections + next action; keep recommended approach from context)
-  $("dms-insights-section").style.display = "block";
-  $("dms-objections").innerHTML = (a.objections && a.objections.length)
-    ? a.objections.map((o) => `<div class="dms-objection">⚠️ ${escapeHtml(o)}</div>`).join("")
+  // Summary
+  $("dms-summary").innerHTML = a.summary
+    ? `<div class="dms-summary">${escHtml(a.summary)}</div>`
     : "";
 
-  const actionEl = $("dms-action");
-  if (a.next_action) {
-    actionEl.style.display = "block";
-    actionEl.innerHTML = `<b>Next action:</b> ${escapeHtml(a.next_action)}`;
-  } else {
-    actionEl.style.display = "none";
+  // Objections
+  $("dms-objections").innerHTML = (a.objections?.length)
+    ? a.objections.map((o) => `<div class="dms-objection">⚠️ ${escHtml(o)}</div>`).join("")
+    : "";
+
+  // Next action
+  $("dms-next-action").innerHTML = a.next_action
+    ? `<div class="dms-next-action">🎯 <strong>Next:</strong> ${escHtml(a.next_action)}</div>`
+    : "";
+
+  // Update stage dropdown
+  if (a.stage) {
+    const sel = $("dms-stage-select");
+    if (sel) sel.value = a.stage;
   }
 
-  if (a.stage) $("dms-stage-select").value = a.stage;
+  // Update overview cards
+  const ov = $("dms-overview");
+  ov.classList.add("visible");
+  $("dms-ov-stage").textContent = a.stage || "—";
+  $("dms-ov-score").textContent = a.conversation_score != null ? a.conversation_score + "/100" : "—";
 
+  // Render replies
   renderReplies(a.replies);
 }
 
 function renderReplies(replies) {
   const sec = $("dms-replies-section");
   const el = $("dms-replies");
-  if (!replies || !replies.length) { sec.style.display = "none"; return; }
+  if (!replies?.length) { sec.style.display = "none"; return; }
   sec.style.display = "block";
+
   el.innerHTML = replies.map((r, i) => `
     <div class="dms-reply">
       <div class="dms-reply-top">
-        <span class="dms-tag">${escapeHtml(r.label || "Reply")}</span>
+        <span class="dms-reply-label">${escHtml(r.label || `Reply ${i + 1}`)}</span>
         <div class="dms-reply-btns">
-          <button class="dms-btn-sm dms-insert" data-i="${i}">Insert</button>
-          <button class="dms-btn-sm dms-copy" data-i="${i}">Copy</button>
+          <button class="dms-btn-sm dms-insert-btn" data-i="${i}">Insert</button>
+          <button class="dms-btn-sm dms-copy-btn" data-i="${i}">Copy</button>
         </div>
       </div>
-      <div class="dms-reply-text">${escapeHtml(r.content || "")}</div>
-      ${r.note ? `<div class="dms-reply-note">💡 ${escapeHtml(r.note)}</div>` : ""}
+      <div class="dms-reply-text">${escHtml(r.content || "")}</div>
+      ${r.note ? `<div class="dms-reply-note">💡 ${escHtml(r.note)}</div>` : ""}
     </div>
   `).join("");
 
-  el.querySelectorAll(".dms-copy").forEach((btn) => {
+  el.querySelectorAll(".dms-copy-btn").forEach((btn) => {
     btn.onclick = (e) => {
       e.stopPropagation();
       const text = replies[+btn.dataset.i]?.content || "";
@@ -326,12 +370,12 @@ function renderReplies(replies) {
       flash(btn, "✓ Copied");
     };
   });
-  el.querySelectorAll(".dms-insert").forEach((btn) => {
+
+  el.querySelectorAll(".dms-insert-btn").forEach((btn) => {
     btn.onclick = (e) => {
       e.stopPropagation();
       const text = replies[+btn.dataset.i]?.content || "";
-      const ok = insertIntoComposer(text);
-      if (ok) flash(btn, "✓ Inserted");
+      if (insertIntoComposer(text)) flash(btn, "✓ Inserted");
       else { navigator.clipboard.writeText(text); flash(btn, "Copied"); }
     };
   });
@@ -344,7 +388,6 @@ function flash(btn, label) {
   setTimeout(() => { btn.textContent = orig; btn.classList.remove("done"); }, 1800);
 }
 
-// Best-effort: drop the reply into the platform's message composer.
 function insertIntoComposer(text) {
   const selectors = [
     'div[role="textbox"][contenteditable="true"]',
@@ -366,7 +409,6 @@ function insertIntoComposer(text) {
       setter.call(box, text);
       box.dispatchEvent(new Event("input", { bubbles: true }));
     } else {
-      // contenteditable
       document.execCommand("selectAll", false, null);
       document.execCommand("insertText", false, text);
       box.dispatchEvent(new Event("input", { bubbles: true }));
@@ -377,24 +419,24 @@ function insertIntoComposer(text) {
   }
 }
 
-// ── Analyse (delegates to DM Setter OS) ─────────────────────────────────────
+// ── Analyse (delegates entirely to DM Setter OS) ────────────────────────────
 
 async function analyse() {
   if (!lastConv?._manual) lastConv = scrape();
   renderConvPreview(lastConv);
 
-  if (!lastConv.lines.length) {
+  if (!lastConv?.lines?.length) {
     showStatus("No messages found — open a DM conversation and scroll through it first.", "error");
     return;
   }
-  if (!connOk) { showStatus("DM Setter OS is unreachable. Check your connection and retry.", "error"); return; }
-  if (!signedIn) { showStatus("Sign in via the extension popup to analyse conversations.", "error"); return; }
+  if (!connOk) { showStatus("DM Setter OS is unreachable. Check your connection.", "error"); return; }
+  if (!signedIn) { showStatus("Sign in via the extension popup to use AI analysis.", "error"); return; }
 
-  showStatus("");
+  showStatus("Analysing with DM Setter OS…", "loading");
   const btn = $("dms-analyse-btn");
   btn.disabled = true;
   btn.textContent = "⏳ Analysing…";
-  $("dms-save-msg").textContent = "";
+  $("dms-save-msg").classList.remove("visible");
 
   const payload = {
     platform: lastConv.platformName || lastConv.platformId || "unknown",
@@ -417,17 +459,23 @@ async function analyse() {
   }
 }
 
-// ── Save to CRM ─────────────────────────────────────────────────────────────
+// ── Save to CRM ──────────────────────────────────────────────────────────────
 
 async function saveToApp() {
-  if (!lastConv?.msgs?.length) { showStatus("Nothing to save — analyse a conversation first.", "error"); return; }
-  if (!connOk || !signedIn) { showStatus("Sign in to DM Setter OS to sync.", "error"); return; }
+  if (!lastConv?.msgs?.length) {
+    showStatus("Analyse a conversation first before saving.", "error");
+    return;
+  }
+  if (!connOk || !signedIn) {
+    showStatus("Sign in to DM Setter OS to sync your CRM.", "error");
+    return;
+  }
 
   const btn = $("dms-save-btn");
   const msgEl = $("dms-save-msg");
   btn.disabled = true;
   btn.textContent = "Saving…";
-  msgEl.textContent = "";
+  msgEl.classList.remove("visible");
 
   if (!lastConv.name) {
     const entered = prompt("What's this prospect's name?", "");
@@ -441,7 +489,7 @@ async function saveToApp() {
     prospect: {
       name: lastConv.name || "Unknown",
       handle: lastConv.handle || "",
-      source: lastConv.platformName + " (Extension)",
+      source: `${lastConv.platformName} (Extension)`,
       platform: lastConv.platformId,
       stage: stageOverride,
     },
@@ -452,41 +500,54 @@ async function saveToApp() {
   try {
     const result = await sendBg({ type: "SAVE_CONVERSATION", payload });
     if (!result?.ok) throw new Error(result?.error || "Unknown error");
+
     btn.textContent = "✓ Saved to CRM";
     btn.classList.add("done");
-    msgEl.textContent = "Synced to DM Setter OS — check your CRM.";
+    msgEl.textContent = "Synced to DM Setter OS ✓";
     msgEl.style.color = "var(--dms-success)";
-    setTimeout(() => { btn.textContent = "💾 Save to CRM"; btn.disabled = false; btn.classList.remove("done"); }, 2500);
+    msgEl.classList.add("visible");
+    setTimeout(() => {
+      btn.textContent = "💾 Save to CRM";
+      btn.disabled = false;
+      btn.classList.remove("done");
+    }, 2500);
   } catch (e) {
     btn.textContent = "💾 Save to CRM";
     btn.disabled = false;
     btn.classList.remove("done");
     msgEl.textContent = "Save failed: " + e.message;
-    msgEl.style.color = "var(--dms-destructive)";
+    msgEl.style.color = "var(--dms-error)";
+    msgEl.classList.add("visible");
   }
 }
 
-// ── Event-driven thread detection (no polling loops) ────────────────────────
+// ── Event-driven thread detection (no polling) ───────────────────────────────
 
 function currentThreadKey() {
   const conv = (typeof scrape === "function") ? scrape() : { name: "", lines: [] };
-  return location.pathname + "|" + (conv.name || "") + "|" + conv.lines.length;
+  return `${location.pathname}|${conv.name || ""}|${conv.lines.length}`;
 }
 
 function onThreadChanged() {
   if (!isOpen) return;
-  const conv = scrape();
-  lastConv = conv;
+  lastConv = scrape();
   lastAnalysis = null;
   lastContext = null;
-  // reset analysis-driven panels into a clean state
-  $("dms-metrics-section").style.display = "none";
+
+  // Reset analysis panels
   $("dms-insights-section").style.display = "none";
   $("dms-replies-section").style.display = "none";
-  $("dms-action").style.display = "none";
-  $("dms-approach").style.display = "none";
-  renderConvPreview(conv);
-  hydrateContext(conv);
+  $("dms-metrics").innerHTML = "";
+  $("dms-badges").innerHTML = "";
+  $("dms-summary").innerHTML = "";
+  $("dms-objections").innerHTML = "";
+  $("dms-next-action").innerHTML = "";
+  $("dms-approach").innerHTML = "";
+  $("dms-overview").classList.remove("visible");
+  showStatus("");
+
+  renderConvPreview(lastConv);
+  hydrateContext(lastConv);
 }
 
 function startObserver() {
@@ -496,10 +557,7 @@ function startObserver() {
     if (observerTimer) clearTimeout(observerTimer);
     observerTimer = setTimeout(() => {
       const key = currentThreadKey();
-      if (key !== threadKey) {
-        threadKey = key;
-        onThreadChanged();
-      }
+      if (key !== threadKey) { threadKey = key; onThreadChanged(); }
     }, 800);
   });
   threadObserver.observe(document.body, { childList: true, subtree: true });
@@ -510,14 +568,14 @@ function stopObserver() {
   if (observerTimer) { clearTimeout(observerTimer); observerTimer = null; }
 }
 
-// ── Manual paste loader ─────────────────────────────────────────────────────
+// ── Manual paste ─────────────────────────────────────────────────────────────
 
 function loadPasted() {
   const name = $("dms-paste-name").value.trim();
   const text = $("dms-paste-text").value.trim();
   if (!text) return;
 
-  const platform = (typeof getCurrentPlatform === "function" && getCurrentPlatform()) || null;
+  const platform = (typeof getCurrentPlatform === "function") ? getCurrentPlatform() : null;
   const lines = text.split("\n").filter((l) => l.trim());
   const msgs = [];
   const seen = new Set();
@@ -528,9 +586,8 @@ function loadPasted() {
       const speaker = line.slice(0, colonIdx).trim().toLowerCase();
       const content = line.slice(colonIdx + 1).trim();
       if (!content || seen.has(content)) return;
-      const isYou = ["you", "me", "setter", "i"].includes(speaker);
       seen.add(content);
-      msgs.push({ sender: isYou ? "setter" : "prospect", content });
+      msgs.push({ sender: ["you", "me", "setter", "i"].includes(speaker) ? "setter" : "prospect", content });
     } else {
       const content = line.trim();
       if (!content || seen.has(content)) return;
@@ -539,7 +596,10 @@ function loadPasted() {
     }
   });
 
-  if (!msgs.length) { showStatus("Could not parse messages. Use: Name: message per line.", "error"); return; }
+  if (!msgs.length) {
+    showStatus("Could not parse messages. Use: Name: message per line.", "error");
+    return;
+  }
 
   const convLines = msgs.map((m) => (m.sender === "setter" ? "You" : (name || "Prospect")) + ": " + m.content);
   lastConv = {
@@ -551,8 +611,9 @@ function loadPasted() {
     lines: convLines,
     _manual: true,
   };
+
   renderConvPreview(lastConv);
-  showStatus("Loaded " + msgs.length + " messages — click Analyse.", "info");
+  showStatus(`Loaded ${msgs.length} messages — click Analyse.`, "info");
   $("dms-paste-area").style.display = "none";
   $("dms-paste-toggle").textContent = "Show";
 }
@@ -563,22 +624,28 @@ function openPanel() {
   if (!panelEl) {
     panelEl = buildPanel();
     document.body.appendChild(panelEl);
+
+    // Wire events
     $("dms-close").onclick = closePanel;
+
     $("dms-refresh").onclick = () => {
       lastConv = scrape();
       renderConvPreview(lastConv);
       refreshConnection().then(() => hydrateContext(lastConv));
     };
+
     $("dms-analyse-btn").onclick = analyse;
     $("dms-regen").onclick = analyse;
     $("dms-save-btn").onclick = saveToApp;
+
     $("dms-paste-toggle").onclick = () => {
       const area = $("dms-paste-area");
-      const tbtn = $("dms-paste-toggle");
-      const hidden = area.style.display === "none";
-      area.style.display = hidden ? "block" : "none";
-      tbtn.textContent = hidden ? "Hide" : "Show";
+      const btn = $("dms-paste-toggle");
+      const show = area.style.display === "none";
+      area.style.display = show ? "block" : "none";
+      btn.textContent = show ? "Hide" : "Show";
     };
+
     $("dms-paste-load").onclick = loadPasted;
   }
 
@@ -591,6 +658,7 @@ function openPanel() {
     renderConvPreview(lastConv);
     hydrateContext(lastConv);
   });
+
   startObserver();
 }
 
@@ -606,27 +674,31 @@ function togglePanel(show) {
   else closePanel();
 }
 
-// React to session changes (sign in/out from popup) live.
+// ── Listeners ────────────────────────────────────────────────────────────────
+
+// Sync session/overlay state changes (e.g. sign in from popup while panel is open)
 chrome.storage.onChanged.addListener((changes) => {
-  if (changes.session && isOpen) refreshConnection().then(() => hydrateContext(lastConv));
-  if (changes.overlay_enabled) {
+  if (changes.session && isOpen) {
+    refreshConnection().then(() => hydrateContext(lastConv));
+  }
+  if (changes.overlay_enabled !== undefined) {
     const enabled = changes.overlay_enabled.newValue;
     if (enabled && !isOpen) openPanel();
     else if (!enabled && isOpen) closePanel();
   }
 });
 
-// Messages from the popup.
+// Messages from popup
 chrome.runtime.onMessage.addListener((msg) => {
   if (msg?.type === "TOGGLE_OVERLAY") togglePanel(!!msg.visible);
   if (msg?.type === "TOGGLE_PANEL") togglePanel(!!msg.show);
   if (msg?.type === "ANALYSE_NOW") {
     if (!isOpen) openPanel();
-    setTimeout(() => analyse(), 500);
+    setTimeout(() => analyse(), 600);
   }
 });
 
-// Restore last state.
+// Restore on page load
 chrome.storage.local.get("overlay_enabled").then((s) => {
   if (s.overlay_enabled) openPanel();
 });

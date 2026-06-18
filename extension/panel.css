@@ -1,318 +1,555 @@
-/* panel.css — DM Setter OS companion panel.
-   Matches the DM Setter OS web app design system (dark, cyan primary, Inter). */
-
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap');
-
-:root {
-  /* Mirror of the app's dark theme tokens */
-  --dms-bg: hsl(222 30% 7%);
-  --dms-card: hsl(222 25% 10%);
-  --dms-surface: hsl(222 22% 11%);
-  --dms-muted: hsl(222 18% 14%);
-  --dms-border: hsl(222 18% 16%);
-  --dms-fg: hsl(210 20% 92%);
-  --dms-fg-muted: hsl(215 15% 55%);
-  --dms-primary: hsl(186 100% 50%);
-  --dms-primary-fg: hsl(222 30% 6%);
-  --dms-success: hsl(152 70% 45%);
-  --dms-warning: hsl(38 92% 50%);
-  --dms-destructive: hsl(0 72% 51%);
-  --dms-info: hsl(210 100% 60%);
-  --dms-radius: 0.625rem;
-}
+/* panel.css — DM Setter OS in-page panel
+   Injected on Instagram, TikTok, X, Facebook, Messenger, LinkedIn.
+   All rules are namespaced under #dms-root to avoid conflicts. */
 
 #dms-root {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 380px;
-  max-width: 92vw;
-  height: 100vh;
-  z-index: 2147483647;
-  transform: translateX(105%);
-  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-}
-#dms-root.open { transform: translateX(0); }
+  /* Design tokens — match DM Setter OS web app exactly */
+  --dms-bg:           #0a0a0f;
+  --dms-surface:      #111118;
+  --dms-surface-2:    #1a1a24;
+  --dms-surface-3:    #22223a;
+  --dms-border:       #2a2a3a;
+  --dms-border-sub:   #1e1e2e;
+  --dms-accent:       #7c3aed;
+  --dms-accent-h:     #a855f7;
+  --dms-accent-glow:  rgba(124, 58, 237, 0.18);
+  --dms-success:      #10b981;
+  --dms-warning:      #f59e0b;
+  --dms-error:        #ef4444;
+  --dms-info:         #3b82f6;
+  --dms-text:         #f0f0ff;
+  --dms-muted:        #6b7280;
+  --dms-subtle:       #9ca3af;
+  --dms-radius:       10px;
+  --dms-radius-sm:    6px;
+  --dms-panel-w:      340px;
 
-.dms-panel {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  background: var(--dms-bg);
-  color: var(--dms-fg);
-  border-left: 1px solid var(--dms-border);
-  box-shadow: -8px 0 40px -8px rgba(0, 0, 0, .6);
-}
+  /* Reset */
+  all: initial;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  color: var(--dms-text) !important;
+  box-sizing: border-box !important;
 
-.dms-panel *, .dms-panel *::before, .dms-panel *::after { box-sizing: border-box; }
-
-/* ── Header ── */
-.dms-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--dms-border);
-  background: var(--dms-card);
-}
-.dms-logo {
-  font-weight: 800;
-  font-size: 14px;
-  letter-spacing: -.01em;
-  background: linear-gradient(135deg, var(--dms-primary), hsl(210 100% 65%));
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-.dms-platform-tag {
-  font-size: 11px;
-  color: var(--dms-fg-muted);
-  padding: 3px 8px;
-  border: 1px solid var(--dms-border);
-  border-radius: 999px;
-  white-space: nowrap;
-}
-.dms-head-btns { margin-left: auto; display: flex; gap: 6px; }
-
-/* ── Connection bar ── */
-.dms-conn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  font-size: 12px;
-  color: var(--dms-fg-muted);
-  border-bottom: 1px solid var(--dms-border);
-  background: var(--dms-surface);
-}
-.dms-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  background: var(--dms-fg-muted);
-  flex: none;
-}
-.dms-dot.ok { background: var(--dms-success); box-shadow: 0 0 8px var(--dms-success); }
-.dms-dot.warn { background: var(--dms-warning); }
-.dms-dot.err { background: var(--dms-destructive); box-shadow: 0 0 8px var(--dms-destructive); }
-
-/* ── Prospect overview (Panel 1) ── */
-.dms-prospect {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--dms-border);
-}
-.dms-prospect-name { font-size: 17px; font-weight: 700; letter-spacing: -.01em; }
-.dms-prospect-sub { font-size: 12px; color: var(--dms-fg-muted); margin-top: 2px; }
-.dms-overview {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-top: 12px;
-}
-.dms-ov-item {
-  background: var(--dms-card);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  padding: 8px 10px;
-}
-.dms-ov-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--dms-fg-muted); }
-.dms-ov-val { font-size: 14px; font-weight: 600; margin-top: 2px; }
-
-/* ── Body / sections ── */
-.dms-body { flex: 1; overflow-y: auto; padding: 14px 16px 24px; }
-.dms-body::-webkit-scrollbar { width: 8px; }
-.dms-body::-webkit-scrollbar-thumb { background: var(--dms-muted); border-radius: 8px; }
-
-.dms-section {
-  margin-top: 14px;
-  background: var(--dms-card);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  padding: 12px;
-}
-.dms-section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--dms-fg-muted);
-  margin-bottom: 10px;
+  /* Positioning */
+  position: fixed !important;
+  top: 0 !important;
+  right: -360px !important;
+  width: var(--dms-panel-w) !important;
+  height: 100vh !important;
+  z-index: 2147483647 !important;
+  transition: right 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  pointer-events: none !important;
 }
 
-/* ── Buttons (mirror app button variants) ── */
-.dms-btn-primary {
-  width: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  background: var(--dms-primary);
-  color: var(--dms-primary-fg);
-  font-family: inherit;
-  font-weight: 700;
-  font-size: 13px;
-  border: none;
-  border-radius: var(--dms-radius);
-  padding: 11px 14px;
-  cursor: pointer;
-  transition: opacity .15s, transform .1s;
-}
-.dms-btn-primary:hover { opacity: .9; }
-.dms-btn-primary:active { transform: scale(.99); }
-.dms-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
-
-.dms-btn-ghost {
-  background: var(--dms-muted);
-  color: var(--dms-fg);
-  border: 1px solid var(--dms-border);
-  font-family: inherit;
-  font-weight: 600;
-  font-size: 12px;
-  border-radius: var(--dms-radius);
-  padding: 9px 12px;
-  cursor: pointer;
-  transition: background .15s;
-}
-.dms-btn-ghost:hover { background: var(--dms-surface); }
-.dms-btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
-
-.dms-btn-sm {
-  background: transparent;
-  color: var(--dms-fg-muted);
-  border: 1px solid var(--dms-border);
-  border-radius: 6px;
-  font-family: inherit;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
-  cursor: pointer;
-  transition: color .15s, border-color .15s;
-}
-.dms-btn-sm:hover { color: var(--dms-fg); border-color: var(--dms-primary); }
-
-/* ── Status / hints ── */
-.dms-status {
-  font-size: 12px;
-  padding: 9px 11px;
-  border-radius: var(--dms-radius);
-  margin-bottom: 10px;
-}
-.dms-status:empty { display: none; }
-.dms-status.info { background: hsl(210 100% 60% / .12); color: var(--dms-info); }
-.dms-status.error { background: hsl(0 72% 51% / .12); color: var(--dms-destructive); }
-.dms-status.success { background: hsl(152 70% 45% / .12); color: var(--dms-success); }
-.dms-hint { font-size: 12px; color: var(--dms-fg-muted); text-align: center; padding: 8px; }
-
-/* ── Metrics ── */
-.dms-metrics { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.dms-metric {
-  background: var(--dms-surface);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  padding: 10px;
-  text-align: center;
-}
-.dms-metric-val { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: 600; }
-.dms-metric-suffix { font-size: 12px; opacity: .6; margin-left: 1px; }
-.dms-metric-lbl { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--dms-fg-muted); margin-top: 2px; }
-
-.dms-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.dms-badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  border-radius: 999px;
-}
-.dms-summary { width: 100%; font-size: 12px; color: var(--dms-fg); line-height: 1.5; margin-top: 6px; }
-
-/* ── Insights ── */
-.dms-objection {
-  font-size: 12px;
-  color: var(--dms-fg);
-  background: hsl(38 92% 50% / .1);
-  border: 1px solid hsl(38 92% 50% / .25);
-  border-radius: var(--dms-radius);
-  padding: 7px 10px;
-  margin-bottom: 6px;
-}
-.dms-action {
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--dms-fg);
-  background: hsl(186 100% 50% / .08);
-  border: 1px solid hsl(186 100% 50% / .25);
-  border-radius: var(--dms-radius);
-  padding: 10px 12px;
-}
-.dms-approach {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--dms-fg-muted);
-  margin-top: 8px;
+#dms-root.open {
+  right: 0 !important;
+  pointer-events: all !important;
 }
 
-/* ── Replies (Panel 3) ── */
-.dms-reply {
-  background: var(--dms-surface);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  padding: 10px;
-  margin-bottom: 8px;
+#dms-root *, #dms-root *::before, #dms-root *::after {
+  box-sizing: border-box !important;
+  font-family: inherit !important;
 }
-.dms-reply-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; gap: 6px; }
-.dms-tag {
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--dms-primary);
-  background: hsl(186 100% 50% / .1);
-  border-radius: 6px;
-  padding: 2px 7px;
-}
-.dms-reply-btns { display: flex; gap: 4px; }
-.dms-reply-text { font-size: 13px; line-height: 1.5; color: var(--dms-fg); white-space: pre-wrap; }
-.dms-reply-note { font-size: 11px; color: var(--dms-fg-muted); margin-top: 6px; font-style: italic; }
-.dms-btn-sm.done { color: var(--dms-success); border-color: var(--dms-success); }
 
-/* ── CRM actions (Panel 4) ── */
-.dms-crm-row { display: flex; gap: 8px; }
-.dms-crm-row > * { flex: 1; }
-.dms-select {
-  width: 100%;
-  background: var(--dms-surface);
-  color: var(--dms-fg);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 9px 10px;
-  margin-top: 8px;
-}
-.dms-save-msg { font-size: 12px; margin-top: 8px; }
+/* ── Panel shell ─────────────────────────────────────────────────────────── */
 
-/* ── Captured messages / paste ── */
-.dms-conv { display: flex; flex-direction: column; gap: 5px; max-height: 160px; overflow-y: auto; }
-.dms-msg {
-  font-size: 12px;
-  line-height: 1.4;
-  padding: 6px 9px;
-  border-radius: 10px;
-  max-width: 85%;
+#dms-root .dms-panel {
+  width: 100% !important;
+  height: 100% !important;
+  background: var(--dms-bg) !important;
+  border-left: 1px solid var(--dms-border) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.6) !important;
 }
-.dms-msg.you { align-self: flex-end; background: var(--dms-primary); color: var(--dms-primary-fg); }
-.dms-msg.them { align-self: flex-start; background: var(--dms-muted); color: var(--dms-fg); }
 
-.dms-input {
-  width: 100%;
-  background: var(--dms-surface);
-  color: var(--dms-fg);
-  border: 1px solid var(--dms-border);
-  border-radius: var(--dms-radius);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 8px 10px;
-  margin-bottom: 6px;
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+#dms-root .dms-head {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 12px 14px !important;
+  background: var(--dms-surface) !important;
+  border-bottom: 1px solid var(--dms-border) !important;
+  flex-shrink: 0 !important;
 }
-.dms-input:focus { outline: none; border-color: var(--dms-primary); }
 
-.dms-stack > * + * { margin-top: 8px; }
+#dms-root .dms-logo {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--dms-text) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  flex: 1 !important;
+}
+
+#dms-root .dms-logo-icon {
+  width: 22px !important;
+  height: 22px !important;
+  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  border-radius: 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+#dms-root .dms-platform-tag {
+  font-size: 10.5px !important;
+  color: var(--dms-subtle) !important;
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  padding: 2px 8px !important;
+  border-radius: 10px !important;
+  white-space: nowrap !important;
+}
+
+#dms-root .dms-head-btns {
+  display: flex !important;
+  gap: 6px !important;
+}
+
+#dms-root .dms-btn-icon {
+  all: unset !important;
+  box-sizing: border-box !important;
+  width: 26px !important;
+  height: 26px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: var(--dms-muted) !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  transition: all 0.15s !important;
+}
+#dms-root .dms-btn-icon:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+
+/* ── Connection bar ──────────────────────────────────────────────────────── */
+
+#dms-root .dms-conn {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 7px 14px !important;
+  background: var(--dms-surface) !important;
+  border-bottom: 1px solid var(--dms-border-sub) !important;
+  font-size: 11px !important;
+  color: var(--dms-subtle) !important;
+  flex-shrink: 0 !important;
+}
+
+#dms-root .dms-dot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  flex-shrink: 0 !important;
+  transition: background 0.2s !important;
+}
+#dms-root .dms-dot.ok   { background: var(--dms-success) !important; box-shadow: 0 0 6px var(--dms-success) !important; }
+#dms-root .dms-dot.warn { background: var(--dms-warning) !important; box-shadow: 0 0 6px var(--dms-warning) !important; }
+#dms-root .dms-dot.err  { background: var(--dms-error) !important; box-shadow: 0 0 6px var(--dms-error) !important; }
+#dms-root .dms-dot.idle { background: var(--dms-muted) !important; }
+
+/* ── Scroll body ─────────────────────────────────────────────────────────── */
+
+#dms-root .dms-body {
+  flex: 1 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0 !important;
+}
+
+#dms-root .dms-body::-webkit-scrollbar { width: 4px !important; }
+#dms-root .dms-body::-webkit-scrollbar-track { background: transparent !important; }
+#dms-root .dms-body::-webkit-scrollbar-thumb { background: var(--dms-border) !important; border-radius: 4px !important; }
+
+/* ── Panel 1: Prospect Overview ──────────────────────────────────────────── */
+
+#dms-root .dms-prospect {
+  padding: 14px !important;
+  background: var(--dms-surface) !important;
+  border-bottom: 1px solid var(--dms-border) !important;
+  flex-shrink: 0 !important;
+}
+
+#dms-root .dms-prospect-name {
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  color: var(--dms-text) !important;
+  margin-bottom: 2px !important;
+}
+
+#dms-root .dms-prospect-sub {
+  font-size: 11px !important;
+  color: var(--dms-muted) !important;
+  margin-bottom: 10px !important;
+}
+
+#dms-root .dms-overview {
+  display: none !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+}
+#dms-root .dms-overview.visible { display: grid !important; }
+
+#dms-root .dms-ov-card {
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  padding: 8px 10px !important;
+}
+
+#dms-root .dms-ov-lbl {
+  font-size: 9.5px !important;
+  color: var(--dms-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 3px !important;
+}
+
+#dms-root .dms-ov-val {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: var(--dms-text) !important;
+}
+
+/* ── Sections ────────────────────────────────────────────────────────────── */
+
+#dms-root .dms-section {
+  padding: 12px 14px !important;
+  border-bottom: 1px solid var(--dms-border-sub) !important;
+}
+
+#dms-root .dms-section-head {
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  color: var(--dms-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  margin-bottom: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+}
+
+/* ── Status message ──────────────────────────────────────────────────────── */
+
+#dms-root .dms-status {
+  margin: 0 14px !important;
+  padding: 7px 10px !important;
+  border-radius: var(--dms-radius-sm) !important;
+  font-size: 11.5px !important;
+  display: none !important;
+}
+#dms-root .dms-status.info    { display: block !important; background: rgba(59,130,246,0.1) !important; color: var(--dms-info) !important; border: 1px solid rgba(59,130,246,0.25) !important; }
+#dms-root .dms-status.error   { display: block !important; background: rgba(239,68,68,0.08) !important; color: var(--dms-error) !important; border: 1px solid rgba(239,68,68,0.2) !important; }
+#dms-root .dms-status.success { display: block !important; background: rgba(16,185,129,0.08) !important; color: var(--dms-success) !important; border: 1px solid rgba(16,185,129,0.2) !important; }
+#dms-root .dms-status.loading { display: block !important; background: var(--dms-surface-2) !important; color: var(--dms-subtle) !important; border: 1px solid var(--dms-border) !important; }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+
+#dms-root .dms-btn-primary {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 9px 14px !important;
+  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: white !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: opacity 0.15s, transform 0.1s !important;
+  letter-spacing: 0.1px !important;
+}
+#dms-root .dms-btn-primary:hover:not(:disabled) { opacity: 0.9 !important; transform: translateY(-1px) !important; }
+#dms-root .dms-btn-primary:active:not(:disabled) { transform: translateY(0) !important; }
+#dms-root .dms-btn-primary:disabled { opacity: 0.35 !important; cursor: not-allowed !important; transform: none !important; }
+#dms-root .dms-btn-primary.done { background: linear-gradient(135deg, #059669, #10b981) !important; }
+
+#dms-root .dms-btn-sm {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  padding: 4px 9px !important;
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: var(--dms-subtle) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+  white-space: nowrap !important;
+}
+#dms-root .dms-btn-sm:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+#dms-root .dms-btn-sm.done { color: var(--dms-success) !important; border-color: var(--dms-success) !important; }
+
+#dms-root .dms-btn-ghost {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 8px 14px !important;
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: var(--dms-subtle) !important;
+  font-size: 12px !important;
+  text-align: center !important;
+  cursor: pointer !important;
+  transition: all 0.15s !important;
+}
+#dms-root .dms-btn-ghost:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+
+/* ── Panel 2: AI Insights ────────────────────────────────────────────────── */
+
+#dms-root .dms-metrics {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+#dms-root .dms-metric {
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  padding: 10px !important;
+  text-align: center !important;
+}
+
+#dms-root .dms-metric-val {
+  font-size: 22px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+  margin-bottom: 3px !important;
+}
+
+#dms-root .dms-metric-suffix {
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  opacity: 0.7 !important;
+}
+
+#dms-root .dms-metric-lbl {
+  font-size: 10px !important;
+  color: var(--dms-muted) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+}
+
+#dms-root .dms-badges {
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+  margin-bottom: 8px !important;
+}
+
+#dms-root .dms-badge {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  padding: 3px 8px !important;
+  border-radius: 10px !important;
+  border: 1px solid currentColor !important;
+}
+
+#dms-root .dms-summary {
+  font-size: 11.5px !important;
+  color: var(--dms-subtle) !important;
+  line-height: 1.5 !important;
+  margin-bottom: 8px !important;
+  padding: 8px 10px !important;
+  background: var(--dms-surface-2) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  border-left: 3px solid var(--dms-accent) !important;
+}
+
+#dms-root .dms-objection {
+  font-size: 11.5px !important;
+  color: var(--dms-warning) !important;
+  padding: 6px 10px !important;
+  background: rgba(245, 158, 11, 0.08) !important;
+  border: 1px solid rgba(245, 158, 11, 0.2) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  margin-bottom: 6px !important;
+}
+
+#dms-root .dms-next-action {
+  font-size: 12px !important;
+  color: var(--dms-text) !important;
+  padding: 8px 10px !important;
+  background: var(--dms-accent-glow) !important;
+  border: 1px solid rgba(124, 58, 237, 0.3) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  margin-bottom: 6px !important;
+}
+
+#dms-root .dms-approach {
+  font-size: 11.5px !important;
+  color: var(--dms-subtle) !important;
+  padding: 7px 10px !important;
+  background: var(--dms-surface-2) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  margin-bottom: 6px !important;
+  line-height: 1.5 !important;
+}
+
+/* ── Panel 3: Replies ────────────────────────────────────────────────────── */
+
+#dms-root .dms-reply {
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  padding: 10px !important;
+  margin-bottom: 8px !important;
+  transition: border-color 0.15s !important;
+}
+#dms-root .dms-reply:last-child { margin-bottom: 0 !important; }
+#dms-root .dms-reply:hover { border-color: var(--dms-accent) !important; }
+
+#dms-root .dms-reply-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  margin-bottom: 6px !important;
+}
+
+#dms-root .dms-reply-label {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+  color: var(--dms-accent-h) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+#dms-root .dms-reply-btns {
+  display: flex !important;
+  gap: 5px !important;
+}
+
+#dms-root .dms-reply-text {
+  font-size: 12px !important;
+  color: var(--dms-text) !important;
+  line-height: 1.55 !important;
+  margin-bottom: 4px !important;
+}
+
+#dms-root .dms-reply-note {
+  font-size: 10.5px !important;
+  color: var(--dms-muted) !important;
+  margin-top: 5px !important;
+}
+
+/* ── Panel 4: CRM Actions ────────────────────────────────────────────────── */
+
+#dms-root .dms-crm-row {
+  display: flex !important;
+  gap: 8px !important;
+  margin-bottom: 8px !important;
+}
+
+#dms-root .dms-select {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 7px 10px !important;
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: var(--dms-text) !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
+  margin-bottom: 8px !important;
+  transition: border-color 0.15s !important;
+}
+#dms-root .dms-select:focus { border-color: var(--dms-accent) !important; outline: none !important; }
+
+#dms-root .dms-save-msg {
+  font-size: 11px !important;
+  margin-top: 6px !important;
+  padding: 5px 8px !important;
+  border-radius: var(--dms-radius-sm) !important;
+  display: none !important;
+}
+#dms-root .dms-save-msg.visible { display: block !important; }
+
+/* ── Conversation preview ────────────────────────────────────────────────── */
+
+#dms-root .dms-conv {
+  max-height: 160px !important;
+  overflow-y: auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 5px !important;
+  margin-top: 6px !important;
+}
+
+#dms-root .dms-msg {
+  font-size: 11.5px !important;
+  padding: 6px 10px !important;
+  border-radius: var(--dms-radius-sm) !important;
+  max-width: 90% !important;
+  line-height: 1.45 !important;
+}
+#dms-root .dms-msg.you {
+  background: var(--dms-accent-glow) !important;
+  border: 1px solid rgba(124, 58, 237, 0.25) !important;
+  color: var(--dms-text) !important;
+  align-self: flex-end !important;
+}
+#dms-root .dms-msg.them {
+  background: var(--dms-surface-2) !important;
+  border: 1px solid var(--dms-border) !important;
+  color: var(--dms-subtle) !important;
+  align-self: flex-start !important;
+}
+
+/* ── Hint text ───────────────────────────────────────────────────────────── */
+
+#dms-root .dms-hint {
+  font-size: 11px !important;
+  color: var(--dms-muted) !important;
+  text-align: center !important;
+  padding: 6px 0 !important;
+  line-height: 1.5 !important;
+}
+
+/* ── Paste area ──────────────────────────────────────────────────────────── */
+
+#dms-root .dms-input {
+  all: unset !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  width: 100% !important;
+  padding: 7px 10px !important;
+  background: var(--dms-bg) !important;
+  border: 1px solid var(--dms-border) !important;
+  border-radius: var(--dms-radius-sm) !important;
+  color: var(--dms-text) !important;
+  font-size: 11.5px !important;
+  margin-bottom: 6px !important;
+  transition: border-color 0.15s !important;
+  resize: vertical !important;
+}
+#dms-root .dms-input:focus { border-color: var(--dms-accent) !important; outline: none !important; }
+#dms-root .dms-input::placeholder { color: var(--dms-muted) !important; }
+
+/* ── Analyse primary button spacing ──────────────────────────────────────── */
+#dms-root .dms-stack { padding: 12px 14px 0 !important; }

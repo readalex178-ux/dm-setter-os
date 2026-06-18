@@ -1,10 +1,15 @@
-// background.js — service worker
-// Owns the Cloud session (tokens) and all reads/writes to the backend via REST.
+// background.js — DM Setter OS service worker
+// Owns the Supabase session and all API calls to DM Setter OS.
+// The extension is a dumb interface layer — ALL intelligence lives server-side.
 
 const SUPABASE_URL = "https://kwqoaqifvccxflaajrjv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cW9hcWlmdmNjeGZsYWFqcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODA2NTcsImV4cCI6MjA4ODU1NjY1N30.uNNWvCSPyckxAWjRZfNP7jB8hqCD44noPmlKJ7WjDLI";
+const APP_URL = "https://dm-wingman-pro.vercel.app";
 
-const PLATFORM_ENUM = ["instagram", "facebook", "whatsapp", "hubspot"];
+// All valid platform IDs — must match Supabase enum
+const PLATFORM_IDS = ["instagram", "tiktok", "twitter", "facebook", "linkedin", "messenger"];
+
+// ── Init ────────────────────────────────────────────────────────────────────
 
 chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.get("overlay_enabled").then((s) => {
@@ -82,17 +87,61 @@ async function authedFetch(path, options = {}, retry = true) {
   return res;
 }
 
-// ── Save a conversation to the backend ───────────────────────────────────────
+// ── Edge Function bridge (AI + CRM lives entirely in DM Setter OS) ───────────
+
+async function callEdgeFn(fn, body) {
+  const res = await authedFetch(`/functions/v1/${fn}`, {
+    method: "POST",
+    body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    if (res.status === 401) throw new Error("Session expired — please sign in again.");
+    if (res.status === 429) throw new Error("Rate limit hit — try again in a moment.");
+    if (res.status === 402) throw new Error("AI credits exhausted. Top up in the DM Setter OS app.");
+    throw new Error(data.error || `DM Setter OS returned ${res.status}`);
+  }
+  return data;
+}
+
+// ── DM Setter OS API calls ───────────────────────────────────────────────────
+
+async function analyzeConversation(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Sign in via the extension popup first.");
+  return await callEdgeFn("extension-analyze", payload);
+}
+
+async function getProspectContext(payload) {
+  const session = await getSession();
+  if (!session?.access_token) throw new Error("Sign in via the extension popup first.");
+  return await callEdgeFn("extension-context", payload);
+}
+
+async function verifySession() {
+  const session = await getSession();
+  if (!session?.access_token) return { ok: true, signedIn: false };
+  try {
+    const res = await authedFetch("/rest/v1/profiles?select=id,display_name&limit=1", { method: "GET" });
+    if (!res.ok) return { ok: true, signedIn: false };
+    const rows = await res.json().catch(() => []);
+    return { ok: true, signedIn: true, user: session.user || null, profile: rows?.[0] || null };
+  } catch {
+    return { ok: true, signedIn: false };
+  }
+}
 
 async function saveConversation(payload) {
   const session = await getSession();
-  if (!session?.user?.id) throw new Error("Please sign in to the extension first (open the popup).");
+  if (!session?.user?.id) throw new Error("Sign in via the extension popup first.");
   const userId = session.user.id;
   const { prospect, messages, analysis } = payload;
 
-  const platform = PLATFORM_ENUM.includes(prospect.platform) ? prospect.platform : null;
-  const prospectId = crypto.randomUUID();
+  // Normalise platform to a valid DB enum value
+  const pid = (prospect.platform || "").toLowerCase();
+  const platform = PLATFORM_IDS.includes(pid) ? pid : null;
 
+  const prospectId = crypto.randomUUID();
   const prospectRow = {
     id: prospectId,
     user_id: userId,
@@ -106,11 +155,10 @@ async function saveConversation(payload) {
     concerns: Array.isArray(analysis?.objections) && analysis.objections.length
       ? analysis.objections.join("; ")
       : (prospect.concerns || null),
-    source: prospect.source || ((prospect.platform || "Extension") + " (Extension)"),
+    source: prospect.source || `${prospect.platform || "Extension"} (Extension)`,
     platform,
     last_contact_at: new Date().toISOString(),
   };
-
 
   const pRes = await authedFetch("/rest/v1/prospects", {
     method: "POST",
@@ -144,68 +192,18 @@ async function saveConversation(payload) {
   return { id: prospectId };
 }
 
-// ── Recently saved (for popup) ───────────────────────────────────────────────
-
 async function getRecent() {
   const res = await authedFetch(
-    "/rest/v1/prospects?select=id,name,stage,lead_score,updated_at&order=updated_at.desc&limit=20",
+    "/rest/v1/prospects?select=id,name,stage,lead_score,conversation_score,updated_at&order=updated_at.desc&limit=20",
     { method: "GET" }
   );
   if (!res.ok) throw new Error("Could not load prospects");
   return await res.json();
 }
 
-// ── Edge Function bridge (all AI / business logic lives server-side) ──────────
-
-async function callEdgeFn(fn, body) {
-  const res = await authedFetch(`/functions/v1/${fn}`, {
-    method: "POST",
-    body: JSON.stringify(body || {}),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    if (res.status === 401) throw new Error("Session expired — please sign in again.");
-    if (res.status === 429) throw new Error("Rate limit — try again in a moment.");
-    if (res.status === 402) throw new Error("AI credits exhausted. Add credits in the app.");
-    throw new Error(data.error || `Request failed (${res.status})`);
-  }
-  return data;
-}
-
-// Analyse the active conversation via the DM Setter OS engine.
-async function analyzeConversation(payload) {
-  const session = await getSession();
-  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
-  return await callEdgeFn("extension-analyze", payload);
-}
-
-// Hydrate the panel with stored intelligence about a prospect on chat open.
-async function getProspectContext(payload) {
-  const session = await getSession();
-  if (!session?.access_token) throw new Error("Please sign in to the extension first (open the popup).");
-  return await callEdgeFn("extension-context", payload);
-}
-
-// Verify the user's account / subscription status is still valid.
-async function verifySession() {
-  const session = await getSession();
-  if (!session?.access_token) return { ok: true, signedIn: false };
-  try {
-    const res = await authedFetch(
-      "/rest/v1/profiles?select=id,display_name&limit=1",
-      { method: "GET" }
-    );
-    if (!res.ok) return { ok: true, signedIn: false };
-    const rows = await res.json().catch(() => []);
-    return { ok: true, signedIn: true, user: session.user || null, profile: rows?.[0] || null };
-  } catch {
-    return { ok: true, signedIn: false };
-  }
-}
-
 // ── Message router ───────────────────────────────────────────────────────────
 
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     try {
       switch (msg.type) {
@@ -249,8 +247,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
           sendResponse({ ok: true, rows });
           break;
         }
+        case "GET_APP_URL": {
+          sendResponse({ ok: true, url: APP_URL });
+          break;
+        }
         default:
-          sendResponse({ ok: false, error: "Unknown message type" });
+          sendResponse({ ok: false, error: "Unknown message type: " + msg.type });
       }
     } catch (e) {
       sendResponse({ ok: false, error: e.message });
@@ -259,13 +261,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   return true; // keep channel open for async response
 });
 
-// Badge: green when signed in
+// ── Badge: green dot when signed in, ! when signed out ──────────────────────
+
 async function updateBadge() {
   const s = await getSession();
   const signedIn = !!s?.access_token;
   chrome.action.setBadgeText({ text: signedIn ? "" : "!" });
-  chrome.action.setBadgeBackgroundColor({ color: signedIn ? "#3fb950" : "#f85149" });
+  chrome.action.setBadgeBackgroundColor({ color: signedIn ? "#7c3aed" : "#f85149" });
 }
+
 updateBadge();
 chrome.storage.onChanged.addListener((changes) => {
   if (changes.session) updateBadge();

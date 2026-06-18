@@ -3,91 +3,50 @@
 <head>
   <meta charset="UTF-8" />
   <title>DM Setter OS</title>
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0d1117; color: #e6edf3; width: 300px; }
-
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: #161b22; border-bottom: 1px solid #21262d; }
-    .logo { font-weight: 700; font-size: 14px; color: #58a6ff; }
-    .version { font-size: 10px; color: #484f58; }
-
-    .status-bar { display: flex; align-items: center; gap: 7px; padding: 8px 14px; border-bottom: 1px solid #21262d; font-size: 12px; }
-    .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-    .dot.green { background: #3fb950; }
-    .dot.orange { background: #d29922; }
-    .dot.grey { background: #484f58; }
-
-    .stats { display: flex; border-bottom: 1px solid #21262d; }
-    .stat { flex: 1; text-align: center; padding: 10px 0; border-right: 1px solid #21262d; }
-    .stat:last-child { border-right: none; }
-    .stat-val { display: block; font-size: 20px; font-weight: 700; color: #58a6ff; }
-    .stat-lbl { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
-
-    .section { padding: 10px 14px; border-bottom: 1px solid #21262d; }
-    .section-title { font-size: 10px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-
-    .toggle-row { display: flex; align-items: center; justify-content: space-between; }
-    .toggle-info p { font-size: 12px; font-weight: 500; }
-    .toggle-info small { font-size: 10px; color: #8b949e; }
-    .switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
-    .switch input { opacity: 0; width: 0; height: 0; }
-    .slider { position: absolute; inset: 0; background: #30363d; border-radius: 20px; cursor: pointer; transition: 0.2s; }
-    .slider:before { content: ""; position: absolute; width: 14px; height: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: 0.2s; }
-    input:checked + .slider { background: #1f6feb; }
-    input:checked + .slider:before { transform: translateX(16px); }
-
-    .btn { display: block; width: 100%; padding: 9px; background: linear-gradient(135deg, #1f6feb, #388bfd); border: none; border-radius: 7px; color: white; font-size: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-    .btn:hover { opacity: 0.9; }
-    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .btn-open { background: none; border: 1px solid #30363d; color: #8b949e; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; font-size: 14px; }
-    .btn-open:hover { color: #e6edf3; border-color: #58a6ff; }
-
-    .recent-item { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #21262d22; }
-    .recent-item:last-child { border-bottom: none; }
-    .avatar { width: 30px; height: 30px; border-radius: 50%; background: #1f6feb22; color: #58a6ff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .recent-name { font-size: 12px; font-weight: 600; }
-    .recent-sub { font-size: 10px; color: #8b949e; }
-    .recent-score { font-size: 11px; font-weight: 700; color: #3fb950; margin-left: auto; }
-    .empty { font-size: 11px; color: #484f58; text-align: center; padding: 8px 0; }
-
-    details summary { font-size: 11px; color: #8b949e; cursor: pointer; padding: 8px 14px; list-style: none; border-top: 1px solid #21262d; }
-    details summary:hover { color: #e6edf3; }
-    details summary::-webkit-details-marker { display: none; }
-    .settings-body { padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 8px; }
-    label.field { display: flex; flex-direction: column; gap: 3px; }
-    label.field span { font-size: 10px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.4px; }
-    input.inp, select.inp { background: #161b22; border: 1px solid #30363d; border-radius: 5px; color: #e6edf3; padding: 6px 8px; font-size: 11px; width: 100%; }
-    input.inp:focus, select.inp:focus { outline: none; border-color: #58a6ff; }
-    .save-btn { padding: 7px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #e6edf3; font-size: 12px; cursor: pointer; }
-    .save-btn:hover { background: #30363d; }
-    .saved-msg { font-size: 11px; color: #3fb950; text-align: center; display: none; }
-  </style>
+  <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
+
+  <!-- Header -->
   <div class="header">
-    <span class="logo">⚡ DM Setter OS</span>
-    <div style="display:flex;align-items:center;gap:8px">
-      <span class="version" id="version">v4.0.0</span>
-      <button class="btn-open" id="btn-open-app" title="Open app">↗</button>
+    <div class="logo">
+      <div class="logo-icon">⚡</div>
+      DM Setter OS
+    </div>
+    <div class="header-right">
+      <span class="version" id="version">v5.0.0</span>
+      <button class="btn-icon" id="btn-open-app" title="Open DM Setter OS">↗</button>
     </div>
   </div>
 
+  <!-- Platform status -->
   <div class="status-bar">
     <span class="dot grey" id="status-dot"></span>
-    <span id="status-text">Checking...</span>
+    <span id="status-text">Checking…</span>
   </div>
 
+  <!-- Stats -->
   <div class="stats">
-    <div class="stat"><span class="stat-val" id="stat-saved">—</span><span class="stat-lbl">Saved</span></div>
-    <div class="stat"><span class="stat-val" id="stat-today">—</span><span class="stat-lbl">Today</span></div>
-    <div class="stat"><span class="stat-val" id="stat-ai">—</span><span class="stat-lbl">AI</span></div>
+    <div class="stat">
+      <span class="stat-val" id="stat-saved">—</span>
+      <span class="stat-lbl">Saved</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" id="stat-today">—</span>
+      <span class="stat-lbl">Today</span>
+    </div>
+    <div class="stat">
+      <span class="stat-val" id="stat-ai">Cloud</span>
+      <span class="stat-lbl">AI</span>
+    </div>
   </div>
 
+  <!-- Panel toggle -->
   <div class="section">
     <div class="toggle-row">
       <div class="toggle-info">
-        <p>Show panel on page</p>
-        <small>Slide in the AI panel on the current tab</small>
+        <p>Show AI panel on page</p>
+        <small>Slide in the DM Setter OS panel</small>
       </div>
       <label class="switch">
         <input type="checkbox" id="toggle-overlay" />
@@ -96,32 +55,45 @@
     </div>
   </div>
 
+  <!-- Analyse button -->
   <div class="section">
-    <button class="btn" id="btn-analyse" disabled>⚡ Analyse Current DM</button>
+    <button class="btn-primary" id="btn-analyse" disabled>⚡ Analyse Current DM</button>
   </div>
 
+  <!-- Recently saved -->
   <div class="section">
     <div class="section-title">Recently Saved</div>
-    <div id="recent-list"><div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save.</div></div>
+    <div id="recent-list">
+      <div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save to CRM.</div>
+    </div>
   </div>
 
+  <!-- Account -->
   <details id="account-details">
     <summary>👤 Account</summary>
     <div class="settings-body">
+
       <div id="signed-out">
-        <p style="font-size:11px;color:#8b949e;margin-bottom:8px">Sign in with the same account you use in the DM Setter OS app. Your captured DMs and AI suggestions sync to your dashboard.</p>
-        <label class="field"><span>Email</span><input class="inp" type="email" id="auth-email" placeholder="you@example.com" /></label>
-        <label class="field"><span>Password</span><input class="inp" type="password" id="auth-password" placeholder="••••••••" /></label>
-        <button class="btn" id="btn-signin" style="margin-top:8px">Sign In</button>
-        <div class="saved-msg" id="auth-error" style="color:#f85149"></div>
+        <p class="note">Sign in with the same account you use in DM Setter OS. Your conversations and AI insights sync to your dashboard.</p>
+        <div class="field">
+          <label class="field-label">Email</label>
+          <input class="inp" type="email" id="auth-email" placeholder="you@example.com" autocomplete="email" />
+        </div>
+        <div class="field">
+          <label class="field-label">Password</label>
+          <input class="inp" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+        <button class="btn-primary" id="btn-signin" style="margin-top:4px">Sign In</button>
+        <div class="auth-error" id="auth-error"></div>
       </div>
+
       <div id="signed-in" style="display:none">
-        <p style="font-size:12px;color:#3fb950">✓ Signed in as <span id="auth-user"></span></p>
-        <button class="save-btn" id="btn-signout" style="margin-top:8px">Sign Out</button>
+        <p class="signed-in-info">✓ Signed in as <span id="auth-user"></span></p>
+        <button class="btn-ghost" id="btn-signout">Sign Out</button>
       </div>
+
     </div>
   </details>
-
 
   <script src="popup.js"></script>
 </body>
