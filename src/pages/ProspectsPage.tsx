@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save } from "lucide-react";
+import { Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useProspects, useTimeline } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
@@ -16,6 +16,7 @@ export default function ProspectsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const { data: prospects = [], isLoading } = useProspects();
   const qc = useQueryClient();
 
@@ -41,6 +42,21 @@ export default function ProspectsPage() {
       toast({ title: "Could not save notes", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Notes saved" });
+      qc.invalidateQueries({ queryKey: ["prospects"] });
+    }
+  }
+
+  async function deleteProspect() {
+    if (!selected) return;
+    if (!window.confirm(`Delete "${selected.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    const { error } = await supabase.from("prospects").delete().eq("id", selected.id);
+    setDeleting(false);
+    if (error) {
+      toast({ title: "Could not delete prospect", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Prospect deleted" });
+      setSelectedId(null);
       qc.invalidateQueries({ queryKey: ["prospects"] });
     }
   }
@@ -100,17 +116,29 @@ export default function ProspectsPage() {
       {/* Profile */}
       {selected && (
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">{selected.name.slice(0, 2).toUpperCase()}</div>
-            <div>
-              <h1 className="text-xl font-bold">{selected.name}</h1>
-              <p className="text-sm text-muted-foreground">{selected.handle || "—"}</p>
-              <div className="flex gap-2 mt-1">
-                <Badge variant="score">{selected.lead_score}/10</Badge>
-                <Badge variant={selected.call_readiness >= 70 ? "success" : "warning"}>{selected.call_readiness}%</Badge>
-                <Badge variant="outline">{selected.stage}</Badge>
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">{selected.name.slice(0, 2).toUpperCase()}</div>
+              <div>
+                <h1 className="text-xl font-bold">{selected.name}</h1>
+                <p className="text-sm text-muted-foreground">{selected.handle || "—"}</p>
+                <div className="flex gap-2 mt-1">
+                  <Badge variant="score">{selected.lead_score}/10</Badge>
+                  <Badge variant={selected.call_readiness >= 70 ? "success" : "warning"}>{selected.call_readiness}%</Badge>
+                  <Badge variant="outline">{selected.stage}</Badge>
+                </div>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={deleteProspect}
+              disabled={deleting}
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+              <span className="ml-1.5 hidden sm:inline">Delete</span>
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
@@ -144,7 +172,6 @@ export default function ProspectsPage() {
             </Card>
           )}
 
-          {/* Notes */}
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Notes</CardTitle></CardHeader>
             <CardContent className="space-y-2">
@@ -155,7 +182,6 @@ export default function ProspectsPage() {
             </CardContent>
           </Card>
 
-          {/* Timeline */}
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm">Interaction Timeline</CardTitle></CardHeader>
             <CardContent>
