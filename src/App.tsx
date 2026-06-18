@@ -13,6 +13,7 @@ import AppLayout from "./components/AppLayout";
 
 // Eager: auth + shell entry points (small, needed immediately)
 import AuthPage from "./pages/AuthPage";
+import AuthCallbackPage from "./pages/AuthCallbackPage";
 import NotFound from "./pages/NotFound";
 
 // Lazy: feature pages are code-split so the initial bundle stays small
@@ -38,11 +39,11 @@ validateEnv();
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 60_000, // 1 min — avoid duplicate refetches across components
-      gcTime: 5 * 60_000, // keep cache 5 min for fast back-nav
+      staleTime: 60_000,
+      gcTime: 5 * 60_000,
       retry: 1,
       refetchOnWindowFocus: false,
-      refetchOnReconnect: true, // offline recovery
+      refetchOnReconnect: true,
     },
     mutations: { retry: 0 },
   },
@@ -54,7 +55,6 @@ const PageLoader = () => (
   </div>
 );
 
-/** Wraps a lazy page in a Suspense + per-area error boundary. */
 const Guard = ({ name, children }: { name: string; children: React.ReactNode }) => (
   <ErrorBoundary name={name}>
     <Suspense fallback={<PageLoader />}>{children}</Suspense>
@@ -71,6 +71,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Navigate to="/app" replace />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route
               path="/app"
               element={
