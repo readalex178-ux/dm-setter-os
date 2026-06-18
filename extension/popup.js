@@ -1,5 +1,6 @@
-// popup.js — DM Setter OS extension popup
-// Interface only. All AI and data lives in DM Setter OS.
+// popup.js — DM Setter OS extension popup v6.0.0
+// Session comes from auth-bridge.js (reads Supabase localStorage on the web app).
+// No email/password here — sign in happens on dm-wingman-pro.vercel.app via Google OAuth.
 
 const APP_URL = "https://dm-wingman-pro.vercel.app";
 
@@ -13,6 +14,7 @@ const PLATFORM_NAMES = {
   "www.messenger.com": "Messenger",
   "www.linkedin.com": "LinkedIn",
   "linkedin.com": "LinkedIn",
+  "web.whatsapp.com": "WhatsApp",
 };
 
 const DM_PATHS = {
@@ -25,6 +27,7 @@ const DM_PATHS = {
   "www.messenger.com": /.*/,
   "www.linkedin.com": /\/messaging/,
   "linkedin.com": /\/messaging/,
+  "web.whatsapp.com": /.*/,
 };
 
 function send(type, extra = {}) {
@@ -33,12 +36,38 @@ function send(type, extra = {}) {
   });
 }
 
+function showView(id) {
+  ["view-loading", "view-auth", "view-main"].forEach((v) => {
+    const el = document.getElementById(v);
+    if (el) el.style.display = v === id ? "" : "none";
+  });
+}
+
 async function init() {
+  showView("view-loading");
+
+  // Determine session state
+  const res = await send("GET_SESSION");
+  const signedIn = !!res?.user;
+
+  if (!signedIn) {
+    showView("view-auth");
+    return;
+  }
+
+  showView("view-main");
+
+  // Version badge
   try {
     const v = chrome.runtime.getManifest().version;
     document.getElementById("version").textContent = "v" + v;
   } catch (_) {}
 
+  // Account email
+  const email = res.user?.email || "";
+  document.getElementById("auth-user-email").textContent = email;
+
+  // Overlay toggle state
   const s = await chrome.storage.local.get(["overlay_enabled"]);
   document.getElementById("toggle-overlay").checked = !!s.overlay_enabled;
 
@@ -63,9 +92,8 @@ async function init() {
       analyseBtn.textContent = "⚡ Analyse " + platformName + " DM";
     } else {
       dot.className = "dot orange";
-      statusText.textContent = platformName + " — open a DM conversation first";
+      statusText.textContent = platformName + " — open a DM conversation";
       analyseBtn.disabled = true;
-      analyseBtn.textContent = "⚡ Analyse Current DM";
     }
   } else {
     dot.className = "dot grey";
@@ -73,27 +101,7 @@ async function init() {
     analyseBtn.disabled = true;
   }
 
-  await refreshAccount();
-}
-
-async function refreshAccount() {
-  const res = await send("GET_SESSION");
-  const signedIn = !!res?.user;
-
-  document.getElementById("signed-in").style.display = signedIn ? "block" : "none";
-  document.getElementById("signed-out").style.display = signedIn ? "none" : "block";
-
-  if (signedIn) {
-    document.getElementById("auth-user").textContent = res.user.email || "your account";
-    document.getElementById("account-details").open = false;
-    loadRecent();
-  } else {
-    document.getElementById("account-details").open = true;
-    document.getElementById("stat-saved").textContent = "—";
-    document.getElementById("stat-today").textContent = "—";
-    document.getElementById("recent-list").innerHTML =
-      '<div class="empty" style="color:#f59e0b">Sign in below to sync your DMs with DM Setter OS</div>';
-  }
+  await loadRecent();
 }
 
 async function loadRecent() {
@@ -113,7 +121,7 @@ async function loadRecent() {
 
   const list = document.getElementById("recent-list");
   if (!rows.length) {
-    list.innerHTML = '<div class="empty">Nothing saved yet.</div>';
+    list.innerHTML = '<div class="empty">Nothing saved yet. Open a DM, analyse it, then save.</div>';
     return;
   }
 
@@ -133,8 +141,16 @@ async function loadRecent() {
   }).join("");
 }
 
+// ── Event listeners ──────────────────────────────────────────────────────────
+
+// Sign in via web app (Google OAuth)
+document.getElementById("btn-open-for-signin").addEventListener("click", () => {
+  chrome.tabs.create({ url: APP_URL + "/auth" });
+  window.close();
+});
+
 // Toggle panel on page
-document.getElementById("toggle-overlay").addEventListener("change", async (e) => {
+document.getElementById("toggle-overlay")?.addEventListener("change", async (e) => {
   const enabled = e.target.checked;
   await chrome.storage.local.set({ overlay_enabled: enabled });
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -143,8 +159,8 @@ document.getElementById("toggle-overlay").addEventListener("change", async (e) =
   }
 });
 
-// Analyse button — open panel and trigger analysis
-document.getElementById("btn-analyse").addEventListener("click", async () => {
+// Analyse button
+document.getElementById("btn-analyse")?.addEventListener("click", async () => {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab?.id) return;
   await chrome.storage.local.set({ overlay_enabled: true });
@@ -153,45 +169,15 @@ document.getElementById("btn-analyse").addEventListener("click", async () => {
   window.close();
 });
 
-// Open DM Setter OS app
-document.getElementById("btn-open-app").addEventListener("click", () => {
+// Open app button
+document.getElementById("btn-open-app")?.addEventListener("click", () => {
   chrome.tabs.create({ url: APP_URL + "/app/inbox" });
 });
 
-// Sign in
-document.getElementById("btn-signin").addEventListener("click", async () => {
-  const email = document.getElementById("auth-email").value.trim();
-  const password = document.getElementById("auth-password").value;
-  const errEl = document.getElementById("auth-error");
-  errEl.style.display = "none";
-
-  if (!email || !password) {
-    errEl.textContent = "Enter your email and password";
-    errEl.style.display = "block";
-    return;
-  }
-
-  const btn = document.getElementById("btn-signin");
-  btn.textContent = "Signing in…";
-  btn.disabled = true;
-
-  const res = await send("SIGN_IN", { email, password });
-  btn.textContent = "Sign In";
-  btn.disabled = false;
-
-  if (!res?.ok) {
-    errEl.textContent = res?.error || "Sign in failed. Check your credentials.";
-    errEl.style.display = "block";
-    return;
-  }
-
-  await refreshAccount();
-});
-
 // Sign out
-document.getElementById("btn-signout").addEventListener("click", async () => {
+document.getElementById("btn-signout")?.addEventListener("click", async () => {
   await send("SIGN_OUT");
-  await refreshAccount();
+  showView("view-auth");
 });
 
 init();

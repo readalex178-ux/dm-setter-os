@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "DM Setter OS",
-  "version": "5.0.0",
-  "description": "Chrome extension layer for DM Setter OS — extract conversations on Instagram, TikTok, X, Facebook & LinkedIn and get instant AI insights, replies, and CRM sync.",
+  "version": "6.0.0",
+  "description": "AI co-pilot for DM setters — powered by DM Setter OS.",
   "permissions": ["activeTab", "storage", "tabs", "scripting", "clipboardWrite"],
   "host_permissions": [
     "https://www.instagram.com/*",
@@ -14,6 +14,8 @@
     "https://www.messenger.com/*",
     "https://www.linkedin.com/*",
     "https://linkedin.com/*",
+    "https://web.whatsapp.com/*",
+    "https://dm-wingman-pro.vercel.app/*",
     "https://kwqoaqifvccxflaajrjv.supabase.co/*"
   ],
   "action": {
@@ -32,10 +34,16 @@
         "https://www.facebook.com/*",
         "https://www.messenger.com/*",
         "https://www.linkedin.com/*",
-        "https://linkedin.com/*"
+        "https://linkedin.com/*",
+        "https://web.whatsapp.com/*"
       ],
       "js": ["scraper.js", "panel.js"],
       "css": ["panel.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://dm-wingman-pro.vercel.app/*"],
+      "js": ["auth-bridge.js"],
       "run_at": "document_idle"
     }
   ],

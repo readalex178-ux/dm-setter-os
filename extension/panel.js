@@ -35,7 +35,7 @@ function buildPanel() {
       <div class="dms-head">
         <div class="dms-logo">
           <div class="dms-logo-icon">⚡</div>
-          DM Setter OS
+          <span><span class="dms-logo-cyan">DM Setter</span> OS</span>
         </div>
         <span class="dms-platform-tag" id="dms-platform">—</span>
         <div class="dms-head-btns">

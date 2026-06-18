@@ -1,42 +1,130 @@
-/* popup.css — DM Setter OS Extension Popup */
+/* popup.css — DM Setter OS Extension Popup v6.0.0
+   Design tokens match dm-wingman-pro.vercel.app exactly. */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #0a0a0f;
-  --surface: #111118;
-  --surface-2: #1a1a24;
-  --border: #2a2a3a;
-  --border-subtle: #1e1e2e;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-glow: rgba(124, 58, 237, 0.15);
-  --success: #10b981;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --text: #f0f0ff;
-  --text-muted: #6b7280;
-  --text-subtle: #9ca3af;
-  --radius: 8px;
-  --radius-sm: 5px;
+  /* ── Exact tokens from src/index.css dark mode ── */
+  --bg:           hsl(222, 30%, 7%);    /* #0b0f1a */
+  --surface:      hsl(222, 25%, 10%);   /* #111827 */
+  --surface-2:    hsl(222, 20%, 13%);   /* #161e2d */
+  --border:       hsl(222, 18%, 16%);   /* #1a2030 */
+  --border-sub:   hsl(222, 15%, 12%);   /* #131820 */
+  --primary:      hsl(186, 100%, 50%);  /* #00e5ff — main cyan */
+  --primary-dim:  hsl(186, 100%, 40%);  /* #00b3cc */
+  --primary-glow: rgba(0, 229, 255, 0.15);
+  --success:      #10b981;
+  --warning:      #f59e0b;
+  --error:        #ef4444;
+  --text:         hsl(210, 20%, 92%);   /* #e8edf5 */
+  --muted:        hsl(215, 15%, 55%);   /* #7a8aa3 */
+  --subtle:       hsl(215, 12%, 70%);   /* #a3afc0 */
+  --radius:       8px;
+  --radius-sm:    6px;
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: var(--bg);
   color: var(--text);
   width: 320px;
   font-size: 13px;
   line-height: 1.4;
+  min-height: 100px;
+}
+
+/* ── Utility ─────────────────────────────────────────────────────────────── */
+.cyan { color: var(--primary); }
+
+/* ── Loading ─────────────────────────────────────────────────────────────── */
+.spinner-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+.spinner {
+  width: 24px; height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Auth Card (signed-out view) ─────────────────────────────────────────── */
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px 28px;
+  gap: 0;
+}
+
+.auth-icon {
+  width: 44px;
+  height: 44px;
+  background: hsl(186, 60%, 10%);
+  border: 1px solid rgba(0, 229, 255, 0.3);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 14px;
+}
+
+.auth-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 4px;
+  letter-spacing: -0.3px;
+}
+
+.auth-sub {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-bottom: 12px;
+}
+.btn-google:hover {
+  background: var(--surface-2);
+  border-color: var(--primary);
+}
+.g-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+.auth-hint {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+  max-width: 240px;
 }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
-
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
+  padding: 11px 14px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
@@ -54,7 +142,8 @@ body {
 .logo-icon {
   width: 22px;
   height: 22px;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: hsl(186, 60%, 10%);
+  border: 1px solid rgba(0, 229, 255, 0.3);
   border-radius: 6px;
   display: flex;
   align-items: center;
@@ -71,7 +160,7 @@ body {
 
 .version {
   font-size: 10px;
-  color: var(--text-muted);
+  color: var(--muted);
   background: var(--surface-2);
   padding: 2px 6px;
   border-radius: 10px;
@@ -84,43 +173,40 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text-muted);
+  color: var(--muted);
   cursor: pointer;
   font-size: 13px;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.15s;
-  text-decoration: none;
 }
-.btn-icon:hover { color: var(--text); border-color: var(--accent); }
+.btn-icon:hover { color: var(--text); border-color: var(--primary); }
 
 /* ── Status Bar ─────────────────────────────────────────────────────────── */
-
 .status-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--border-sub);
   background: var(--surface);
   font-size: 11.5px;
+  color: var(--subtle);
 }
 
 .dot {
-  width: 7px;
-  height: 7px;
+  width: 7px; height: 7px;
   border-radius: 50%;
   flex-shrink: 0;
   transition: background 0.2s;
 }
 .dot.green  { background: var(--success); box-shadow: 0 0 6px var(--success); }
 .dot.orange { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
-.dot.grey   { background: var(--text-muted); }
+.dot.grey   { background: var(--muted); }
 .dot.red    { background: var(--error); }
 
 /* ── Stats ──────────────────────────────────────────────────────────────── */
-
 .stats {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -140,64 +226,43 @@ body {
 .stat-val {
   font-size: 18px;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--primary);
   line-height: 1;
 }
-
 .stat-lbl {
   font-size: 9.5px;
-  color: var(--text-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 /* ── Sections ───────────────────────────────────────────────────────────── */
-
 .section {
   padding: 10px 14px;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-sub);
 }
 
 .section-title {
   font-size: 10px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.6px;
   margin-bottom: 9px;
 }
 
 /* ── Toggle ─────────────────────────────────────────────────────────────── */
-
 .toggle-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
+.toggle-info p { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.toggle-info small { font-size: 10.5px; color: var(--muted); display: block; margin-top: 1px; }
 
-.toggle-info p {
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text);
-}
-
-.toggle-info small {
-  font-size: 10.5px;
-  color: var(--text-muted);
-  display: block;
-  margin-top: 1px;
-}
-
-.switch {
-  position: relative;
-  width: 38px;
-  height: 22px;
-  flex-shrink: 0;
-}
-
+.switch { position: relative; width: 38px; height: 22px; flex-shrink: 0; }
 .switch input { opacity: 0; width: 0; height: 0; }
-
 .slider {
   position: absolute;
   inset: 0;
@@ -210,35 +275,26 @@ body {
 .slider::before {
   content: "";
   position: absolute;
-  width: 16px;
-  height: 16px;
-  left: 2px;
-  top: 2px;
-  background: var(--text-muted);
+  width: 16px; height: 16px;
+  left: 2px; top: 2px;
+  background: var(--muted);
   border-radius: 50%;
   transition: all 0.2s;
 }
-input:checked + .slider {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-input:checked + .slider::before {
-  background: white;
-  transform: translateX(16px);
-}
+input:checked + .slider { background: var(--primary); border-color: var(--primary); }
+input:checked + .slider::before { background: var(--bg); transform: translateX(16px); }
 
 /* ── Buttons ────────────────────────────────────────────────────────────── */
-
 .btn-primary {
   display: block;
   width: 100%;
   padding: 9px 14px;
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: var(--primary);
   border: none;
   border-radius: var(--radius);
-  color: white;
+  color: var(--bg);
   font-size: 12.5px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s, transform 0.1s;
   letter-spacing: 0.1px;
@@ -248,23 +304,21 @@ input:checked + .slider::before {
 .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
 
 /* ── Recent list ────────────────────────────────────────────────────────── */
-
 .recent-item {
   display: flex;
   align-items: center;
   gap: 9px;
   padding: 6px 0;
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 1px solid var(--border-sub);
 }
 .recent-item:last-child { border-bottom: none; }
 
 .avatar {
-  width: 30px;
-  height: 30px;
+  width: 30px; height: 30px;
   border-radius: 50%;
-  background: var(--accent-glow);
-  border: 1px solid var(--accent);
-  color: var(--accent);
+  background: var(--primary-glow);
+  border: 1px solid var(--primary);
+  color: var(--primary);
   font-size: 10px;
   font-weight: 700;
   display: flex;
@@ -274,7 +328,7 @@ input:checked + .slider::before {
 }
 
 .recent-name { font-size: 12px; font-weight: 600; color: var(--text); }
-.recent-sub  { font-size: 10px; color: var(--text-muted); }
+.recent-sub  { font-size: 10px; color: var(--muted); }
 .recent-score {
   font-size: 11px;
   font-weight: 700;
@@ -285,99 +339,39 @@ input:checked + .slider::before {
 
 .empty {
   font-size: 11px;
-  color: var(--text-muted);
+  color: var(--muted);
   text-align: center;
   padding: 10px 0;
   line-height: 1.5;
 }
 
-/* ── Account details ────────────────────────────────────────────────────── */
-
-details summary {
-  font-size: 11.5px;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 9px 14px;
-  list-style: none;
-  border-top: 1px solid var(--border-subtle);
-  transition: color 0.15s;
-  user-select: none;
-}
-details summary:hover { color: var(--text); }
-details summary::-webkit-details-marker { display: none; }
-
-.settings-body {
-  padding: 10px 14px 14px;
+/* ── Account footer ─────────────────────────────────────────────────────── */
+.account-footer {
   display: flex;
-  flex-direction: column;
-  gap: 9px;
-  background: var(--surface);
-  border-top: 1px solid var(--border-subtle);
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border-sub);
+  gap: 8px;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.field-label {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 600;
-}
-
-.inp {
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text);
-  padding: 7px 10px;
-  font-size: 12px;
-  width: 100%;
-  transition: border-color 0.15s;
-  outline: none;
-}
-.inp:focus { border-color: var(--accent); }
-.inp::placeholder { color: var(--text-muted); }
-
-.signed-in-info {
-  font-size: 12px;
-  color: var(--success);
-  font-weight: 500;
-}
-
-.btn-ghost {
-  width: 100%;
-  padding: 7px;
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-subtle);
-  font-size: 12px;
-  cursor: pointer;
-  transition: all 0.15s;
-  margin-top: 4px;
-}
-.btn-ghost:hover { background: var(--border); color: var(--text); }
-
-.auth-error {
-  font-size: 11px;
-  color: var(--error);
-  display: none;
-  margin-top: 2px;
-  padding: 5px 8px;
-  background: rgba(239, 68, 68, 0.08);
-  border-radius: var(--radius-sm);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-/* ── Note text ──────────────────────────────────────────────────────────── */
-.note {
+.signed-as {
   font-size: 10.5px;
-  color: var(--text-muted);
-  line-height: 1.5;
-  margin-bottom: 6px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
+.btn-signout {
+  font-size: 10.5px;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.btn-signout:hover { color: var(--text); border-color: var(--muted); }

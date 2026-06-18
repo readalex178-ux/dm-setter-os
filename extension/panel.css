@@ -1,32 +1,32 @@
-/* panel.css — DM Setter OS in-page panel
-   Injected on Instagram, TikTok, X, Facebook, Messenger, LinkedIn.
-   All rules are namespaced under #dms-root to avoid conflicts. */
+/* panel.css — DM Setter OS in-page panel v6.0.0
+   Injected on Instagram, TikTok, X, Facebook, Messenger, LinkedIn, WhatsApp.
+   All rules namespaced under #dms-root. Design tokens match web app exactly. */
 
 #dms-root {
-  /* Design tokens — match DM Setter OS web app exactly */
-  --dms-bg:           #0a0a0f;
-  --dms-surface:      #111118;
-  --dms-surface-2:    #1a1a24;
-  --dms-surface-3:    #22223a;
-  --dms-border:       #2a2a3a;
-  --dms-border-sub:   #1e1e2e;
-  --dms-accent:       #7c3aed;
-  --dms-accent-h:     #a855f7;
-  --dms-accent-glow:  rgba(124, 58, 237, 0.18);
-  --dms-success:      #10b981;
-  --dms-warning:      #f59e0b;
-  --dms-error:        #ef4444;
-  --dms-info:         #3b82f6;
-  --dms-text:         #f0f0ff;
-  --dms-muted:        #6b7280;
-  --dms-subtle:       #9ca3af;
-  --dms-radius:       10px;
-  --dms-radius-sm:    6px;
-  --dms-panel-w:      340px;
+  /* ── Exact tokens from dm-wingman-pro.vercel.app ── */
+  --dms-bg:          hsl(222, 30%, 7%);    /* #0b0f1a */
+  --dms-surface:     hsl(222, 25%, 10%);   /* #111827 */
+  --dms-surface-2:   hsl(222, 20%, 13%);   /* #161e2d */
+  --dms-surface-3:   hsl(222, 18%, 17%);   /* #1e2535 */
+  --dms-border:      hsl(222, 18%, 16%);   /* #1a2030 */
+  --dms-border-sub:  hsl(222, 15%, 12%);   /* #131820 */
+  --dms-primary:     hsl(186, 100%, 50%);  /* #00e5ff */
+  --dms-primary-dim: hsl(186, 100%, 40%);  /* #00b3cc */
+  --dms-primary-glow: rgba(0, 229, 255, 0.15);
+  --dms-success:     #10b981;
+  --dms-warning:     #f59e0b;
+  --dms-error:       #ef4444;
+  --dms-info:        #3b82f6;
+  --dms-text:        hsl(210, 20%, 92%);   /* #e8edf5 */
+  --dms-muted:       hsl(215, 15%, 55%);   /* #7a8aa3 */
+  --dms-subtle:      hsl(215, 12%, 70%);   /* #a3afc0 */
+  --dms-radius:      10px;
+  --dms-radius-sm:   6px;
+  --dms-panel-w:     340px;
 
   /* Reset */
   all: initial;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif !important;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
   font-size: 13px !important;
   line-height: 1.45 !important;
   color: var(--dms-text) !important;
@@ -88,10 +88,15 @@
   flex: 1 !important;
 }
 
+#dms-root .dms-logo-cyan {
+  color: var(--dms-primary) !important;
+}
+
 #dms-root .dms-logo-icon {
   width: 22px !important;
   height: 22px !important;
-  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  background: hsl(186, 60%, 10%) !important;
+  border: 1px solid rgba(0, 229, 255, 0.3) !important;
   border-radius: 6px !important;
   display: flex !important;
   align-items: center !important;
@@ -131,7 +136,7 @@
   font-size: 13px !important;
   transition: all 0.15s !important;
 }
-#dms-root .dms-btn-icon:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+#dms-root .dms-btn-icon:hover { color: var(--dms-text) !important; border-color: var(--dms-primary) !important; }
 
 /* ── Connection bar ──────────────────────────────────────────────────────── */
 
@@ -265,20 +270,20 @@
   display: block !important;
   width: 100% !important;
   padding: 9px 14px !important;
-  background: linear-gradient(135deg, #7c3aed, #a855f7) !important;
+  background: var(--dms-primary) !important;
   border-radius: var(--dms-radius-sm) !important;
-  color: white !important;
+  color: hsl(222, 30%, 7%) !important;
   font-size: 12.5px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   text-align: center !important;
   cursor: pointer !important;
   transition: opacity 0.15s, transform 0.1s !important;
   letter-spacing: 0.1px !important;
 }
-#dms-root .dms-btn-primary:hover:not(:disabled) { opacity: 0.9 !important; transform: translateY(-1px) !important; }
-#dms-root .dms-btn-primary:active:not(:disabled) { transform: translateY(0) !important; }
-#dms-root .dms-btn-primary:disabled { opacity: 0.35 !important; cursor: not-allowed !important; transform: none !important; }
-#dms-root .dms-btn-primary.done { background: linear-gradient(135deg, #059669, #10b981) !important; }
+#dms-root .dms-btn-primary:hover:not([disabled]) { opacity: 0.88 !important; transform: translateY(-1px) !important; }
+#dms-root .dms-btn-primary:active:not([disabled]) { transform: translateY(0) !important; }
+#dms-root .dms-btn-primary[disabled] { opacity: 0.35 !important; cursor: not-allowed !important; transform: none !important; }
+#dms-root .dms-btn-primary.done { background: linear-gradient(135deg, #059669, #10b981) !important; color: #fff !important; }
 
 #dms-root .dms-btn-sm {
   all: unset !important;
@@ -297,7 +302,7 @@
   transition: all 0.15s !important;
   white-space: nowrap !important;
 }
-#dms-root .dms-btn-sm:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+#dms-root .dms-btn-sm:hover { color: var(--dms-text) !important; border-color: var(--dms-primary) !important; }
 #dms-root .dms-btn-sm.done { color: var(--dms-success) !important; border-color: var(--dms-success) !important; }
 
 #dms-root .dms-btn-ghost {
@@ -315,7 +320,7 @@
   cursor: pointer !important;
   transition: all 0.15s !important;
 }
-#dms-root .dms-btn-ghost:hover { color: var(--dms-text) !important; border-color: var(--dms-accent) !important; }
+#dms-root .dms-btn-ghost:hover { color: var(--dms-text) !important; border-color: var(--dms-primary) !important; }
 
 /* ── Panel 2: AI Insights ────────────────────────────────────────────────── */
 
@@ -377,7 +382,7 @@
   padding: 8px 10px !important;
   background: var(--dms-surface-2) !important;
   border-radius: var(--dms-radius-sm) !important;
-  border-left: 3px solid var(--dms-accent) !important;
+  border-left: 3px solid var(--dms-primary) !important;
 }
 
 #dms-root .dms-objection {
@@ -394,8 +399,8 @@
   font-size: 12px !important;
   color: var(--dms-text) !important;
   padding: 8px 10px !important;
-  background: var(--dms-accent-glow) !important;
-  border: 1px solid rgba(124, 58, 237, 0.3) !important;
+  background: var(--dms-primary-glow) !important;
+  border: 1px solid rgba(0, 229, 255, 0.25) !important;
   border-radius: var(--dms-radius-sm) !important;
   margin-bottom: 6px !important;
 }
@@ -421,7 +426,7 @@
   transition: border-color 0.15s !important;
 }
 #dms-root .dms-reply:last-child { margin-bottom: 0 !important; }
-#dms-root .dms-reply:hover { border-color: var(--dms-accent) !important; }
+#dms-root .dms-reply:hover { border-color: var(--dms-primary) !important; }
 
 #dms-root .dms-reply-top {
   display: flex !important;
@@ -433,7 +438,7 @@
 #dms-root .dms-reply-label {
   font-size: 9.5px !important;
   font-weight: 700 !important;
-  color: var(--dms-accent-h) !important;
+  color: var(--dms-primary) !important;
   text-transform: uppercase !important;
   letter-spacing: 0.5px !important;
 }
@@ -479,7 +484,7 @@
   margin-bottom: 8px !important;
   transition: border-color 0.15s !important;
 }
-#dms-root .dms-select:focus { border-color: var(--dms-accent) !important; outline: none !important; }
+#dms-root .dms-select:focus { border-color: var(--dms-primary) !important; outline: none !important; }
 
 #dms-root .dms-save-msg {
   font-size: 11px !important;
@@ -509,8 +514,8 @@
   line-height: 1.45 !important;
 }
 #dms-root .dms-msg.you {
-  background: var(--dms-accent-glow) !important;
-  border: 1px solid rgba(124, 58, 237, 0.25) !important;
+  background: var(--dms-primary-glow) !important;
+  border: 1px solid rgba(0, 229, 255, 0.2) !important;
   color: var(--dms-text) !important;
   align-self: flex-end !important;
 }
@@ -531,7 +536,7 @@
   line-height: 1.5 !important;
 }
 
-/* ── Paste area ──────────────────────────────────────────────────────────── */
+/* ── Paste / textarea ────────────────────────────────────────────────────── */
 
 #dms-root .dms-input {
   all: unset !important;
@@ -548,8 +553,8 @@
   transition: border-color 0.15s !important;
   resize: vertical !important;
 }
-#dms-root .dms-input:focus { border-color: var(--dms-accent) !important; outline: none !important; }
+#dms-root .dms-input:focus { border-color: var(--dms-primary) !important; outline: none !important; }
 #dms-root .dms-input::placeholder { color: var(--dms-muted) !important; }
 
-/* ── Analyse primary button spacing ──────────────────────────────────────── */
+/* ── Analyse button spacing ──────────────────────────────────────────────── */
 #dms-root .dms-stack { padding: 12px 14px 0 !important; }

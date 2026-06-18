@@ -6,8 +6,7 @@ const SUPABASE_URL = "https://kwqoaqifvccxflaajrjv.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cW9hcWlmdmNjeGZsYWFqcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODA2NTcsImV4cCI6MjA4ODU1NjY1N30.uNNWvCSPyckxAWjRZfNP7jB8hqCD44noPmlKJ7WjDLI";
 const APP_URL = "https://dm-wingman-pro.vercel.app";
 
-// All valid platform IDs — must match Supabase enum
-const PLATFORM_IDS = ["instagram", "tiktok", "twitter", "facebook", "linkedin", "messenger"];
+const PLATFORM_IDS = ["instagram", "tiktok", "twitter", "facebook", "linkedin", "messenger", "whatsapp"];
 
 // ── Init ────────────────────────────────────────────────────────────────────
 
@@ -32,18 +31,6 @@ async function setSession(session) {
 
 async function clearSession() {
   await chrome.storage.local.remove("session");
-}
-
-async function signIn(email, password) {
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPABASE_ANON_KEY },
-    body: JSON.stringify({ email, password }),
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error_description || data.msg || data.error || "Sign in failed");
-  await setSession(data);
-  return { user: data.user };
 }
 
 async function refreshSession() {
@@ -87,7 +74,7 @@ async function authedFetch(path, options = {}, retry = true) {
   return res;
 }
 
-// ── Edge Function bridge (AI + CRM lives entirely in DM Setter OS) ───────────
+// ── Edge Function bridge ─────────────────────────────────────────────────────
 
 async function callEdgeFn(fn, body) {
   const res = await authedFetch(`/functions/v1/${fn}`, {
@@ -137,7 +124,6 @@ async function saveConversation(payload) {
   const userId = session.user.id;
   const { prospect, messages, analysis } = payload;
 
-  // Normalise platform to a valid DB enum value
   const pid = (prospect.platform || "").toLowerCase();
   const platform = PLATFORM_IDS.includes(pid) ? pid : null;
 
@@ -207,9 +193,21 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   (async () => {
     try {
       switch (msg.type) {
-        case "SIGN_IN": {
-          const r = await signIn(msg.email, msg.password);
-          sendResponse({ ok: true, user: r.user });
+        case "SYNC_SESSION": {
+          // Sent by auth-bridge.js when user signs in/out on dm-wingman-pro.vercel.app
+          const raw = msg.session;
+          const session = raw?.currentSession || raw || null;
+          if (session?.access_token) {
+            await setSession(session);
+          } else {
+            await clearSession();
+          }
+          sendResponse({ ok: true });
+          break;
+        }
+        case "CLEAR_SESSION": {
+          await clearSession();
+          sendResponse({ ok: true });
           break;
         }
         case "SIGN_OUT": {
@@ -258,16 +256,16 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       sendResponse({ ok: false, error: e.message });
     }
   })();
-  return true; // keep channel open for async response
+  return true;
 });
 
-// ── Badge: green dot when signed in, ! when signed out ──────────────────────
+// ── Badge: cyan when signed in, red ! when signed out ───────────────────────
 
 async function updateBadge() {
   const s = await getSession();
   const signedIn = !!s?.access_token;
   chrome.action.setBadgeText({ text: signedIn ? "" : "!" });
-  chrome.action.setBadgeBackgroundColor({ color: signedIn ? "#7c3aed" : "#f85149" });
+  chrome.action.setBadgeBackgroundColor({ color: signedIn ? "#00e5ff" : "#f85149" });
 }
 
 updateBadge();
