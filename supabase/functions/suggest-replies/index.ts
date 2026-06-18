@@ -1,172 +1,113 @@
-import { loadContext } from "../_shared/context.ts";
-import { getAuthUser, unauthorized } from "../_shared/auth.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
+const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   try {
-    const { user } = await getAuthUser(req);
-    if (!user) return unauthorized(corsHeaders);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
 
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
-
-    const { messages, prospect, prospectId } = await req.json();
-    const offerContext = await loadContext(req, prospectId ? { prospectId } : undefined);
-
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-      return new Response(
-        JSON.stringify({ error: "No conversation messages provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const conversationText = messages
-      .map((m: { sender: string; content: string }) =>
-        `${m.sender === "setter" ? "You (setter)" : "Prospect"}: ${m.content}`
-      )
-      .join("\n");
-
-    const prospectContext = prospect
-      ? `
-Prospect Profile:
-- Name: ${prospect.name}
-- Stage: ${prospect.stage}
-- Intent Level: ${prospect.intentLevel} (${prospect.intentConfidence}% confidence)
-- Motivation: ${prospect.motivation}
-- Concerns: ${prospect.concerns}
-- Call Readiness: ${prospect.callReadiness}%
-- Lead Score: ${prospect.leadScore}/10
-- Current Job: ${prospect.currentJob || "Unknown"}
-- Income Goal: ${prospect.incomeGoal || "Unknown"}
-`
-      : "";
-
-    const systemPrompt = `You are an expert DM setter coach for online business / network marketing. You analyze conversations between a setter and a prospect, then suggest 3 optimal reply options.
-
-Each suggestion should have:
-- A short "type" label (2-4 words, e.g. "Build Rapport", "Address Concern", "Transition to Call", "Create Urgency", "Share Social Proof", "Ask Discovery Question")
-- The actual message content the setter should send
-- A brief coaching note explaining WHY this reply works
-
-Consider the prospect's stage, intent level, concerns, and call readiness when crafting suggestions. Tailor replies to move the conversation forward strategically.
-
-Rules:
-- Keep replies conversational and natural (not salesy or robotic)
-- Match the prospect's energy and communication style
-- If call readiness is high (>70%), include at least one call transition suggestion
-- If prospect has concerns, address them empathetically
-- Never be pushy or manipulative
-${offerContext}`;
-
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-flash-1.5",
-          messages: [
-            { role: "system", content: systemPrompt },
-            {
-              role: "user",
-              content: `${prospectContext}\nConversation so far:\n${conversationText}\n\nSuggest 3 optimal reply options.`,
-            },
-          ],
-          tools: [
-            {
-              type: "function",
-              function: {
-                name: "suggest_replies",
-                description: "Return 3 suggested reply options for the setter",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    suggestions: {
-                      type: "array",
-                      items: {
-                        type: "object",
-                        properties: {
-                          type: {
-                            type: "string",
-                            description:
-                              "Short label like 'Build Rapport', 'Address Concern', 'Transition to Call'",
-                          },
-                          content: {
-                            type: "string",
-                            description: "The actual message to send",
-                          },
-                          coaching_note: {
-                            type: "string",
-                            description:
-                              "Brief explanation of why this reply is effective",
-                          },
-                        },
-                        required: ["type", "content", "coaching_note"],
-                        additionalProperties: false,
-                      },
-                    },
-                  },
-                  required: ["suggestions"],
-                  additionalProperties: false,
-                },
-              },
-            },
-          ],
-          tool_choice: {
-            type: "function",
-            function: { name: "suggest_replies" },
-          },
-        }),
-      }
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
     );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
+    const body = await req.json();
+    const { prospect, messages = [], offer, icp, objections = [], scripts = [], conversationContext = "" } = body;
 
-    const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
 
-    if (!toolCall?.function?.arguments) {
-      throw new Error("No structured response from AI");
-    }
+    const systemPrompt = `You are an expert DM setter AI co-pilot for high-ticket sales.
 
-    const parsed = JSON.parse(toolCall.function.arguments);
+OFFER:
+${offer ? `Name: ${offer.name || "Unknown"}
+What it is: ${offer.description || ""}
+Price: ${offer.price || ""}
+Target: ${offer.target_audience || ""}
+Main result: ${offer.main_result || ""}` : "No offer defined yet."}
 
-    return new Response(JSON.stringify(parsed), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+IDEAL CLIENT PROFILE:
+${icp ? `Demographics: ${icp.demographics || ""}
+Goals: ${icp.goals || ""}
+Pain points: ${icp.pain_points || ""}
+Language: ${icp.language_patterns || ""}` : "No ICP defined yet."}
+
+OBJECTION RESPONSES:
+${objections.slice(0, 5).map((o) => `- Objection: "${o.objection}" → Response: "${o.response}"`).join("\n") || "None saved."}
+
+SCRIPT EXAMPLES:
+${scripts.slice(0, 3).map((s) => `[${s.title}]: ${s.content?.substring(0, 150)}`).join("\n") || "None saved."}
+
+TASK:
+Generate exactly 3 distinct reply options for the setter to send next. Each reply should:
+- Match the prospect's current stage and energy
+- Sound natural, human, and conversational (not salesy)
+- Be concise (under 50 words each)
+- Move the conversation forward toward qualification or booking
+
+Return ONLY a JSON array of 3 strings. No explanation. No markdown. Just the JSON array.`;
+
+    const userPrompt = `PROSPECT:
+Name: ${prospect?.name || "Unknown"}
+Platform: ${prospect?.platform || "Unknown"}
+Stage: ${prospect?.stage || "new_lead"}
+Notes: ${prospect?.notes || "None"}
+
+CONVERSATION SO FAR:
+${messages.slice(-10).map((m) => `${m.role === "user" ? "SETTER" : "PROSPECT"}: ${m.content}`).join("\n") || "No messages yet. This is the opening."}
+
+${conversationContext ? `CONTEXT: ${conversationContext}` : ""}
+
+Generate 3 reply options now.`;
+
+    const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
+        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
+        "X-Title": "DM Setter OS",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        max_tokens: 400,
+        temperature: 0.7,
+      }),
     });
-  } catch (e) {
-    console.error("suggest-replies error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+
+    if (!orResponse.ok) {
+      const err = await orResponse.text();
+      return new Response(JSON.stringify({ error: "AI error", detail: err }), { status: 502, headers: CORS });
+    }
+
+    const orData = await orResponse.json();
+    const content = orData.choices?.[0]?.message?.content || "[]";
+
+    let suggestions = [];
+    try {
+      suggestions = JSON.parse(content);
+    } catch {
+      const matches = content.match(/"([^"]{10,})"/g) || [];
+      suggestions = matches.slice(0, 3).map((s) => s.slice(1, -1));
+    }
+
+    return new Response(JSON.stringify({ suggestions }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS });
   }
 });
