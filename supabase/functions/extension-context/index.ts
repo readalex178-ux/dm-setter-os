@@ -109,8 +109,8 @@ Deno.serve(async (req) => {
     let history_summary = "";
     let recommended_approach = prospect.suggested_action || "";
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (LOVABLE_API_KEY && messages.length > 0) {
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (OPENROUTER_API_KEY && messages.length > 0) {
       try {
         const knowledge = await loadContext(req, { prospectId: prospect.id });
         const transcript = messages
@@ -130,11 +130,11 @@ ${transcript}
 
 Return the JSON object.`;
 
-        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
           method: "POST",
-          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "google/gemini-flash-1.5:free",
             max_tokens: 400,
             messages: [
               { role: "system", content: system },
