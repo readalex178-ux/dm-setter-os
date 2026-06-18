@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { lovable } from "@/integrations/lovable/index";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,12 +57,14 @@ export default function AuthPage() {
   async function handleGoogle() {
     setLoading(true);
     try {
-      const result = await lovable.auth.signInWithOAuth("google", {
-        redirect_uri: window.location.origin + "/app",
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
       });
-      if (result.error) throw result.error;
-      if (result.redirected) return;
-      navigate("/app", { replace: true });
+      if (error) throw error;
+      // Browser will redirect — no need to setLoading(false)
     } catch (err) {
       toast({
         title: "Google sign-in failed",
@@ -95,6 +96,7 @@ export default function AuthPage() {
             onClick={handleGoogle}
             disabled={loading}
           >
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
             Continue with Google
           </Button>
 
