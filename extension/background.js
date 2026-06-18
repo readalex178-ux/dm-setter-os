@@ -2,8 +2,8 @@
 // Owns the Supabase session and all API calls to DM Setter OS.
 // The extension is a dumb interface layer — ALL intelligence lives server-side.
 
-const SUPABASE_URL = "https://kwqoaqifvccxflaajrjv.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt3cW9hcWlmdmNjeGZsYWFqcmp2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODA2NTcsImV4cCI6MjA4ODU1NjY1N30.uNNWvCSPyckxAWjRZfNP7jB8hqCD44noPmlKJ7WjDLI";
+const SUPABASE_URL = "https://mtvtzwxymlfgiffuvlzp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10dnR6d3h5bWxmZ2lmZnV2bHpwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3MjUzODEsImV4cCI6MjA5NzMwMTM4MX0.B2oaaXGMUptlJQJO8_pe3cdCK-rXKZLjAxREE-DAyVI";
 const APP_URL = "https://dm-wingman-pro.vercel.app";
 
 const PLATFORM_IDS = ["instagram", "tiktok", "twitter", "facebook", "linkedin", "messenger", "whatsapp"];
