@@ -20,6 +20,7 @@ interface Props {
   onBack: () => void;
   onAnalyzeStage: () => void;
   onChangeStage: (s: string) => void;
+  onDelete: () => void;
   aiSuggestions: AISuggestion[];
   aiLoading: boolean;
   aiError: string | null;
@@ -31,7 +32,7 @@ interface Props {
 export function ConversationView(props: Props) {
   const {
     sel, messages, isMobile, useDemo, hidden, messageInput, setMessageInput, sending,
-    onSend, onBack, onAnalyzeStage, onChangeStage, aiSuggestions, aiLoading, aiError,
+    onSend, onBack, onAnalyzeStage, onChangeStage, onDelete, aiSuggestions, aiLoading, aiError,
     demoReplies, onRequestAi, messagesEndRef,
   } = props;
 
@@ -41,7 +42,7 @@ export function ConversationView(props: Props) {
 
   return (
     <div className={`flex-1 flex flex-col min-w-0 ${hidden ? "hidden" : ""} lg:flex`}>
-      <ConversationHeader sel={sel} isMobile={isMobile} useDemo={useDemo} onBack={onBack} onAnalyzeStage={onAnalyzeStage} onChangeStage={onChangeStage} />
+      <ConversationHeader sel={sel} isMobile={isMobile} useDemo={useDemo} onBack={onBack} onAnalyzeStage={onAnalyzeStage} onChangeStage={onChangeStage} onDelete={onDelete} />
 
       <ScrollArea className="flex-1 p-4">
         <div className="space-y-3 max-w-2xl mx-auto">
