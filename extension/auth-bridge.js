@@ -2,7 +2,7 @@
 // Runs on dm-wingman-pro.vercel.app
 // Reads the Supabase session from localStorage and syncs it to the extension background.
 
-const STORAGE_KEY = "sb-kwqoaqifvccxflaajrjv-auth-token";
+const STORAGE_KEY = "sb-mtvtzwxymlfgiffuvlzp-auth-token";
 
 function sendSession() {
   try {
