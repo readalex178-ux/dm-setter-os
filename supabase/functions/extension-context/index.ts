@@ -2,7 +2,7 @@
 // a prospect when a DM thread is opened. Read-only: looks up an existing prospect for the
 // signed-in user (by handle, then name) and returns history, objections, memory and a
 // recommended approach. ALL logic lives server-side; the extension only renders this.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { loadContext } from "../_shared/context.ts";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
