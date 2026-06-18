@@ -86,14 +86,15 @@ Return ONLY valid JSON in EXACTLY this shape, no markdown, no commentary:
   "booking_probability": <0-100 likelihood this prospect books a call soon>,
   "temperature": "hot" | "warm" | "cold",
   "stage": "<current stage from the list above>",
+  "intent": "<1 short sentence describing what the prospect actually wants or is looking for>",
   "objections": ["<short objection detected>", ...],
   "next_action": "<one concrete, specific next step the setter should take>",
   "summary": "<1-2 sentence read on where this conversation stands>",
   "replies": [
-    {"label": "<2-3 word style label>", "content": "<exact message the setter could send>", "note": "<1 sentence why this works>"}
+    {"label": "<tone label e.g. Direct, Empathetic, Value-led, Follow-up, Urgency>", "content": "<exact message the setter could send>", "note": "<1 sentence why this works>"}
   ]
 }
-Provide exactly 3 reply options spanning different angles. If no objections are present, return an empty array for "objections".`;
+Provide exactly 5 reply options spanning different tones and angles (e.g. Direct, Empathetic, Value-led, Follow-up, Urgency). If no objections are present, return an empty array for "objections".`;
 
     const userPrompt = `Platform: ${platform}
 Prospect: ${name}
@@ -111,7 +112,7 @@ Analyse this conversation and return the JSON object.`;
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
-        max_tokens: 1200,
+        max_tokens: 1800,
         messages: [
           { role: "system", content: system },
           { role: "user", content: userPrompt },
@@ -145,13 +146,16 @@ Analyse this conversation and return the JSON object.`;
       booking_probability: clamp(analysis.booking_probability),
       temperature: ["hot", "warm", "cold"].includes(analysis.temperature) ? analysis.temperature : "warm",
       stage: typeof analysis.stage === "string" ? analysis.stage : "New Lead",
-      objections: Array.isArray(analysis.objections) ? analysis.objections.filter((o: any) => typeof o === "string").slice(0, 6) : [],
+      intent: typeof analysis.intent === "string" ? analysis.intent.slice(0, 300) : "",
+      objections: Array.isArray(analysis.objections)
+        ? analysis.objections.filter((o: any) => typeof o === "string").slice(0, 6)
+        : [],
       next_action: typeof analysis.next_action === "string" ? analysis.next_action : "",
       summary: typeof analysis.summary === "string" ? analysis.summary : "",
       replies: Array.isArray(analysis.replies)
         ? analysis.replies
             .filter((r: any) => r && typeof r.content === "string")
-            .slice(0, 3)
+            .slice(0, 5) // ← updated from 3 to 5
             .map((r: any) => ({
               label: String(r.label || "Reply").slice(0, 40),
               content: String(r.content).slice(0, 1200),
