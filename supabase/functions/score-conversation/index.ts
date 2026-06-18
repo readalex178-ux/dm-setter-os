@@ -16,11 +16,11 @@ const STAGES = [
 const MEMORY_CATEGORIES = ["goal", "pain", "budget", "family", "availability", "objection", "interest"];
 
 async function callAI(apiKey: string, systemPrompt: string, userPrompt: string, tool: any) {
-  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+  const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-flash-1.5:free",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
@@ -55,8 +55,8 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
       };
       const sys = `You are an elite DM-setting coach. Review the setter's handling of this conversation honestly and constructively. Quote specifics where possible.${offerContext}`;
       const usr = `${prospectInfo}\n\nConversation:\n${convoText}`;
-      const out = await callAI(LOVABLE_API_KEY, sys, usr, tool);
+      const out = await callAI(OPENROUTER_API_KEY, sys, usr, tool);
       if (out.error) return new Response(JSON.stringify({ error: out.error }),
         { status: out.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ review: out.result }),
@@ -146,7 +146,7 @@ Deno.serve(async (req) => {
     };
     const sys = `You are an expert DM sales analyst. Score the conversation health and booking likelihood, classify lead temperature and stage, recommend the next action, and extract durable prospect memory (goals, pains, budget, family, availability, objections, interests). Be evidence-based.${offerContext}`;
     const usr = `${prospectInfo}\n\nConversation:\n${convoText}`;
-    const out = await callAI(LOVABLE_API_KEY, sys, usr, tool);
+    const out = await callAI(OPENROUTER_API_KEY, sys, usr, tool);
     if (out.error) return new Response(JSON.stringify({ error: out.error }),
       { status: out.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
