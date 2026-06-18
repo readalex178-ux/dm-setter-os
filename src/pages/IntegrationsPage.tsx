@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import PlatformCard, { type ConnectedAccount } from "@/components/integrations/PlatformCard";
 import { messagingPlatforms, crmPlatforms } from "@/data/integrations-data";
 
-const LIVE_CRM_IDS = ["hubspot"]; // CRMs with working integrations
+const LIVE_CRM_IDS: string[] = []; // All integrations coming soon
 
 export default function IntegrationsPage() {
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
@@ -36,7 +36,7 @@ export default function IntegrationsPage() {
     setConnecting(platform);
 
     // Coming soon CRMs
-    if (!LIVE_CRM_IDS.includes(platform) && !["instagram", "facebook", "whatsapp"].includes(platform)) {
+    if (!LIVE_CRM_IDS.includes(platform)) {
       toast({ title: "Coming Soon", description: `${platform} integration is under development.` });
       setConnecting(null);
       return;
