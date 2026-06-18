@@ -42,7 +42,7 @@ export default function KPITrackerPage() {
   const [editTargetsOpen, setEditTargetsOpen] = useState(false);
   const [targetDraft, setTargetDraft] = useState<typeof customTargets>({});
 
-  const goalList = goalList.map((g) => ({
+  const goalList = kpiGoals.map((g) => ({
     ...g,
     dailyTarget: customTargets[g.metric]?.dailyTarget ?? g.dailyTarget,
     weeklyTarget: customTargets[g.metric]?.weeklyTarget ?? g.weeklyTarget,
