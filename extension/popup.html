@@ -7,21 +7,17 @@
 </head>
 <body>
 
-  <!-- Loading spinner (hidden by default) -->
-  <div id="view-loading" style="display:none">
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
-    </div>
-  </div>
-
-  <!-- Signed-out state (DEFAULT - visible even without JS) -->
-  <div id="view-auth">
-    <div class="auth-card">
-      <div class="auth-icon">⚡</div>
-      <h1 class="auth-title"><span class="cyan">DM Setter</span> OS</h1>
-      <p class="auth-sub">Sign in to your co-pilot</p>
-      <button class="btn-google" id="btn-open-for-signin">
-        <svg class="g-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+  <div id="view-auth" class="view">
+    <div class="card">
+      <div class="brand-icon">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z" fill="#00e5ff" stroke="#00e5ff" stroke-width="1" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <h1 class="brand-title"><span class="cyan">DM Setter</span> OS</h1>
+      <p class="brand-sub">Sign in to your co-pilot</p>
+      <button class="btn-google" id="btn-signin">
+        <svg class="g-icon" viewBox="0 0 24 24">
           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
           <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
@@ -29,56 +25,48 @@
         </svg>
         Continue with Google
       </button>
-      <p class="auth-hint">Opens DM Setter OS in a new tab — sign in there, then come back.</p>
+      <p class="hint">Opens DM Setter OS in a new tab. Sign in there, then come back here.</p>
     </div>
   </div>
 
-  <!-- Signed-in state -->
-  <div id="view-main" style="display:none">
-    <div class="header">
+  <div id="view-main" class="view" style="display:none">
+    <div class="topbar">
       <div class="logo">
-        <div class="logo-icon">⚡</div>
-        <span><span class="cyan">DM Setter</span> OS</span>
+        <div class="logo-icon"><svg width="12" height="12" viewBox="0 0 24 24"><path d="M13 2L4.5 13.5H12L11 22L19.5 10.5H12L13 2Z" fill="#00e5ff"/></svg></div>
+        <span class="logo-text"><span class="cyan">DM Setter</span> OS</span>
       </div>
-      <div class="header-right">
-        <span class="version" id="version">v6.0.0</span>
-        <button class="btn-icon" id="btn-open-app" title="Open DM Setter OS">↗</button>
-      </div>
-    </div>
-    <div class="status-bar">
-      <span class="dot grey" id="status-dot"></span>
-      <span id="status-text">Checking…</span>
-    </div>
-    <div class="stats">
-      <div class="stat"><span class="stat-val" id="stat-saved">—</span><span class="stat-lbl">Saved</span></div>
-      <div class="stat"><span class="stat-val" id="stat-today">—</span><span class="stat-lbl">Today</span></div>
-      <div class="stat"><span class="stat-val" id="stat-ai">Cloud</span><span class="stat-lbl">AI</span></div>
-    </div>
-    <div class="section">
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <p>Show AI panel on page</p>
-          <small>Slide in the DM Setter OS panel</small>
-        </div>
-        <label class="switch">
-          <input type="checkbox" id="toggle-overlay" />
-          <span class="slider"></span>
-        </label>
+      <div class="topbar-right">
+        <span class="ver" id="ver">v6</span>
+        <button class="icon-btn" id="btn-open-app" title="Open app">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+        </button>
       </div>
     </div>
-    <div class="section">
-      <button class="btn-primary" id="btn-analyse" disabled>⚡ Analyse Current DM</button>
+    <div class="status-row"><span class="dot" id="dot"></span><span class="status-txt" id="status-txt">Checking...</span></div>
+    <div class="stats-row">
+      <div class="stat"><span class="stat-n" id="s-saved">-</span><span class="stat-l">Saved</span></div>
+      <div class="stat"><span class="stat-n" id="s-today">-</span><span class="stat-l">Today</span></div>
+      <div class="stat"><span class="stat-n">Cloud</span><span class="stat-l">AI</span></div>
     </div>
-    <div class="section">
-      <div class="section-title">Recently Saved</div>
-      <div id="recent-list">
-        <div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save to CRM.</div>
-      </div>
+    <div class="row-section">
+      <div class="row-label">Show panel on page</div>
+      <label class="toggle"><input type="checkbox" id="tog-overlay" /><span class="track"><span class="thumb"></span></span></label>
     </div>
-    <div class="account-footer">
-      <span class="signed-as" id="auth-user-email"></span>
+    <div class="btn-section">
+      <button class="btn-primary" id="btn-analyse" disabled>Analyse Current DM</button>
+    </div>
+    <div class="recent-section">
+      <div class="recent-label">Recently Saved</div>
+      <div id="recent-list"><div class="empty-msg">Nothing saved yet.</div></div>
+    </div>
+    <div class="footer">
+      <span class="footer-email" id="footer-email"></span>
       <button class="btn-signout" id="btn-signout">Sign out</button>
     </div>
+  </div>
+
+  <div id="view-loading" class="view" style="display:none">
+    <div class="spin-wrap"><div class="spin"></div></div>
   </div>
 
   <script src="popup.js"></script>
