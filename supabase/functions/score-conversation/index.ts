@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { loadContext } from "../_shared/context.ts";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
