@@ -1,11 +1,14 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Trash2 } from "lucide-react";
+import { Search, MapPin, Pencil, Download, Briefcase, DollarSign, Clock, Users, Loader2, Save, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useProspects, useTimeline } from "@/hooks/useSetterData";
+import { useProspects, useTimeline, useUpdateProspect, PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -66,7 +69,28 @@ export default function ProspectsPage() {
   }
 
   if (prospects.length === 0) {
-    return (
+    function openEdit(p: typeof prospects[0]) {
+    setEditForm({ name: p.name || "", handle: p.handle || "", location: p.location || "", current_job: p.current_job || "", income_goal: p.income_goal || "", stage: p.stage || "", notes: p.notes || "" });
+    setSelected(p);
+    setEditModalOpen(true);
+  }
+
+  async function handleEditSave() {
+    if (!selected) return;
+    await updateProspect.mutateAsync({ id: selected.id, updates: editForm });
+    setEditModalOpen(false);
+  }
+
+  function exportCSV() {
+    const rows = [["Name","Handle","Location","Job","Income Goal","Stage","Notes","Created"],...(prospects || []).map(p => [p.name,p.handle||"",p.location||"",p.current_job||"",p.income_goal||"",p.stage||"",p.notes||"",p.created_at?.split("T")[0]||""])];
+    const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    a.download = "prospects.csv";
+    a.click();
+  }
+
+  return (
       <div className="p-6">
         <h1 className="text-2xl font-bold mb-4">Prospects</h1>
         <EmptyState
@@ -88,6 +112,7 @@ export default function ProspectsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search prospects..." className="pl-9 h-9 text-sm" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Button variant="outline" size="sm" onClick={exportCSV} className="flex items-center gap-1"><Download className="h-4 w-4" />Export CSV</Button>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto">
@@ -129,7 +154,8 @@ export default function ProspectsPage() {
                 </div>
               </div>
             </div>
-            <Button
+            <Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); openEdit(p); }} className="text-blue-500 hover:text-blue-700"><Pencil className="h-4 w-4" /></Button>
+                  <Button
               variant="ghost"
               size="sm"
               onClick={deleteProspect}
@@ -204,6 +230,32 @@ export default function ProspectsPage() {
           </Card>
         </div>
       )}
+      {/* Edit Prospect Modal */}
+      <Dialog open={editModalOpen} onOpenChange={setEditModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Prospect</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div><Label>Name</Label><input className="w-full border rounded px-3 py-2 text-sm mt-1" value={editForm.name} onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))} /></div>
+            <div><Label>Handle / Username</Label><input className="w-full border rounded px-3 py-2 text-sm mt-1" value={editForm.handle} onChange={e => setEditForm(f => ({ ...f, handle: e.target.value }))} /></div>
+            <div><Label>Location</Label><input className="w-full border rounded px-3 py-2 text-sm mt-1" value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} /></div>
+            <div><Label>Job / Role</Label><input className="w-full border rounded px-3 py-2 text-sm mt-1" value={editForm.current_job} onChange={e => setEditForm(f => ({ ...f, current_job: e.target.value }))} /></div>
+            <div><Label>Income Goal</Label><input className="w-full border rounded px-3 py-2 text-sm mt-1" value={editForm.income_goal} onChange={e => setEditForm(f => ({ ...f, income_goal: e.target.value }))} /></div>
+            <div><Label>Stage</Label>
+              <Select value={editForm.stage} onValueChange={v => setEditForm(f => ({ ...f, stage: v }))}>
+                <SelectTrigger className="mt-1"><SelectValue placeholder="Select stage" /></SelectTrigger>
+                <SelectContent>{(PIPELINE_STAGES || []).map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div><Label>Notes</Label><textarea className="w-full border rounded px-3 py-2 text-sm mt-1 h-20" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))} /></div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditModalOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditSave} disabled={updateProspect.isPending}>{updateProspect.isPending ? "Saving..." : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
