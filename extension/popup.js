@@ -33,6 +33,9 @@ function send(type, extra = {}) {
 }
 
 async function init() {
+  try {
+    document.getElementById("version").textContent = "v" + chrome.runtime.getManifest().version;
+  } catch (_e) {}
   const s = await chrome.storage.local.get(["overlay_enabled"]);
   document.getElementById("toggle-overlay").checked = s.overlay_enabled || false;
   document.getElementById("stat-ai").textContent = "Cloud";

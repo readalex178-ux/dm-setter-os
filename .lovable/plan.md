@@ -1,30 +1,27 @@
-# Rebuild the DM Setter OS Chrome Extension (v4)
+# Fix the extension version showing as v1.0
 
-The `extension/` source is already at **v4.0.0** (see `extension/manifest.json`), but the distributed package and the in-app version labels are stale. The actual extension files were never re-zipped, so users still download an old build.
+## The real problem
+The extension's `manifest.json` is already `4.0.0`, but the popup window you see is driven by `extension/popup.html`, which has the version **hardcoded** in its header:
 
-## What's wrong now
-- `public/dm-setter-os-extension.zip` is an outdated package — it does not reflect the current `extension/` source.
-- `src/pages/ExtensionPage.tsx` still shows `v2.0.0` and says "No API keys needed".
+```html
+<span class="version">v1.0</span>
+```
 
-## Changes
+That static text is why the popup still reads "v1.0" no matter how many times the zip is rebuilt. The previous rebuilds were real, but none touched this line.
 
-### 1. Verify and repackage the extension
-- Confirm the `extension/` folder is complete and consistent: `manifest.json`, `background.js`, `platform.js`, `scraper.js`, `panel.js`, `panel.css`, `popup.html`, `popup.css`, `popup.js`, and icons (`icon.png`, `icon128.png`).
-- Fix one consistency bug: `manifest.json` only declares `platform.js`, `scraper.js`, `panel.js` as content scripts, while `scraper.js` already defines its own `getCurrentPlatform()`. `platform.js` is redundant/duplicative — confirm load order does not cause a redeclaration error, and align the two so only one source of truth for platform detection remains.
-- Regenerate the ZIP from the current source:
-  ```text
-  rm -f public/dm-setter-os-extension.zip
-  cd extension && nix run nixpkgs#zip -- -r ../public/dm-setter-os-extension.zip .
-  ```
+## What I'll change
 
-### 2. Update the Extension page labels (`src/pages/ExtensionPage.tsx`)
-- Change the version line from `v2.0.0` to `v4.0.0`.
-- Keep messaging accurate to the v4 "lightweight companion" architecture (extract → analyse via Cloud → sync), which the feature cards already describe.
+1. **`extension/popup.html`** — make the version dynamic instead of a static string:
+   - Give the span an id (`id="version"`).
+   - In `extension/popup.js`, set it from the manifest at load time:
+     `document.getElementById("version").textContent = "v" + chrome.runtime.getManifest().version;`
+   - This way the popup always matches the manifest and can never drift again.
+
+2. **Repackage** `public/dm-setter-os-extension.zip` from the `extension/` folder so the download serves the corrected popup.
+
+## After this
+- You must remove the old extension at `chrome://extensions` and **Load unpacked** the freshly unzipped folder (Chrome caches the old popup).
+- The popup header will then read **v4.0.0**, pulled live from the manifest.
 
 ## Out of scope
-- No changes to extension business logic, edge functions, or backend — v4 architecture stays as-is. This is purely a repackage + label sync so the download matches the current source.
-
-## Acceptance
-- Downloaded ZIP loads cleanly in `chrome://extensions` as **DM Setter OS v4.0.0**.
-- No duplicate-declaration console errors from content scripts.
-- Extension page shows v4.0.0.
+No changes to extension logic, edge functions, or backend — this is a label fix plus repackage.
