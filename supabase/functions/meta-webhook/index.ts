@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 // This is a PUBLIC webhook — Meta authenticates via a verify token (GET) and
 // an HMAC-SHA256 request signature (POST). No user JWT is involved.
@@ -22,7 +21,7 @@ async function verifySignature(rawBody: ArrayBuffer, header: string | null, appS
   return diff === 0;
 }
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const META_WEBHOOK_VERIFY_TOKEN = Deno.env.get('META_WEBHOOK_VERIFY_TOKEN');
