@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Phone, Target } from "lucide-react";
+import { ArrowLeft, Phone, Target, Trash2 } from "lucide-react";
 import { platformIcon, STAGES, type NormalizedProspect } from "@/components/inbox/types";
 
 interface Props {
@@ -13,9 +13,10 @@ interface Props {
   onBack: () => void;
   onAnalyzeStage: () => void;
   onChangeStage: (stage: string) => void;
+  onDelete: () => void;
 }
 
-export function ConversationHeader({ sel, isMobile, useDemo, onBack, onAnalyzeStage, onChangeStage }: Props) {
+export function ConversationHeader({ sel, isMobile, useDemo, onBack, onAnalyzeStage, onChangeStage, onDelete }: Props) {
   return (
     <div className="p-3 lg:p-4 border-b border-border flex items-center justify-between gap-2">
       <div className="flex items-center gap-2 min-w-0">
@@ -46,6 +47,17 @@ export function ConversationHeader({ sel, isMobile, useDemo, onBack, onAnalyzeSt
         <Badge variant={sel.callReadiness >= 70 ? "success" : "warning"} className="text-xs hidden sm:inline-flex">
           <Phone className="h-3 w-3 mr-1" /> {sel.callReadiness}%
         </Badge>
+        {!useDemo && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={onDelete}
+            title="Delete prospect"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        )}
       </div>
     </div>
   );
