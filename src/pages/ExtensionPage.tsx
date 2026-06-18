@@ -102,7 +102,7 @@ export default function ExtensionPage() {
             <p className="text-xs text-emerald-500">Check your Downloads folder for <strong>dm-setter-os-extension.zip</strong></p>
           )}
 
-          <p className="text-xs text-muted-foreground">v2.0.0 · Syncs to your account · No API keys needed</p>
+          <p className="text-xs text-muted-foreground">v4.0.0 · Syncs to your account · No API keys needed</p>
 
           {/* Fallback direct link */}
           <a
