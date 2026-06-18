@@ -34,11 +34,14 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
     concernsConfidence: p.concerns_confidence || 0, location: p.location || "—",
     currentJob: p.current_job || "—", incomeGoal: p.income_goal || "—",
     timeAvailability: p.time_availability || "—", source: p.source || "—",
-    platform: p.platform, avatar: p.name.split(" ").map((w) => w[0]).join("").slice(0, 2),
+    platform: p.platform, avatar: p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2),
     unread: false,
-    conversationScore: p.conversation_score, bookingProbability: p.booking_probability,
-    leadTemperature: p.lead_temperature, stageConfidence: p.stage_confidence,
-    stageSuggested: p.stage_suggested, suggestedAction: p.suggested_action,
+    conversationScore: (p as any).conversation_score ?? null,
+    bookingProbability: (p as any).booking_probability ?? null,
+    leadTemperature: (p as any).lead_temperature ?? null,
+    stageConfidence: (p as any).stage_confidence ?? null,
+    stageSuggested: (p as any).stage_suggested ?? null,
+    suggestedAction: (p as any).suggested_action ?? null,
   };
 }
 
@@ -52,6 +55,7 @@ export function useInbox() {
   const [search, setSearch] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [useDemo, setUseDemo] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<AISuggestion[]>([]);
@@ -193,13 +197,36 @@ export function useInbox() {
       return;
     }
     setSending(true);
-    const { data, error } = await supabase.functions.invoke("send-message", {
-      body: { prospectId: selectedId, content: messageInput.trim() },
-    });
-    if (error) console.error("Send error:", error);
-    else if (data?.message) setDbMessages((prev) => [...prev, data.message]);
+    const { data: newMsg, error } = await supabase.from("messages").insert({
+      prospect_id: selectedId,
+      sender: "setter",
+      content: messageInput.trim(),
+      sent_at: new Date().toISOString(),
+    }).select().single();
+    if (error) {
+      console.error("Send error:", error);
+      toast({ title: "Could not send message", description: error.message, variant: "destructive" });
+    } else if (newMsg) {
+      setDbMessages((prev) => [...prev, newMsg as DBMessage]);
+    }
     setMessageInput("");
     setSending(false);
+  }
+
+  async function deleteProspect() {
+    if (!selectedId || useDemo || !sel) return;
+    if (!window.confirm(`Delete "${sel.name}"? This cannot be undone.`)) return;
+    setDeleting(true);
+    const { error } = await supabase.from("prospects").delete().eq("id", selectedId);
+    setDeleting(false);
+    if (error) {
+      toast({ title: "Could not delete prospect", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Prospect deleted" });
+      setDbProspects((prev) => prev.filter((p) => p.id !== selectedId));
+      setSelectedId(null);
+      if (isMobile) setShowChat(false);
+    }
   }
 
   async function fetchAiSuggestions() {
@@ -229,7 +256,6 @@ export function useInbox() {
     }
   }
 
-  // Phase 5: AI conversation scoring + memory extraction
   async function scoreConversation() {
     if (!selectedId || useDemo || messages.length === 0) return;
     setScoring(true);
@@ -243,12 +269,12 @@ export function useInbox() {
       if (s) {
         setDbProspects((prev) => prev.map((p) => p.id === selectedId ? {
           ...p,
-          conversation_score: s.conversationScore ?? p.conversation_score,
-          booking_probability: s.bookingProbability ?? p.booking_probability,
-          lead_temperature: s.leadTemperature ?? p.lead_temperature,
-          stage_confidence: s.stageConfidence ?? p.stage_confidence,
-          stage_suggested: s.suggestedStage ?? p.stage_suggested,
-          suggested_action: s.suggestedAction ?? p.suggested_action,
+          conversation_score: s.conversationScore ?? (p as any).conversation_score,
+          booking_probability: s.bookingProbability ?? (p as any).booking_probability,
+          lead_temperature: s.leadTemperature ?? (p as any).lead_temperature,
+          stage_confidence: s.stageConfidence ?? (p as any).stage_confidence,
+          stage_suggested: s.suggestedStage ?? (p as any).stage_suggested,
+          suggested_action: s.suggestedAction ?? (p as any).suggested_action,
         } : p));
         toast({ title: "Conversation scored", description: `Score ${s.conversationScore}/100 • ${s.leadTemperature} • ${s.bookingProbability}% booking` });
       }
@@ -269,9 +295,9 @@ export function useInbox() {
 
   return {
     isMobile, showChat, setShowChat, search, setSearch, messageInput, setMessageInput,
-    sending, useDemo, loaded, aiSuggestions, aiLoading, aiError, scoring,
+    sending, deleting, useDemo, loaded, aiSuggestions, aiLoading, aiError, scoring,
     messagesEndRef, selectedId, selectProspect, prospects, filtered, sel, messages, replies,
     dbProspectsEmpty: !useDemo && dbProspects.length === 0,
-    handleSend, fetchAiSuggestions, scoreConversation, applyStage,
+    handleSend, deleteProspect, fetchAiSuggestions, scoreConversation, applyStage,
   };
 }
