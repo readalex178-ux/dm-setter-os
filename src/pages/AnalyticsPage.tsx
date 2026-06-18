@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
 } from "recharts";
 import { BarChart3, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useProspects, useKPIs } from "@/hooks/useSetterData";
 import { PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
@@ -23,6 +25,7 @@ const tooltipStyle = {
 const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
 export default function AnalyticsPage() {
+  const [dateRange, setDateRange] = useState<"7d" | "30d" | "all">("30d");
   const { data: prospects = [], isLoading } = useProspects();
   const { data: kpis = [] } = useKPIs();
 
@@ -50,7 +53,7 @@ export default function AnalyticsPage() {
     .slice(0, 6);
 
   // Weekly activity from KPIs (last 7 days, chronological)
-  const weeklyData = kpis.slice(0, 7).reverse().map((k) => ({
+  const weeklyData = filteredKpis.slice(0, dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : filteredKpis.length).reverse().map((k) => ({
     day: new Date(k.date).toLocaleDateString("en-US", { weekday: "short" }),
     conversations: k.dms_sent + k.follow_ups_sent,
     booked: k.calls_booked,
@@ -61,6 +64,15 @@ export default function AnalyticsPage() {
   }
 
   return (
+    <div className="space-y-4">
+      {/* Date Range Filter */}
+      <div className="flex gap-2">
+        {(["7d", "30d", "all"] as const).map((r) => (
+          <Button key={r} size="sm" variant={dateRange === r ? "default" : "outline"} onClick={() => setDateRange(r)}>
+            {r === "7d" ? "7 Days" : r === "30d" ? "30 Days" : "All Time"}
+          </Button>
+        ))}
+      </div>
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
       <div>
         <h1 className="text-2xl font-bold">Analytics</h1>
@@ -153,6 +165,7 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       )}
+    </div>
     </div>
   );
 }
