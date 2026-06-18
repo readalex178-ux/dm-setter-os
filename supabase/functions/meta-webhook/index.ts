@@ -1,14 +1,39 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// This is a PUBLIC webhook — no auth required, Meta verifies via token
+// This is a PUBLIC webhook — Meta authenticates via a verify token (GET) and
+// an HMAC-SHA256 request signature (POST). No user JWT is involved.
+
+async function verifySignature(rawBody: ArrayBuffer, header: string | null, appSecret: string): Promise<boolean> {
+  const expected = header?.replace('sha256=', '');
+  if (!expected) return false;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(appSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const sig = await crypto.subtle.sign('HMAC', key, rawBody);
+  const actual = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('');
+  if (actual.length !== expected.length) return false;
+  let diff = 0;
+  for (let i = 0; i < actual.length; i++) diff |= actual.charCodeAt(i) ^ expected.charCodeAt(i);
+  return diff === 0;
+}
+
 serve(async (req) => {
   const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
   const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-  const META_WEBHOOK_VERIFY_TOKEN = Deno.env.get('META_WEBHOOK_VERIFY_TOKEN') || 'dmsetteros_verify_token';
+  const META_WEBHOOK_VERIFY_TOKEN = Deno.env.get('META_WEBHOOK_VERIFY_TOKEN');
+  const META_APP_SECRET = Deno.env.get('META_APP_SECRET');
 
   // GET = Meta webhook verification challenge
   if (req.method === 'GET') {
+    if (!META_WEBHOOK_VERIFY_TOKEN) {
+      console.error('META_WEBHOOK_VERIFY_TOKEN is not configured');
+      return new Response('Server misconfigured', { status: 500 });
+    }
     const url = new URL(req.url);
     const mode = url.searchParams.get('hub.mode');
     const token = url.searchParams.get('hub.verify_token');
@@ -24,7 +49,17 @@ serve(async (req) => {
   // POST = incoming message event
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
+      if (!META_APP_SECRET) {
+        console.error('META_APP_SECRET is not configured');
+        return new Response('Server misconfigured', { status: 500 });
+      }
+      const rawBody = await req.arrayBuffer();
+      const valid = await verifySignature(rawBody, req.headers.get('x-hub-signature-256'), META_APP_SECRET);
+      if (!valid) {
+        console.error('Invalid webhook signature');
+        return new Response('Forbidden', { status: 403 });
+      }
+      const body = JSON.parse(new TextDecoder().decode(rawBody));
       const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
       // Process each entry
