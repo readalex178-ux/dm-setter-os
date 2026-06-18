@@ -1,154 +1,85 @@
-import { loadContext } from "../_shared/context.ts";
-import { getAuthUser, unauthorized } from "../_shared/auth.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
-const corsHeaders = {
+const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   try {
-    const { user: authUser } = await getAuthUser(req);
-    if (!authUser) return unauthorized(corsHeaders);
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
 
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
-    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
 
-    const { messages, scenario } = await req.json();
-    const offerContext = await loadContext(req);
+    const body = await req.json();
+    const { messages = [], scenario, offer, icp, scripts = [], objections = [] } = body;
 
-    if (!scenario) {
-      return new Response(
-        JSON.stringify({ error: "No scenario provided" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
+
+    const systemPrompt = `You are a realistic prospect for roleplay sales training. You're simulating a DM conversation so a setter can practice their skills.
+
+SCENARIO: ${scenario || "Cold DM outreach to a potential high-ticket coaching client"}
+
+OFFER CONTEXT (what the setter is selling):
+${offer ? `${offer.name}: ${offer.description || ""}. Price: ${offer.price || "unknown"}. For: ${offer.target_audience || ""}` : "Unknown offer - act confused about what's being sold"}
+
+YOUR PROSPECT PERSONA:
+${icp ? `- You match this profile: ${icp.demographics || ""}\n- Your goals: ${icp.goals || ""}\n- Your pain points: ${icp.pain_points || ""}` : "You're a skeptical but curious business owner. You're busy and need a good reason to keep talking."}
+
+ROLEPLAY RULES:
+1. Stay in character as the prospect at ALL times
+2. Start skeptical but become more interested as the setter demonstrates value
+3. Use realistic objections naturally (don't throw them all at once)
+4. Match the energy of whoever is messaging you
+5. If the setter asks great qualifying questions, warm up
+6. If they pitch too hard too fast, push back
+7. Keep responses SHORT (1-4 sentences) - real DMs are brief
+8. Never break character or reveal you're an AI
+9. Occasionally use casual language, typos are fine
+
+RESPOND AS THE PROSPECT ONLY. Short, realistic DM responses.`;
+
+    const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
+        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
+        "X-Title": "DM Setter OS",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          ...messages.slice(-20),
+        ],
+        max_tokens: 250,
+        temperature: 0.85,
+      }),
+    });
+
+    if (!orResponse.ok) {
+      const err = await orResponse.text();
+      return new Response(JSON.stringify({ error: "AI error", detail: err }), { status: 502, headers: CORS });
     }
 
-    const conversationText = (messages || [])
-      .map((m: { role: string; content: string }) =>
-        `${m.role === "user" ? "Setter" : "Prospect (you)"}: ${m.content}`
-      )
-      .join("\n");
+    const orData = await orResponse.json();
+    const reply = orData.choices?.[0]?.message?.content || "...";
 
-    const systemPrompt = `You are role-playing as a prospect in a DM conversation for training purposes. You are helping a DM setter practice their sales/outreach skills.
-
-Your character:
-- Name: ${scenario.personaName || "Alex"}${scenario.personaAge ? `\n- Age: ${scenario.personaAge}` : ""}${scenario.personaJob ? `\n- Job / situation: ${scenario.personaJob}` : ""}${scenario.personaTrait ? `\n- Personality: ${scenario.personaTrait}` : ""}${scenario.personaContext ? `\n- Context (why you followed/downloaded/replied): ${scenario.personaContext}` : ""}
-- Type: ${scenario.personaType} prospect
-- Scenario: ${scenario.name} — ${scenario.description}
-- Difficulty: ${scenario.difficulty}
-
-Character guidelines based on persona type:
-${scenario.personaType === "Cold" ? `- You have zero context about what they do
-- You're mildly curious but guarded
-- You give short, casual replies
-- You need them to earn your attention
-- Don't volunteer information easily` : ""}
-${scenario.personaType === "Warm" ? `- You downloaded their free guide and found it interesting
-- You're somewhat interested but cautious about committing
-- You ask genuine questions about how things work
-- You're open but need reassurance
-- Share some personal details when asked` : ""}
-${scenario.personaType === "Skeptical" ? `- You've been burned by online programs/businesses before
-- You're very direct and ask tough, pointed questions
-- You demand proof, testimonials, real numbers
-- You call out anything that sounds salesy or vague
-- You're not rude, but you're blunt and no-nonsense` : ""}
-${scenario.personaType === "Time-pressed" ? `- You're a busy professional making good money
-- You're intrigued but always mention being too busy
-- You need to see clear ROI and time efficiency
-- You respond in short bursts and sometimes delayed
-- You value getting straight to the point` : ""}
-${scenario.personaType === "Hesitant" ? `- You ask many questions but avoid commitment
-- You frequently say "I'll think about it" or "maybe later"
-- You're genuinely interested but afraid of making the wrong decision
-- You need hand-holding and patience
-- You respond to empathy better than pressure` : ""}
-
-Rules:
-- Stay 100% in character. Never break character or mention that you're AI.
-- Keep responses conversational, realistic, and natural (like real DMs)
-- Keep replies between 1-3 sentences. Real DMs are short.
-- React appropriately to the setter's approach — reward good technique, be harder if they're pushy or generic
-- Gradually warm up if the setter does well, stay guarded if they don't
-- Include occasional typos, abbreviations, or emojis to feel authentic
-- If the setter asks for a call and you feel the conversation earned it, agree tentatively
-- ONLY respond as the prospect. Do not add narration or commentary.
-${offerContext ? `\nThe setter is selling this offer (react realistically to it — ask about its price, outcome, and proof; raise objections a real prospect would):\n${offerContext}` : ""}`;
-
-    const aiMessages: { role: string; content: string }[] = [
-      { role: "system", content: systemPrompt },
-    ];
-
-    if (messages && messages.length > 0) {
-      // Add conversation history. The AI only ever RESPONDS — the setter always
-      // sends the first message. We never generate an opener.
-      for (const m of messages) {
-        aiMessages.push({
-          role: m.role === "user" ? "user" : "assistant",
-          content: m.content,
-        });
-      }
-    } else {
-      // No user message yet — the AI must never initiate the conversation.
-      return new Response(
-        JSON.stringify({ error: "The setter must send the first message. The AI only responds." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-flash-1.5",
-          messages: aiMessages,
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "AI credits exhausted. Please add credits in Settings → Workspace → Usage." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      throw new Error(`AI gateway error: ${response.status}`);
-    }
-
-    const data = await response.json();
-    const reply = data.choices?.[0]?.message?.content;
-
-    if (!reply) throw new Error("No response from AI");
-
-    return new Response(
-      JSON.stringify({ reply }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-  } catch (e) {
-    console.error("training-chat error:", e);
-    return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ reply, role: "assistant" }), {
+      headers: { ...CORS, "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS });
   }
 });
