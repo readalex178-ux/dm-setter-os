@@ -27,6 +27,12 @@ export interface DBProspect {
   last_contact_at: string | null;
   created_at: string;
   connected_account_id: string | null;
+  conversation_score: number | null;
+  booking_probability: number | null;
+  lead_temperature: string | null;
+  stage_confidence: number | null;
+  stage_suggested: string | null;
+  suggested_action: string | null;
 }
 
 export interface DBTimelineEvent {
