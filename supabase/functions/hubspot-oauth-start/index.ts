@@ -1,9 +1,20 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
+
+// Only allow redirect URIs that point at the app's own OAuth callback path.
+function isAllowedRedirect(redirectUri: string): boolean {
+  try {
+    const u = new URL(redirectUri);
+    return u.protocol === 'https:' && u.pathname === '/app/integrations/callback';
+  } catch {
+    return false;
+  }
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -11,6 +22,10 @@ serve(async (req) => {
   }
 
   try {
+    // Require an authenticated user.
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
     const HUBSPOT_CLIENT_ID = Deno.env.get('HUBSPOT_CLIENT_ID');
     if (!HUBSPOT_CLIENT_ID) {
       return new Response(
@@ -24,6 +39,13 @@ serve(async (req) => {
     if (!redirectUri) {
       return new Response(
         JSON.stringify({ error: 'Missing redirectUri' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!isAllowedRedirect(redirectUri)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid redirect URI' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
