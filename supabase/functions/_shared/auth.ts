@@ -1,5 +1,5 @@
 // Shared helper: verifies the caller's JWT and returns the authenticated user.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 export interface AuthResult {
   user: { id: string } | null;
