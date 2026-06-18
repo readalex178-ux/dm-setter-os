@@ -3,13 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <title>DM Setter OS</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="popup.css" />
 </head>
 <body>
 
-  <!-- ── Signed-out state ── -->
-  <div id="view-auth" style="display:none">
+  <!-- Loading spinner (hidden by default) -->
+  <div id="view-loading" style="display:none">
+    <div class="spinner-wrap">
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- Signed-out state (DEFAULT - visible even without JS) -->
+  <div id="view-auth">
     <div class="auth-card">
       <div class="auth-icon">⚡</div>
       <h1 class="auth-title"><span class="cyan">DM Setter</span> OS</h1>
@@ -27,10 +33,8 @@
     </div>
   </div>
 
-  <!-- ── Signed-in state ── -->
+  <!-- Signed-in state -->
   <div id="view-main" style="display:none">
-
-    <!-- Header -->
     <div class="header">
       <div class="logo">
         <div class="logo-icon">⚡</div>
@@ -41,30 +45,15 @@
         <button class="btn-icon" id="btn-open-app" title="Open DM Setter OS">↗</button>
       </div>
     </div>
-
-    <!-- Platform status -->
     <div class="status-bar">
       <span class="dot grey" id="status-dot"></span>
       <span id="status-text">Checking…</span>
     </div>
-
-    <!-- Stats -->
     <div class="stats">
-      <div class="stat">
-        <span class="stat-val" id="stat-saved">—</span>
-        <span class="stat-lbl">Saved</span>
-      </div>
-      <div class="stat">
-        <span class="stat-val" id="stat-today">—</span>
-        <span class="stat-lbl">Today</span>
-      </div>
-      <div class="stat">
-        <span class="stat-val" id="stat-ai">Cloud</span>
-        <span class="stat-lbl">AI</span>
-      </div>
+      <div class="stat"><span class="stat-val" id="stat-saved">—</span><span class="stat-lbl">Saved</span></div>
+      <div class="stat"><span class="stat-val" id="stat-today">—</span><span class="stat-lbl">Today</span></div>
+      <div class="stat"><span class="stat-val" id="stat-ai">Cloud</span><span class="stat-lbl">AI</span></div>
     </div>
-
-    <!-- Panel toggle -->
     <div class="section">
       <div class="toggle-row">
         <div class="toggle-info">
@@ -77,32 +66,18 @@
         </label>
       </div>
     </div>
-
-    <!-- Analyse button -->
     <div class="section">
       <button class="btn-primary" id="btn-analyse" disabled>⚡ Analyse Current DM</button>
     </div>
-
-    <!-- Recently saved -->
     <div class="section">
       <div class="section-title">Recently Saved</div>
       <div id="recent-list">
         <div class="empty">Nothing saved yet. Open a DM on any platform, analyse it, then save to CRM.</div>
       </div>
     </div>
-
-    <!-- Account footer -->
     <div class="account-footer">
       <span class="signed-as" id="auth-user-email"></span>
       <button class="btn-signout" id="btn-signout">Sign out</button>
-    </div>
-
-  </div>
-
-  <!-- Loading spinner shown until JS determines state -->
-  <div id="view-loading">
-    <div class="spinner-wrap">
-      <div class="spinner"></div>
     </div>
   </div>
 
