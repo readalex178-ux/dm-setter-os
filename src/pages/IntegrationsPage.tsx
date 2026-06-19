@@ -7,7 +7,11 @@ import { useToast } from "@/hooks/use-toast";
 import PlatformCard, { type ConnectedAccount } from "@/components/integrations/PlatformCard";
 import { messagingPlatforms, crmPlatforms } from "@/data/integrations-data";
 
-const LIVE_CRM_IDS: string[] = []; // All integrations coming soon
+// All integrations are pending build-out â none are live yet.
+// To enable: add Edge Functions (hubspot-oauth-start, meta-oauth-start, etc.)
+// and add the platform ID to LIVE_CRM_IDS / LIVE_MESSAGING_IDS.
+const LIVE_CRM_IDS: string[] = [];
+const LIVE_MESSAGING_IDS: string[] = [];
 
 export default function IntegrationsPage() {
   const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
@@ -33,47 +37,11 @@ export default function IntegrationsPage() {
   }
 
   async function handleConnect(platform: string) {
-    setConnecting(platform);
-
-    // Coming soon CRMs
-    if (!LIVE_CRM_IDS.includes(platform)) {
-      toast({ title: "Coming Soon", description: `${platform} integration is under development.` });
-      setConnecting(null);
-      return;
-    }
-
-    const redirectUri = `${window.location.origin}/app/integrations/callback`;
-
-    if (platform === "hubspot") {
-      const { data, error } = await supabase.functions.invoke("hubspot-oauth-start", {
-        body: { redirectUri },
-      });
-      if (error || !data?.url) {
-        toast({ title: "Connection failed", description: error?.message || "Could not start HubSpot OAuth. Make sure HubSpot credentials are configured.", variant: "destructive" });
-        setConnecting(null);
-        return;
-      }
-      window.location.href = data.url;
-      return;
-    }
-
-    // Meta platforms
-    const scopes = platform === "instagram"
-      ? "instagram_manage_messages,instagram_basic,pages_show_list,pages_manage_metadata"
-      : platform === "facebook"
-      ? "pages_messaging,pages_show_list,pages_read_engagement,pages_manage_metadata"
-      : "whatsapp_business_management,whatsapp_business_messaging";
-
-    const { data, error } = await supabase.functions.invoke("meta-oauth-start", {
-      body: { platform, redirectUri, scopes },
+    // All integrations are coming soon â show info toast, no API call
+    toast({
+      title: "Coming Soon",
+      description: `${platform.charAt(0).toUpperCase() + platform.slice(1)} integration is under development. Use the Chrome extension in the meantime.`,
     });
-
-    if (error || !data?.url) {
-      toast({ title: "Connection failed", description: error?.message || "Could not start OAuth flow.", variant: "destructive" });
-      setConnecting(null);
-      return;
-    }
-    window.location.href = data.url;
   }
 
   async function handleDisconnect(accountId: string) {
@@ -90,22 +58,7 @@ export default function IntegrationsPage() {
   }
 
   async function handleSync(accountId: string, platformName: string) {
-    // Determine which sync function to call based on the account's platform
-    const account = accounts.find((a) => a.id === accountId);
-    const isHubSpot = account?.platform === "hubspot";
-
-    toast({ title: "Syncing...", description: `Pulling latest ${platformName} data.` });
-
-    const functionName = isHubSpot ? "hubspot-sync-contacts" : "meta-sync-messages";
-    const { data, error } = await supabase.functions.invoke(functionName, { body: { accountId } });
-
-    if (error) {
-      toast({ title: "Sync failed", description: error.message, variant: "destructive" });
-    } else {
-      const label = isHubSpot ? "contacts" : "messages";
-      toast({ title: "Sync complete", description: `${data?.count || 0} ${label} synced.` });
-      fetchAccounts();
-    }
+    toast({ title: "Coming Soon", description: "Sync will be available once the integration is live." });
   }
 
   return (
@@ -122,7 +75,7 @@ export default function IntegrationsPage() {
       <Card className="border-info/30 bg-info/5">
         <CardContent className="p-4">
           <p className="text-sm text-foreground">
-            <strong>How it works:</strong> Click connect, authorize via OAuth, and your data syncs automatically. <em>No passwords are shared.</em>
+            <strong>Chrome Extension:</strong> The fastest way to capture leads right now is the Chrome extension â it works with Instagram, Facebook, and any DM platform directly in your browser.
           </p>
         </CardContent>
       </Card>
@@ -134,7 +87,10 @@ export default function IntegrationsPage() {
           {messagingPlatforms.map((platform) => (
             <PlatformCard
               key={platform.id}
-              platform={platform}
+              platform={{
+                ...platform,
+                comingSoon: !LIVE_MESSAGING_IDS.includes(platform.id),
+              }}
               account={getAccountForPlatform(platform.id)}
               isConnecting={connecting === platform.id}
               onConnect={() => handleConnect(platform.id)}
@@ -173,15 +129,16 @@ export default function IntegrationsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 text-warning" /> Setup Required
+            <AlertCircle className="h-4 w-4 text-warning" /> What's Coming
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-2">
-          <p>To connect integrations, you need developer credentials for each platform:</p>
+          <p>Native integrations require developer credentials and platform approval. These are in progress:</p>
           <ul className="list-disc list-inside space-y-1 ml-2">
-            <li><strong>Meta (Instagram/FB/WhatsApp)</strong> — Meta Developer App</li>
-            <li><strong>HubSpot</strong> — HubSpot Developer App with OAuth</li>
+            <li><strong>Meta (Instagram/FB/WhatsApp)</strong> â Requires Meta App Review (weeks-long process)</li>
+            <li><strong>HubSpot</strong> â Requires HubSpot Developer App with OAuth credentials</li>
           </ul>
+          <p className="mt-2">In the meantime, the Chrome extension covers Instagram, Facebook, and WhatsApp natively.</p>
           <div className="flex gap-4 mt-3">
             <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1 text-xs">
               Meta Console <ExternalLink className="h-3 w-3" />
