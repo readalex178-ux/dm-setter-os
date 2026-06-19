@@ -1,8 +1,10 @@
 import { useState } from "react";
-import { Loader2, MessageCircle } from "lucide-react";
+import { Loader2, MessageCircle, UserPlus } from "lucide-react";
 
 import { useInbox } from "@/hooks/useInbox";
+import { AddProspectDialog } from "@/components/AddProspectDialog";
 import { EmptyState } from "@/components/EmptyState";
+import { Button } from "@/components/ui/button";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 import { ConversationList } from "@/components/inbox/ConversationList";
 import { ConversationView } from "@/components/inbox/ConversationView";
@@ -30,6 +32,7 @@ export default function InboxPage() {
     selectedId, selectProspect, filtered, sel, messages, replies, dbProspectsEmpty,
     handleSend, deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm,
     fetchAiSuggestions, scoreConversation, applyStage,
+    showAddProspect, setShowAddProspect, handleProspectAdded,
   } = inbox;
 
   if (!loaded) {
@@ -39,7 +42,12 @@ export default function InboxPage() {
   if (dbProspectsEmpty) {
     return (
       <div className="p-6">
-        <h1 className="text-2xl font-bold mb-4">Inbox</h1>
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-2xl font-bold">Inbox</h1>
+          <Button size="sm" variant="outline" onClick={() => setShowAddProspect(true)}>
+            <UserPlus className="h-4 w-4 mr-1" /> Add Prospect
+          </Button>
+        </div>
         <EmptyState
           icon={MessageCircle}
           title="No conversations yet"
@@ -47,6 +55,7 @@ export default function InboxPage() {
           actionLabel="Go to Dashboard"
           actionTo="/app"
         />
+        <AddProspectDialog open={showAddProspect} onOpenChange={setShowAddProspect} onAdded={handleProspectAdded} />
       </div>
     );
   }
@@ -67,6 +76,7 @@ export default function InboxPage() {
           selectedId={selectedId}
           onSelect={selectProspect}
           hidden={mobileShowChat}
+          onAddProspect={() => setShowAddProspect(true)}
         />
 
         <ConversationView
@@ -120,6 +130,8 @@ export default function InboxPage() {
           prospectId={selectedId}
           prospectName={sel.name}
         />
+
+        <AddProspectDialog open={showAddProspect} onOpenChange={setShowAddProspect} onAdded={handleProspectAdded} />
       </div>
 
       <AlertDialog open={showDeleteConfirm} onOpenChange={(open) => { if (!open) cancelDelete(); }}>
