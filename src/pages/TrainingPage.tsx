@@ -463,7 +463,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
             <h3 className="font-semibold text-lg mb-2">Leave training session?</h3>
-            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</r>
+            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</p>
             <div className="flex gap-3 justify-end">
               <button onClick={() => blocker.reset()} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Stay</button>
               <button onClick={() => blocker.proceed()} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Leave</button>
