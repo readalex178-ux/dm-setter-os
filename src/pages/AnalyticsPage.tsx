@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
 } from "recharts";
 import { BarChart3, Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useProspects, useKPIs } from "@/hooks/useSetterData";
 import { PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
@@ -24,17 +24,30 @@ const tooltipStyle = {
 
 const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
+type Range = "30d" | "90d" | "all";
+
 export default function AnalyticsPage() {
-  const [dateRange, setDateRange] = useState<"7d" | "30d" | "all">("30d");
-  const { data: prospects = [], isLoading } = useProspects();
-  const { data: kpis = [] } = useKPIs();
-  const filteredKpis = kpis.filter((k) => {
-    if (dateRange === "all") return true;
-    const days = dateRange === "7d" ? 7 : 30;
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - days);
-    return new Date(k.date) >= cutoff;
-  });
+  const { data: allProspects = [], isLoading } = useProspects();
+  const { data: allKpis = [] } = useKPIs();
+  const [range, setRange] = useState<Range>("all");
+
+  const cutoff = useMemo(() => {
+    if (range === "all") return null;
+    const days = range === "30d" ? 30 : 90;
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    return d;
+  }, [range]);
+
+  const prospects = useMemo(() => {
+    if (!cutoff) return allProspects;
+    return allProspects.filter((p) => new Date(p.created_at) >= cutoff!);
+  }, [allProspects, cutoff]);
+
+  const kpis = useMemo(() => {
+    if (!cutoff) return allKpis;
+    return allKpis.filter((k) => new Date(k.date) >= cutoff!);
+  }, [allKpis, cutoff]);
 
   const totalConversations = prospects.length;
   const qualified = prospects.filter((p) => QUALIFIED_STAGES.includes(p.stage)).length;
@@ -46,7 +59,6 @@ export default function AnalyticsPage() {
     count: prospects.filter((p) => p.stage === stage).length,
   }));
 
-  // Objection breakdown from prospect.concerns (set by analyze-stage AI)
   const objectionCounts: Record<string, number> = {};
   prospects.forEach((p) => {
     if (p.concerns) {
@@ -59,8 +71,8 @@ export default function AnalyticsPage() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  // Weekly activity from KPIs (last 7 days, chronological)
-  const weeklyData = filteredKpis.slice(0, dateRange === "7d" ? 7 : dateRange === "30d" ? 30 : filteredKpis.length).reverse().map((k) => ({
+  const kpisToChart = kpis.slice(0, 7).reverse();
+  const weeklyData = kpisToChart.map((k) => ({
     day: new Date(k.date).toLocaleDateString("en-US", { weekday: "short" }),
     conversations: k.dms_sent + k.follow_ups_sent,
     booked: k.calls_booked,
@@ -71,19 +83,25 @@ export default function AnalyticsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Date Range Filter */}
-      <div className="flex gap-2">
-        {(["7d", "30d", "all"] as const).map((r) => (
-          <Button key={r} size="sm" variant={dateRange === r ? "default" : "outline"} onClick={() => setDateRange(r)}>
-            {r === "7d" ? "7 Days" : r === "30d" ? "30 Days" : "All Time"}
-          </Button>
-        ))}
-      </div>
     <div className="p-6 space-y-6 max-w-6xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold">Analytics</h1>
-        <p className="text-sm text-muted-foreground">Performance tracking and insights from your real activity</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Analytics</h1>
+          <p className="text-sm text-muted-foreground">Performance tracking and insights from your real activity</p>
+        </div>
+        <div className="flex gap-1 bg-muted rounded-lg p-1">
+          {(["30d", "90d", "all"] as Range[]).map((r) => (
+            <Button
+              key={r}
+              size="sm"
+              variant={range === r ? "default" : "ghost"}
+              className="h-7 px-3 text-xs"
+              onClick={() => setRange(r)}
+            >
+              {r === "all" ? "All time" : r}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -159,9 +177,9 @@ export default function AnalyticsPage() {
             <CardHeader><CardTitle className="text-sm">Funnel Conversion</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {[
-                { label: "Prospects → Qualified", value: totalConversations ? Math.round((qualified / totalConversations) * 100) : 0 },
-                { label: "Qualified → Booked", value: qualified ? Math.round((booked / qualified) * 100) : 0 },
-                { label: "Prospects → Booked", value: conversionRate },
+                { label: "Prospects â Qualified", value: totalConversations ? Math.round((qualified / totalConversations) * 100) : 0 },
+                { label: "Qualified â Booked", value: qualified ? Math.round((booked / qualified) * 100) : 0 },
+                { label: "Prospects â Booked", value: conversionRate },
               ].map((row) => (
                 <div key={row.label}>
                   <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">{row.label}</span><span className="font-semibold">{row.value}%</span></div>
@@ -172,7 +190,6 @@ export default function AnalyticsPage() {
           </Card>
         </div>
       )}
-    </div>
     </div>
   );
 }
