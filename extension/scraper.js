@@ -1,6 +1,6 @@
 // scraper.js — scoped to open conversation only
 
-// ── Platform detection ─────────────────────────────────────────────────────
+// ── Platform detection ────────────────────────────────────────────────────
 
 function getCurrentPlatform() {
   const h = location.hostname;
@@ -12,7 +12,7 @@ function getCurrentPlatform() {
   return null;
 }
 
-// ── Junk filter ─────────────────────────────────────────────────────────────
+// ── Junk filter ──────────────────────────────────────────────────────────
 
 function isJunk(t) {
   if (!t || t.length < 2 || t.length > 600) return true;
@@ -20,6 +20,7 @@ function isJunk(t) {
   if (/^(Today|Yesterday|Mon|Tue|Wed|Thu|Fri|Sat|Sun|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\b/i.test(t)) return true;
   if (/^(Sent|Delivered|Seen|Read|Active|Liked|Reacted|Follow|Following|Followers|Views|Likes|Like)$/i.test(t)) return true;
   if (/^(Send message|Video call|Audio call|React|Reply|Unsend|More|Share|Save|Copy|Forward|Delete|Photo|Video|GIF|Sticker)$/i.test(t)) return true;
+  if (/^(For You|Following|Friends|Inbox|Activity|Upload|Discover|LIVE|Live)$/i.test(t)) return true;
   if (t.includes("React to") || t.includes("Reply to") || t.includes("Tap to")) return true;
   return false;
 }
@@ -40,7 +41,14 @@ function detectSender(el) {
   return null;
 }
 
-// ── Find the chat container (NOT the whole page) ────────────────────────────
+// ── Find the chat container (NOT the whole page) ───────────────────────────
+//
+// IMPORTANT: if none of a platform's specific selectors match, we return
+// null rather than silently falling back to document.body. Scanning the
+// whole page (nav bars, sidebars, "For You" feed, etc.) is what previously
+// produced garbled, repeated junk messages on platforms whose DOM had
+// drifted from the hardcoded selectors below (e.g. TikTok). An honest
+// "no messages found" state is better than fabricated output.
 
 function getChatContainer(platformId) {
   const candidates = {
@@ -53,10 +61,14 @@ function getChatContainer(platformId) {
     tiktok: [
       '[data-e2e="chat-detail"]',
       '[data-e2e="chat-message-container"]',
+      '[data-e2e="message-list"]',
+      '[data-e2e="chat-content"]',
       '[class*="ChatDetail"]',
       '[class*="chat-detail"]',
       '[class*="MessageList"]',
       '[class*="messageList"]',
+      '[class*="DivMessageListContainer"]',
+      '[aria-label="Messages"]',
     ],
     twitter: [
       '[data-testid="DMActivity"]',
@@ -81,8 +93,15 @@ function getChatContainer(platformId) {
     const el = document.querySelector(sel);
     if (el) return el;
   }
-  // Last resort — role=main scoped
-  return document.querySelector('[role="main"]') || document.body;
+
+  // Best-effort fallback for platforms whose primary layout uses a real
+  // role="main" landmark scoped to the conversation pane (Instagram,
+  // Facebook). Platforms without a reliable landmark (TikTok, Twitter,
+  // LinkedIn) get null instead of document.body — see note above.
+  if (platformId === "instagram" || platformId === "facebook") {
+    return document.querySelector('[role="main"]') || null;
+  }
+  return null;
 }
 
 // ── Name extraction ─────────────────────────────────────────────────────────
@@ -94,6 +113,8 @@ function getProspectName(platformId) {
       'div[role="main"] header a span',
       'div[role="main"] header h2',
       'div[role="main"] header span[dir="auto"]',
+      'div[role="main"] header [role="button"] span[dir="auto"]',
+      'div[role="main"] header h1',
     ];
     for (const sel of selectors) {
       const els = document.querySelectorAll(sel);
@@ -114,12 +135,16 @@ function getProspectName(platformId) {
       '[data-e2e="chat-detail-header"] [class*="name"]',
       '[data-e2e="chat-detail-header"] [class*="Name"]',
       '[data-e2e="chat-detail-header"] span',
+      '[data-e2e="chat-detail-header"] [aria-label]',
+      '[aria-label="Messages"] h1, [aria-label="Messages"] h2',
+      'header [class*="UserName"]',
+      'header [class*="username"]',
     ];
     for (const sel of selectors) {
       const els = document.querySelectorAll(sel);
       for (const el of els) {
-        const text = el.textContent?.trim();
-        if (text && text.length > 0 && text.length < 60 && !["TikTok","Messages","DM"].includes(text)) return text;
+        const text = (el.getAttribute && el.getAttribute('aria-label')) || el.textContent?.trim();
+        if (text && text.length > 0 && text.length < 60 && !["TikTok","Messages","DM"].includes(text)) return text.trim();
       }
     }
     // TikTok title: "Chat with Username | TikTok" or just "TikTok"
@@ -167,6 +192,8 @@ function extractMessages(container, platformId) {
   const msgs = [];
   const seen = new Set();
 
+  if (!container) return msgs;
+
   function add(text, sender) {
     const t = (text || "").trim();
     if (isJunk(t) || seen.has(t) || !sender) return;
@@ -196,7 +223,7 @@ function extractMessages(container, platformId) {
 
     // Class-based fallback within container only
     if (msgs.length === 0) {
-      const classSelectors = ['[class*="DmMessage"]', '[class*="MessageItem"]', '[class*="messageItem"]', '[class*="chatMessage"]'];
+      const classSelectors = ['[class*="DmMessage"]', '[class*="MessageItem"]', '[class*="messageItem"]', '[class*="chatMessage"]', '[class*="ChatMessage"]'];
       for (const sel of classSelectors) {
         container.querySelectorAll(sel).forEach(el => {
           const textEl = el.querySelector('p') || el.querySelector('span');
@@ -206,7 +233,11 @@ function extractMessages(container, platformId) {
       }
     }
 
-    // Scoped text walker — ONLY within the chat container, not the whole page
+    // Scoped text walker — ONLY runs when getChatContainer found a real,
+    // platform-specific container (never document.body / [role="main"]
+    // fallback — those are excluded upstream by returning null). This is
+    // a narrower net than before, intentionally: it is better to surface
+    // "no messages found" than to scrape page chrome as fake messages.
     if (msgs.length === 0) {
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
       let node;
@@ -267,24 +298,26 @@ function extractMessages(container, platformId) {
   return msgs;
 }
 
-// ── Debug info when nothing found ───────────────────────────────────────────
+// ── Debug info when nothing found ──────────────────────────────────────────
 
 function getDebugInfo(platformId, container) {
   const lines = [
     "Platform: " + platformId,
     "URL: " + location.pathname,
     "Title: " + document.title,
-    "Container: " + (container === document.body ? "body (fallback)" : container.tagName + "." + container.className?.toString().slice(0, 40)),
+    "Container: " + (!container ? "none found (try scrolling into the conversation, or use Paste fallback)" : container.tagName + "." + container.className?.toString().slice(0, 40)),
   ];
-  const checks = ['[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]'];
-  checks.forEach(sel => {
-    const n = container.querySelectorAll(sel).length;
-    if (n > 0) lines.push("Found " + n + "x " + sel);
-  });
+  if (container) {
+    const checks = ['[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]'];
+    checks.forEach(sel => {
+      const n = container.querySelectorAll(sel).length;
+      if (n > 0) lines.push("Found " + n + "x " + sel);
+    });
+  }
   return lines.join("\n");
 }
 
-// ── Main scrape function ────────────────────────────────────────────────────
+// ── Main scrape function ──────────────────────────────────────────────────────
 
 function scrape() {
   const platform = getCurrentPlatform();
