@@ -23,7 +23,7 @@ import {
   type ObjectionEntry, type FAQEntry, type WinLossLog, type ConversationExample,
 } from "@/hooks/useKnowledge";
 import { Plus, Pencil, Trash2, Target, MessageSquareWarning, HelpCircle, Trophy, MessagesSquare } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 export default function KnowledgeBasePage() {
   return (
@@ -31,7 +31,7 @@ export default function KnowledgeBasePage() {
       <div>
         <h1 className="text-2xl font-bold">Knowledge Base</h1>
         <p className="text-sm text-muted-foreground">
-          Everything the AI uses to ground its suggestions — your ideal client, objection responses, FAQs, and lessons learned.
+          Everything the AI uses to ground its suggestions â your ideal client, objection responses, FAQs, and lessons learned.
         </p>
       </div>
       <Tabs defaultValue="icp">
@@ -65,13 +65,14 @@ const ICP_FIELDS: { key: string; label: string; placeholder: string }[] = [
 function ICPTab() {
   const { data: icp } = useICP();
   const save = useSaveICP();
+  const { toast } = useToast();
   const [form, setForm] = useState<any>({ name: "My Ideal Client" });
 
   useEffect(() => { if (icp) setForm(icp); }, [icp]);
 
   const handleSave = async () => {
     await save.mutateAsync(form);
-    toast.success("ICP saved — the AI will now speak to this person");
+    toast({ title: "ICP saved â the AI will now speak to this person" });
   };
 
   return (
@@ -97,13 +98,17 @@ function ObjectionsTab() {
   const { data: list = [], isLoading } = useObjections();
   const save = useSaveObjection();
   const del = useDeleteObjection();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ category: "price", objection: "", framework: "", response: "" });
 
   const handleSave = async () => {
-    if (!form.objection.trim() || !form.response.trim()) { toast.error("Objection and response are required"); return; }
+    if (!form.objection.trim() || !form.response.trim()) {
+      toast({ title: "Objection and response are required", variant: "destructive" });
+      return;
+    }
     await save.mutateAsync(form);
-    toast.success("Objection saved");
+    toast({ title: "Objection saved" });
     setOpen(false);
   };
 
@@ -161,13 +166,17 @@ function FAQTab() {
   const { data: list = [], isLoading } = useFAQs();
   const save = useSaveFAQ();
   const del = useDeleteFAQ();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ question: "", answer: "" });
 
   const handleSave = async () => {
-    if (!form.question.trim() || !form.answer.trim()) { toast.error("Question and answer are required"); return; }
+    if (!form.question.trim() || !form.answer.trim()) {
+      toast({ title: "Question and answer are required", variant: "destructive" });
+      return;
+    }
     await save.mutateAsync(form);
-    toast.success("FAQ saved");
+    toast({ title: "FAQ saved" });
     setOpen(false);
   };
 
@@ -216,12 +225,13 @@ function WinsTab() {
   const { data: list = [], isLoading } = useWinLoss();
   const save = useSaveWinLoss();
   const del = useDeleteWinLoss();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ outcome: "win", prospect_name: "", summary: "", lesson: "" });
 
   const handleSave = async () => {
     await save.mutateAsync(form);
-    toast.success("Logged");
+    toast({ title: "Logged" });
     setOpen(false);
   };
 
@@ -282,13 +292,17 @@ function ConversationsTab() {
   const { data: list = [], isLoading } = useConversations();
   const save = useSaveConversation();
   const del = useDeleteConversation();
+  const { toast } = useToast();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<any>({ title: "", category: "booking", transcript: "", notes: "" });
 
   const handleSave = async () => {
-    if (!form.title.trim() || !form.transcript.trim()) { toast.error("Title and transcript are required"); return; }
+    if (!form.title.trim() || !form.transcript.trim()) {
+      toast({ title: "Title and transcript are required", variant: "destructive" });
+      return;
+    }
     await save.mutateAsync(form);
-    toast.success("Example saved — the AI will model these conversations");
+    toast({ title: "Example saved â the AI will model these conversations" });
     setOpen(false);
   };
 
@@ -335,7 +349,7 @@ function ConversationsTab() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{CONVERSATION_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
-            <Textarea rows={8} placeholder={"Paste the conversation, one line per message, e.g.\nProspect: hey saw your post\nSetter: love that — what made it resonate?"} value={form.transcript} onChange={(e) => setForm({ ...form, transcript: e.target.value })} />
+            <Textarea rows={8} placeholder={"Paste the conversation, one line per message, e.g.\nProspect: hey saw your post\nSetter: love that â what made it resonate?"} value={form.transcript} onChange={(e) => setForm({ ...form, transcript: e.target.value })} />
             <Input placeholder="Why this worked (optional)" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={save.isPending}>Save</Button></DialogFooter>
