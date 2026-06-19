@@ -11,6 +11,7 @@ import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { useSaveTrainingAttempt } from "@/hooks/useKnowledge";
 import { useICP } from "@/hooks/useKnowledge";
 
+import { useBlocker } from "react-router-dom";
 interface ChatMsg {
   role: "user" | "ai-prospect";
   content: string;
@@ -86,7 +87,13 @@ export default function TrainingPage() {
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
   const [persona, setPersona] = useState<Persona | null>(null);
-  const saveAttempt = useSaveTrainingAttempt();
+
+
+  // Nav guard — warn before leaving an active training session
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      messages.length > 0 && !completed && currentLocation.pathname !== nextLocation.pathname
+  );  const saveAttempt = useSaveTrainingAttempt();
   const { data: icp } = useICP();
 
   const scenarios = useMemo(() => {
@@ -481,5 +488,17 @@ function TrainingDictateButton({ input, setInput, aiThinking, sendMessage }: {
         {aiThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
       </Button>
     </div>
+      {blocker.state === "blocked" && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h3 className="font-semibold text-lg mb-2">Leave training session?</h3>
+            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => blocker.reset()} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Stay</button>
+              <button onClick={() => blocker.proceed()} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Leave</button>
+            </div>
+          </div>
+        </div>
+      )}
   );
 }
