@@ -27,6 +27,7 @@ export interface DBProspect {
   last_contact_at: string | null;
   created_at: string;
   connected_account_id: string | null;
+  // AI scoring fields (populated by score-conversation Edge Function)
   conversation_score: number | null;
   booking_probability: number | null;
   lead_temperature: string | null;
@@ -151,6 +152,32 @@ export function useAddProspect() {
   });
 }
 
+export function useUpdateProspect() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: Partial<DBProspect> & { id: string }) => {
+      const { id, ...fields } = input;
+      const { error } = await supabase
+        .from("prospects")
+        .update(fields)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prospects"] }),
+  });
+}
+
+export function useDeleteProspect() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("prospects").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["prospects"] }),
+  });
+}
+
 export function useUpdateProspectStage() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -203,7 +230,6 @@ export function useMarkContacted() {
   });
 }
 
-
 export function useLogKPI() {
   const qc = useQueryClient();
   const { user } = useAuth();
@@ -215,6 +241,17 @@ export function useLogKPI() {
           { user_id: user!.id, ...input },
           { onConflict: "user_id,date" }
         );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["daily_kpis"] }),
+  });
+}
+
+export function useDeleteKPI() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("daily_kpis").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["daily_kpis"] }),
