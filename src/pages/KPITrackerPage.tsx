@@ -4,25 +4,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import {
   Send, MessageSquare, UserPlus, Phone, Clock,
-  Flame, Target, Plus, ChevronUp, Download, Settings2,
-  CheckCircle2, Trophy, Loader2, Save, Trash2,
+  Flame, Target, Plus, ChevronUp,
+  CheckCircle2, Trophy, Loader2, Save, Pencil, Trash2,
 } from "lucide-react";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
-import { useKPIs, useLogKPI, type DBDailyKPI } from "@/hooks/useSetterData";
+import { useKPIs, useLogKPI, useDeleteKPI, type DBDailyKPI } from "@/hooks/useSetterData";
 import {
   kpiGoals, getStreak, getWeekTotal, getTodayKPI, todayStr, EMPTY_KPI,
   benchmark, benchmarkColor, correctiveTip,
 } from "@/lib/kpi";
-import { toast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 
 const metricIcons: Record<string, React.ElementType> = {
   dms_sent: Send,
@@ -35,35 +35,15 @@ const metricIcons: Record<string, React.ElementType> = {
 type FormState = Omit<DBDailyKPI, "id" | "date">;
 
 export default function KPITrackerPage() {
-  // Custom targets (localStorage-backed)
-  const [customTargets, setCustomTargets] = useState<Record<string, { dailyTarget: number; weeklyTarget: number }>>(() => {
-    try { return JSON.parse(localStorage.getItem("kpiTargets") || "{}"); } catch { return {}; }
-  });
-  const [editTargetsOpen, setEditTargetsOpen] = useState(false);
-  const [targetDraft, setTargetDraft] = useState<typeof customTargets>({});
-
-  const goalList = kpiGoals.map((g) => ({
-    ...g,
-    dailyTarget: customTargets[g.metric]?.dailyTarget ?? g.dailyTarget,
-    weeklyTarget: customTargets[g.metric]?.weeklyTarget ?? g.weeklyTarget,
-  }));
-
-  function openEditTargets() {
-    setTargetDraft(Object.fromEntries(goalList.map((g) => [g.metric, { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }])));
-    setEditTargetsOpen(true);
-  }
-
-  function saveTargets() {
-    setCustomTargets(targetDraft);
-    localStorage.setItem("kpiTargets", JSON.stringify(targetDraft));
-    setEditTargetsOpen(false);
-  }
   const { data: kpis = [], isLoading } = useKPIs();
   const logKPI = useLogKPI();
-  const qc = useQueryClient();
+  const deleteKPI = useDeleteKPI();
+  const { toast } = useToast();
   const [showLogForm, setShowLogForm] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_KPI);
-  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const [editEntry, setEditEntry] = useState<DBDailyKPI | null>(null);
+  const [editForm, setEditForm] = useState<FormState>(EMPTY_KPI);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const today = getTodayKPI(kpis);
 
@@ -95,41 +75,54 @@ export default function KPITrackerPage() {
     }
   }
 
-  async function deleteKPI(id: string, date: string) {
-    const label = date === todayStr() ? "today's entry" : `entry for ${new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
-    if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
-    setDeletingIds((prev) => new Set(prev).add(id));
-    const { error } = await supabase.from("daily_kpis").delete().eq("id", id);
-    setDeletingIds((prev) => { const s = new Set(prev); s.delete(id); return s; });
-    if (error) {
-      toast({ title: "Could not delete entry", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Entry deleted" });
-      qc.invalidateQueries({ queryKey: ["daily_kpis"] });
+  function openEdit(k: DBDailyKPI) {
+    const { id, date, ...rest } = k;
+    setEditForm(rest);
+    setEditEntry(k);
+  }
+
+  async function saveEdit() {
+    if (!editEntry) return;
+    try {
+      await logKPI.mutateAsync({ date: editEntry.date, ...editForm });
+      toast({ title: "Updated" });
+      setEditEntry(null);
+    } catch (e) {
+      toast({ title: "Could not update", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
     }
   }
 
-  const numField = (k: keyof FormState) => ({
-    value: (form[k] as number) ?? 0,
+  async function confirmDelete(id: string) {
+    try {
+      await deleteKPI.mutateAsync(id);
+      toast({ title: "Entry deleted" });
+      setDeleteConfirm(null);
+    } catch (e) {
+      toast({ title: "Could not delete", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    }
+  }
+
+  const numField = (k: keyof FormState, target: FormState, setter: (fn: (f: FormState) => FormState) => void) => ({
+    value: (target[k] as number) ?? 0,
     onChange: (e: React.ChangeEvent<HTMLInputElement>) =>
-      setForm((f) => ({ ...f, [k]: Number(e.target.value) })),
+      setter((f) => ({ ...f, [k]: Number(e.target.value) })),
   });
+
+  const KPI_FIELDS = [
+    { label: "DMs Sent", key: "dms_sent" as const },
+    { label: "DMs Received", key: "dms_received" as const },
+    { label: "New Leads", key: "new_leads" as const },
+    { label: "Follow-Ups Sent", key: "follow_ups_sent" as const },
+    { label: "Calls Booked", key: "calls_booked" as const },
+    { label: "Calls Completed", key: "calls_completed" as const },
+    { label: "No-Shows", key: "no_shows" as const },
+    { label: "Qualified", key: "conversions_to_qualified" as const },
+    { label: "Objections Handled", key: "objections_handled" as const },
+    { label: "Hours Worked", key: "hours_worked" as const },
+  ];
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
-  }
-
-  function exportKPICSV() {
-    if (!kpis) return;
-    const rows = [
-      ["Date", ...goalList.map((g) => g.label)],
-      ...kpis.map((k) => [k.date, ...goalList.map((g) => String(k[g.metric] ?? ""))])
-    ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = "kpi-tracker.csv";
-    a.click();
   }
 
   return (
@@ -138,10 +131,6 @@ export default function KPITrackerPage() {
         <div>
           <h1 className="text-2xl font-bold">KPI Tracker</h1>
           <p className="text-sm text-muted-foreground">Track your daily numbers and hit your targets</p>
-          <div className="flex gap-2 mt-2">
-            <Button variant="outline" size="sm" onClick={openEditTargets} className="flex items-center gap-1"><Settings2 className="h-4 w-4" />Edit Targets</Button>
-            <Button variant="outline" size="sm" onClick={exportKPICSV} className="flex items-center gap-1"><Download className="h-4 w-4" />Export CSV</Button>
-          </div>
         </div>
         <Button onClick={() => setShowLogForm(!showLogForm)} size="sm">
           {showLogForm ? <ChevronUp className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
@@ -149,26 +138,16 @@ export default function KPITrackerPage() {
         </Button>
       </div>
 
+      {/* Quick Log Form */}
       {showLogForm && (
         <Card className="border-primary/30">
           <CardHeader className="pb-3"><CardTitle className="text-sm">Log Today's Numbers</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-              {[
-                { label: "DMs Sent", key: "dms_sent" as const },
-                { label: "DMs Received", key: "dms_received" as const },
-                { label: "New Leads", key: "new_leads" as const },
-                { label: "Follow-Ups Sent", key: "follow_ups_sent" as const },
-                { label: "Calls Booked", key: "calls_booked" as const },
-                { label: "Calls Completed", key: "calls_completed" as const },
-                { label: "No-Shows", key: "no_shows" as const },
-                { label: "Qualified", key: "conversions_to_qualified" as const },
-                { label: "Objections Handled", key: "objections_handled" as const },
-                { label: "Hours Worked", key: "hours_worked" as const },
-              ].map((f) => (
+              {KPI_FIELDS.map((f) => (
                 <div key={f.key}>
                   <Label className="text-xs text-muted-foreground">{f.label}</Label>
-                  <Input type="number" className="mt-1" {...numField(f.key)} />
+                  <Input type="number" className="mt-1" {...numField(f.key, form, setForm)} />
                 </div>
               ))}
             </div>
@@ -191,8 +170,9 @@ export default function KPITrackerPage() {
         </Card>
       )}
 
+      {/* Daily Goal Progress + benchmark */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        {goalList.map((goal) => {
+        {kpiGoals.map((goal) => {
           const todayVal = today[goal.metric] as number;
           const pct = Math.min((todayVal / goal.dailyTarget) * 100, 100);
           const hit = todayVal >= goal.dailyTarget;
@@ -226,8 +206,9 @@ export default function KPITrackerPage() {
         })}
       </div>
 
+      {/* Key Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Today's Conversion</p><p className="text-2xl font-bold">{conversionRate}%</p><p className="text-xs text-muted-foreground">DM → Call</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Today's Conversion</p><p className="text-2xl font-bold">{conversionRate}%</p><p className="text-xs text-muted-foreground">DM â Call</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Weekly Conversion</p><p className="text-2xl font-bold">{weekConversion}%</p><p className="text-xs text-muted-foreground">{weekCallsBooked} calls / {weekDmsSent} DMs</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Objections Handled</p><p className="text-2xl font-bold">{today.objections_handled}</p><p className="text-xs text-muted-foreground">Today</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">No-Shows</p><p className="text-2xl font-bold">{today.no_shows}</p><p className="text-xs text-muted-foreground">{getWeekTotal(kpis, "no_shows")} this week</p></CardContent></Card>
@@ -241,6 +222,7 @@ export default function KPITrackerPage() {
         </Card>
       ) : (
         <>
+          {/* Charts */}
           <div className="grid lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">DMs & Follow-Ups (7 days)</CardTitle></CardHeader>
@@ -274,6 +256,7 @@ export default function KPITrackerPage() {
             </Card>
           </div>
 
+          {/* Daily Log Table */}
           <Card>
             <CardHeader className="pb-3"><CardTitle className="text-sm">Daily Log (Last 30 Days)</CardTitle></CardHeader>
             <CardContent>
@@ -288,17 +271,16 @@ export default function KPITrackerPage() {
                       <th className="text-center py-2 px-2">Calls Booked</th>
                       <th className="text-center py-2 px-2">Completed</th>
                       <th className="text-center py-2 px-2">No-Shows</th>
-                      <th className="text-center py-2 px-2">Hours</th>
+                      <th className="text-center py-2 px-2">Hours</th~
                       <th className="text-left py-2 pl-4">Notes</th>
-                      <th className="py-2 pl-2"></th>
+                      <th className="text-center py-2 px-2">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {kpis.map((k) => {
                       const isToday = k.date === todayStr();
-                      const isDeleting = deletingIds.has(k.id);
                       return (
-                        <tr key={k.id} className={`border-b border-border/50 group ${isToday ? "bg-primary/5" : ""}`}>
+                        <tr key={k.id} className={`border-b border-border/50 ${isToday ? "bg-primary/5" : ""}`}>
                           <td className="py-2 pr-4 whitespace-nowrap font-medium">
                             {isToday ? <Badge variant="outline" className="text-xs">Today</Badge> : new Date(k.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </td>
@@ -310,15 +292,15 @@ export default function KPITrackerPage() {
                           <td className="text-center py-2 px-2">{k.no_shows > 0 ? <span className="text-destructive font-medium">{k.no_shows}</span> : <span className="text-muted-foreground">0</span>}</td>
                           <td className="text-center py-2 px-2">{k.hours_worked}h</td>
                           <td className="py-2 pl-4 text-muted-foreground text-xs max-w-[200px] truncate">{k.notes}</td>
-                          <td className="py-2 pl-2">
-                            <button
-                              onClick={() => deleteKPI(k.id, k.date)}
-                              disabled={isDeleting}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive disabled:opacity-50"
-                              title="Delete this entry"
-                            >
-                              {isDeleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                            </button>
+                          <td className="py-2 px-2">
+                            <div className="flex gap-1 justify-center">
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(k)}>
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setDeleteConfirm(k.id)}>
+                                <Trash2 className="h-3 w-3 text-destructive" />
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -329,6 +311,7 @@ export default function KPITrackerPage() {
             </CardContent>
           </Card>
 
+          {/* Weekly Totals */}
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
@@ -338,7 +321,7 @@ export default function KPITrackerPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-                {goalList.map((goal) => {
+                {kpiGoals.map((goal) => {
                   const weekVal = getWeekTotal(kpis, goal.metric);
                   const pct = Math.min((weekVal / goal.weeklyTarget) * 100, 100);
                   const hit = weekVal >= goal.weeklyTarget;
@@ -356,30 +339,46 @@ export default function KPITrackerPage() {
           </Card>
         </>
       )}
-      {/* Edit Targets Modal */}
-      <Dialog open={editTargetsOpen} onOpenChange={setEditTargetsOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader><DialogTitle>Edit Daily Targets</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            {goalList.map((g) => (
-              <div key={g.metric} className="grid grid-cols-3 gap-3 items-center">
-                <Label className="text-sm font-medium">{g.label}</Label>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Daily</p>
-                  <Input type="number" min={0} className="h-8" value={targetDraft[g.metric]?.dailyTarget ?? g.dailyTarget}
-                    onChange={(e) => setTargetDraft((d) => ({ ...d, [g.metric]: { ...(d[g.metric] ?? { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }), dailyTarget: Number(e.target.value) } }))} />
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Weekly</p>
-                  <Input type="number" min={0} className="h-8" value={targetDraft[g.metric]?.weeklyTarget ?? g.weeklyTarget}
-                    onChange={(e) => setTargetDraft((d) => ({ ...d, [g.metric]: { ...(d[g.metric] ?? { dailyTarget: g.dailyTarget, weeklyTarget: g.weeklyTarget }), weeklyTarget: Number(e.target.value) } }))} />
-                </div>
+
+      {/* Edit Modal */}
+      <Dialog open={!!editEntry} onOpenChange={(o) => { if (!o) setEditEntry(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Edit {editEntry ? new Date(editEntry.date).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" }) : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-[50vh] overflow-y-auto">
+            {KPI_FIELDS.map((f) => (
+              <div key={f.key}>
+                <Label className="text-xs text-muted-foreground">{f.label}</Label>
+                <Input type="number" className="mt-1" {...numField(f.key, editForm, setEditForm)} />
               </div>
             ))}
           </div>
+          <div>
+            <Label className="text-xs text-muted-foreground">Notes</Label>
+            <Textarea className="mt-1 text-sm" value={editForm.notes ?? ""} onChange={(e) => setEditForm((f: FormState) => ({ ...f, notes: e.target.value }))} />
+          </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditTargetsOpen(false)}>Cancel</Button>
-            <Button onClick={saveTargets}>Save Targets</Button>
+            <Button variant="outline" onClick={() => setEditEntry(null)}>Cancel</Button>
+            <Button onClick={saveEdit} disabled={logKPI.isPending}>
+              {logKPI.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />} Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Modal */}
+      <Dialog open={!!deleteConfirm} onOpenChange={(o) => { if (!o) setDeleteConfirm(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete KPI Entry</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">This will permanently remove this day's log. You can always re-log it.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={() => deleteConfirm && confirmDelete(deleteConfirm)} disabled={deleteKPI.isPending}>
+              {deleteKPI.isPending ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />} Delete
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
