@@ -88,12 +88,13 @@ export default function TrainingPage() {
   const [turnCount, setTurnCount] = useState(0);
   const [persona, setPersona] = useState<Persona | null>(null);
 
-
-  // Nav guard — warn before leaving an active training session
+  // Nav guard â warn before leaving an active training session
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       messages.length > 0 && !completed && currentLocation.pathname !== nextLocation.pathname
-  );  const saveAttempt = useSaveTrainingAttempt();
+  );
+
+  const saveAttempt = useSaveTrainingAttempt();
   const { data: icp } = useICP();
 
   const scenarios = useMemo(() => {
@@ -159,27 +160,7 @@ export default function TrainingPage() {
         .map((m) => `${m.role === "user" ? "Setter" : "Prospect"}: ${m.content}`)
         .join("\n");
 
-      const { data, error: fnError } = await supabase.functions.invoke("suggest-replies", {
-        body: {
-          messages: conversationHistory.map((m) => ({
-            sender: m.role === "user" ? "setter" : "prospect",
-            content: m.content,
-          })),
-          prospect: {
-            name: "Training Prospect",
-            stage: scenario?.personaType || "Unknown",
-            intentLevel: scenario?.difficulty || "Unknown",
-            intentConfidence: 0,
-            motivation: "Practice scenario",
-            concerns: "N/A",
-            callReadiness: 0,
-            leadScore: 0,
-          },
-          feedbackMode: true,
-        },
-      });
-
-      // Use a dedicated feedback call via training-chat with a feedback prompt
+      // Get coaching feedback via training-chat in feedback mode
       const { data: fbData } = await supabase.functions.invoke("training-chat", {
         body: {
           messages: [
@@ -190,7 +171,7 @@ export default function TrainingPage() {
 Conversation:
 ${convoText}
 
-Scenario: ${scenario?.name} (${scenario?.difficulty}) — ${scenario?.description}
+Scenario: ${scenario?.name} (${scenario?.difficulty}) â ${scenario?.description}
 
 Respond with ONLY a JSON object (no markdown, no code blocks):
 {"grade":"A/B/C/D","strengths":["point1","point2"],"improvements":["point1","point2","point3"],"summary":"One sentence overall assessment"}`,
@@ -257,7 +238,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setError(null);
     setAiThinking(false);
     // Generate a fresh random prospect persona. The AI never sends the first
-    // message — the user must initiate the conversation.
+    // message â the user must initiate the conversation.
     setPersona(generatePersona());
   }
 
@@ -321,7 +302,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm">{scenario?.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect • Turn {turnCount}/6</p>
+                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect â¢ Turn {turnCount}/6</p>
                   </div>
                   <div className="flex gap-2">
                     {turnCount >= 3 && !completed && (
@@ -346,7 +327,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                       {persona && (
                         <div className="rounded-md bg-background/60 border border-border p-3">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Your prospect</p>
-                          <p className="font-medium">{persona.name}, {persona.age} · {persona.job}</p>
+                          <p className="font-medium">{persona.name}, {persona.age} Â· {persona.job}</p>
                           <p className="text-muted-foreground text-xs mt-1">{persona.trait}. They {persona.context}.</p>
                         </div>
                       )}
@@ -355,7 +336,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                   )}
                   {messages.map((m, i) => (
                     <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-                      <div className={`flex items-start gap-2 max-w-[80%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+                      <div className={`flex items-start gap-2 max-w[80%] ${m.role === "user" ? "flex-row-reverse" : ""}`}>
                         <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 ${
                           m.role === "user" ? "bg-primary/10" : "bg-muted"
                         }`}>
@@ -371,7 +352,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                   ))}
                   {aiThinking && (
                     <div className="flex justify-start">
-                      <div className="flex items-start gap-2 max-w-[80%]">
+                      <div className="flex items-start gap-2 max-w[80%]">
                         <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 bg-muted">
                           <Bot className="h-3.5 w-3.5 text-muted-foreground" />
                         </div>
@@ -392,7 +373,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 ) : (
                   <div className="text-center py-2">
                     <Badge variant="success" className="mb-2">Practice Complete</Badge>
-                    <p className="text-xs text-muted-foreground">See AI feedback on the right →</p>
+                    <p className="text-xs text-muted-foreground">See AI feedback on the right â</p>
                   </div>
                 )}
               </div>
@@ -420,7 +401,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-success mb-1">Strengths</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.strengths.map((s, i) => (
-                        <li key={i}>• {s}</li>
+                        <li key={i}>â¢ {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -428,7 +409,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-warning mb-1">Areas to Improve</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.improvements.map((s, i) => (
-                        <li key={i}>• {s}</li>
+                        <li key={i}>â¢ {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -454,6 +435,20 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
               )}
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Nav guard modal â must be in TrainingPage scope where blocker is defined */}
+      {blocker.state === "blocked" && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
+            <h3 className="font-semibold text-lg mb-2">Leave training session?</h3>
+            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</p>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => blocker.reset()} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Stay</button>
+              <button onClick={() => blocker.proceed()} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Leave</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -488,17 +483,5 @@ function TrainingDictateButton({ input, setInput, aiThinking, sendMessage }: {
         {aiThinking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
       </Button>
     </div>
-      {blocker.state === "blocked" && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
-            <h3 className="font-semibold text-lg mb-2">Leave training session?</h3>
-            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</p>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => blocker.reset()} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Stay</button>
-              <button onClick={() => blocker.proceed()} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Leave</button>
-            </div>
-          </div>
-        </div>
-      )}
   );
 }
