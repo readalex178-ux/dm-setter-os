@@ -9,6 +9,7 @@ import {
 import type {
   DBProspect, DBMessage, AISuggestion, NormalizedProspect, UIMessage,
 } from "@/components/inbox/types";
+import { useDeleteProspect } from "@/hooks/useSetterData";
 
 function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
   if (!selected) return null;
@@ -58,8 +59,11 @@ export function useInbox() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
   const [scoring, setScoring] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showAddProspect, setShowAddProspect] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoAnalyzeCooldown = useRef<Record<string, number>>({});
+  const deleteProspectMutation = useDeleteProspect();
 
   const selectProspect = useCallback((id: string) => {
     setSelectedId(id);
@@ -277,11 +281,43 @@ export function useInbox() {
     setDbProspects((prev) => prev.map((p) => (p.id === selectedId ? { ...p, stage: newStage } : p)));
   }
 
+  function deleteProspect() {
+    if (useDemo || !selectedId) return;
+    setShowDeleteConfirm(true);
+  }
+
+  function cancelDelete() {
+    setShowDeleteConfirm(false);
+  }
+
+  async function confirmDelete() {
+    if (!selectedId) return;
+    try {
+      await deleteProspectMutation.mutateAsync(selectedId);
+      setDbProspects((prev) => prev.filter((p) => p.id !== selectedId));
+      setSelectedId(null);
+      setShowDeleteConfirm(false);
+      toast({ title: "Prospect deleted" });
+    } catch (e: any) {
+      console.error("Delete prospect error:", e);
+      toast({ title: "Could not delete prospect", description: e.message || "Try again", variant: "destructive" });
+    }
+  }
+
+  function handleProspectAdded(prospect: DBProspect) {
+    setDbProspects((prev) => [prospect, ...prev]);
+    setSelectedId(prospect.id);
+    setShowAddProspect(false);
+    if (isMobile) setShowChat(true);
+  }
+
   return {
     isMobile, showChat, setShowChat, search, setSearch, messageInput, setMessageInput,
     sending, useDemo, loaded, aiSuggestions, aiLoading, aiError, scoring,
     messagesEndRef, selectedId, selectProspect, prospects, filtered, sel, messages, replies,
     dbProspectsEmpty: !useDemo && dbProspects.length === 0,
     handleSend, fetchAiSuggestions, scoreConversation, applyStage,
+    deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm,
+    showAddProspect, setShowAddProspect, handleProspectAdded,
   };
 }
