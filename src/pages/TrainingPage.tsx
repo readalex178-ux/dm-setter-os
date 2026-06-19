@@ -86,9 +86,11 @@ export default function TrainingPage() {
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [turnCount, setTurnCount] = useState(0);
+  const [maxTurns, setMaxTurns] = useState(6);
   const [persona, setPersona] = useState<Persona | null>(null);
+  const minTurnsToEnd = Math.max(2, Math.ceil(maxTurns / 2));
 
-  // Nav guard â warn before leaving an active training session
+  // Nav guard Ã¢ÂÂ warn before leaving an active training session
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       messages.length > 0 && !completed && currentLocation.pathname !== nextLocation.pathname
@@ -171,7 +173,7 @@ export default function TrainingPage() {
 Conversation:
 ${convoText}
 
-Scenario: ${scenario?.name} (${scenario?.difficulty}) â ${scenario?.description}
+Scenario: ${scenario?.name} (${scenario?.difficulty}) Ã¢ÂÂ ${scenario?.description}
 
 Respond with ONLY a JSON object (no markdown, no code blocks):
 {"grade":"A/B/C/D","strengths":["point1","point2"],"improvements":["point1","point2","point3"],"summary":"One sentence overall assessment"}`,
@@ -238,7 +240,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setError(null);
     setAiThinking(false);
     // Generate a fresh random prospect persona. The AI never sends the first
-    // message â the user must initiate the conversation.
+    // message Ã¢ÂÂ the user must initiate the conversation.
     setPersona(generatePersona());
   }
 
@@ -252,7 +254,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setTurnCount(newTurnCount);
 
     // After 5+ user turns, allow ending
-    if (newTurnCount >= 6) {
+    if (newTurnCount >= maxTurns) {
       setCompleted(true);
       getFeedback(newMessages);
       return;
@@ -277,6 +279,23 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
       </div>
 
       {!activeScenario ? (
+        <>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Session length</span>
+            <div className="flex gap-1.5">
+              {[3, 6, 10].map((n) => (
+                <Button
+                  key={n}
+                  type="button"
+                  size="sm"
+                  variant={maxTurns === n ? "default" : "outline"}
+                  onClick={() => setMaxTurns(n)}
+                >
+                  {n} turns
+                </Button>
+              ))}
+            </div>
+          </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {scenarios.map((s) => (
             <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
@@ -294,6 +313,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
             </Card>
           ))}
         </div>
+        </>
       ) : (
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
@@ -302,10 +322,10 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm">{scenario?.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect â¢ Turn {turnCount}/6</p>
+                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect Ã¢ÂÂ¢ Turn {turnCount}/{maxTurns}</p>
                   </div>
                   <div className="flex gap-2">
-                    {turnCount >= 3 && !completed && (
+                    {turnCount >= minTurnsToEnd && !completed && (
                       <Button variant="outline" size="sm" onClick={endConversation}>
                         End & Get Feedback
                       </Button>
@@ -327,7 +347,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                       {persona && (
                         <div className="rounded-md bg-background/60 border border-border p-3">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Your prospect</p>
-                          <p className="font-medium">{persona.name}, {persona.age} Â· {persona.job}</p>
+                          <p className="font-medium">{persona.name}, {persona.age} ÃÂ· {persona.job}</p>
                           <p className="text-muted-foreground text-xs mt-1">{persona.trait}. They {persona.context}.</p>
                         </div>
                       )}
@@ -373,7 +393,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 ) : (
                   <div className="text-center py-2">
                     <Badge variant="success" className="mb-2">Practice Complete</Badge>
-                    <p className="text-xs text-muted-foreground">See AI feedback on the right â</p>
+                    <p className="text-xs text-muted-foreground">See AI feedback on the right Ã¢ÂÂ</p>
                   </div>
                 )}
               </div>
@@ -401,7 +421,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-success mb-1">Strengths</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.strengths.map((s, i) => (
-                        <li key={i}>â¢ {s}</li>
+                        <li key={i}>Ã¢ÂÂ¢ {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -409,7 +429,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-warning mb-1">Areas to Improve</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.improvements.map((s, i) => (
-                        <li key={i}>â¢ {s}</li>
+                        <li key={i}>Ã¢ÂÂ¢ {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -426,7 +446,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 <div className="text-muted-foreground text-center py-8">
                   <Target className="h-8 w-8 mx-auto mb-2 opacity-50" />
                   <p>Complete the conversation to receive AI coaching feedback</p>
-                  {turnCount >= 3 && !completed && (
+                  {turnCount >= minTurnsToEnd && !completed && (
                     <Button variant="outline" size="sm" className="mt-3" onClick={endConversation}>
                       End & Get Feedback
                     </Button>
@@ -438,12 +458,12 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
         </div>
       )}
 
-      {/* Nav guard modal â must be in TrainingPage scope where blocker is defined */}
+      {/* Nav guard modal Ã¢ÂÂ must be in TrainingPage scope where blocker is defined */}
       {blocker.state === "blocked" && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
             <h3 className="font-semibold text-lg mb-2">Leave training session?</h3>
-            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</p>
+            <p className="text-muted-foreground text-sm mb-4">Your progress will be lost if you leave now.</r>
             <div className="flex gap-3 justify-end">
               <button onClick={() => blocker.reset()} className="px-4 py-2 text-sm border rounded-lg hover:bg-muted">Stay</button>
               <button onClick={() => blocker.proceed()} className="px-4 py-2 text-sm bg-destructive text-destructive-foreground rounded-lg hover:opacity-90">Leave</button>
