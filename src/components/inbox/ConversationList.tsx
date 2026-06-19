@@ -1,7 +1,8 @@
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { stageColor, platformIcon, type DBProspect } from "@/components/inbox/types";
 import type { Prospect as DemoProspect } from "@/data/demo-data";
 
@@ -13,12 +14,13 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string) => void;
   hidden?: boolean;
+  onAddProspect?: () => void;
 }
 
-export function ConversationList({ search, setSearch, filtered, useDemo, selectedId, onSelect, hidden }: Props) {
+export function ConversationList({ search, setSearch, filtered, useDemo, selectedId, onSelect, hidden, onAddProspect }: Props) {
   return (
     <div className={`w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 lg:h-full ${hidden ? "hidden" : "flex-1"} lg:flex`}>
-      <div className="p-3 border-b border-border">
+      <div className="p-3 border-b border-border space-y-2">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -28,6 +30,11 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {onAddProspect && (
+          <Button variant="outline" size="sm" className="w-full h-8 text-xs" onClick={onAddProspect}>
+            <UserPlus className="h-3.5 w-3.5 mr-1" /> Add Prospect
+          </Button>
+        )}
       </div>
       <ScrollArea className="flex-1">
         {filtered.map((p) => {
