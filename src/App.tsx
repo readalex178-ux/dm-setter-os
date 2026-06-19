@@ -27,8 +27,6 @@ const CoachingPage = lazy(() => import("./pages/CoachingPage"));
 const TrainingPage = lazy(() => import("./pages/TrainingPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const KPITrackerPage = lazy(() => import("./pages/KPITrackerPage"));
-const IntegrationsPage = lazy(() => import("./pages/IntegrationsPage"));
-const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallbackPage"));
 const ExtensionPage = lazy(() => import("./pages/ExtensionPage"));
 const OfferPage = lazy(() => import("./pages/OfferPage"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBasePage"));
@@ -93,8 +91,6 @@ const App = () => (
               <Route path="coaching" element={<Guard name="Coaching"><CoachingPage /></Guard>} />
               <Route path="training" element={<Guard name="Training"><TrainingPage /></Guard>} />
               <Route path="settings" element={<Guard name="Settings"><SettingsPage /></Guard>} />
-              <Route path="integrations" element={<Guard name="Integrations"><IntegrationsPage /></Guard>} />
-              <Route path="integrations/callback" element={<Guard name="OAuth"><OAuthCallbackPage /></Guard>} />
               <Route path="extension" element={<Guard name="Extension"><ExtensionPage /></Guard>} />
             </Route>
             <Route path="*" element={<NotFound />} />
