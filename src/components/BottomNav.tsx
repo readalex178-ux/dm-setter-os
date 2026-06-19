@@ -18,7 +18,6 @@ const moreTabs = [
   { title: "Coaching", url: "/app/coaching" },
   { title: "Training", url: "/app/training" },
   { title: "Analytics", url: "/app/analytics" },
-  { title: "Integrations", url: "/app/integrations" },
   { title: "Extension", url: "/app/extension" },
   { title: "Settings", url: "/app/settings" },
 ];
