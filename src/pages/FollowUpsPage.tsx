@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Clock, CheckCircle2, Inbox, AlertTriangle } from "lucide-react";
 import { useProspects, useMarkContacted } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 const ACTIVE_STAGES = ["New Lead", "Discovery", "Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
@@ -18,6 +18,7 @@ function daysSince(iso: string | null): number {
 export default function FollowUpsPage() {
   const { data: prospects = [], isLoading } = useProspects();
   const markContacted = useMarkContacted();
+  const { toast } = useToast();
 
   const queue = useMemo(() => {
     return prospects
@@ -31,9 +32,9 @@ export default function FollowUpsPage() {
   async function handleMark(id: string, name: string) {
     try {
       await markContacted.mutateAsync({ id });
-      toast.success(`Marked ${name} as followed up`);
+      toast({ title: `Marked ${name} as followed up` });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not update");
+      toast({ title: "Could not update", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
     }
   }
 
@@ -84,7 +85,7 @@ export default function FollowUpsPage() {
                   </div>
                   <div className="min-w-0">
                     <div className="text-sm font-medium truncate">{p.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">{p.handle || "—"} • {p.stage}</div>
+                    <div className="text-xs text-muted-foreground truncate">{p.handle || "â"} â¢ {p.stage}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
