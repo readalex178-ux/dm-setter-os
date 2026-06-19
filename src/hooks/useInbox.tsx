@@ -31,9 +31,9 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
     callReadiness: p.call_readiness, intentLevel: p.intent_level || "Unknown",
     intentConfidence: p.intent_confidence || 0, motivation: p.motivation || "Unknown",
     motivationConfidence: p.motivation_confidence || 0, concerns: p.concerns || "None",
-    concernsConfidence: p.concerns_confidence || 0, location: p.location || "—",
-    currentJob: p.current_job || "—", incomeGoal: p.income_goal || "—",
-    timeAvailability: p.time_availability || "—", source: p.source || "—",
+    concernsConfidence: p.concerns_confidence || 0, location: p.location || "â",
+    currentJob: p.current_job || "â", incomeGoal: p.income_goal || "â",
+    timeAvailability: p.time_availability || "â", source: p.source || "â",
     platform: p.platform, avatar: p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2),
     unread: false,
     conversationScore: (p as any).conversation_score ?? null,
@@ -97,8 +97,8 @@ export function useInbox() {
       if (!analysis) return;
       if (analysis.suggestedStage !== pData.stage && analysis.confidence >= 65) {
         toast({
-          title: `🎯 Stage suggestion: ${pData.name}`,
-          description: `${pData.stage} → ${analysis.suggestedStage} (${analysis.confidence}%) — open "Analyze Stage" to review & apply`,
+          title: `ð¯ Stage suggestion: ${pData.name}`,
+          description: `${pData.stage} â ${analysis.suggestedStage} (${analysis.confidence}%) â open "Analyze Stage" to review & apply`,
         });
       }
     } catch (e) {
@@ -144,7 +144,10 @@ export function useInbox() {
         { event: "INSERT", schema: "public", table: "messages", filter: `prospect_id=eq.${selectedId}` },
         (payload) => {
           const newMsg = payload.new as DBMessage;
-          setDbMessages((prev) => [...prev, newMsg]);
+          setDbMessages((prev) => {
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
           if (newMsg.sender !== "setter") autoAnalyzeStage(selectedId);
         })
       .subscribe();
@@ -198,20 +201,20 @@ export function useInbox() {
       return;
     }
     setSending(true);
-    const { data: newMsg, error } = await supabase.from("messages").insert({
-      prospect_id: selectedId,
-      sender: "setter",
-      content: messageInput.trim(),
-      sent_at: new Date().toISOString(),
-    }).select().single();
-    if (error) {
-      console.error("Send error:", error);
-      toast({ title: "Could not send message", description: error.message, variant: "destructive" });
-    } else if (newMsg) {
-      setDbMessages((prev) => [...prev, newMsg as DBMessage]);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-message", {
+        body: { prospectId: selectedId, content: messageInput.trim() },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setMessageInput("");
+      // Message will appear via realtime subscription (deduplication handled in handler above)
+    } catch (e: any) {
+      console.error("Send error:", e);
+      toast({ title: "Could not send message", description: e.message, variant: "destructive" });
+    } finally {
+      setSending(false);
     }
-    setMessageInput("");
-    setSending(false);
   }
 
   function deleteProspect() {
@@ -286,7 +289,7 @@ export function useInbox() {
           stage_suggested: s.suggestedStage ?? (p as any).stage_suggested,
           suggested_action: s.suggestedAction ?? (p as any).suggested_action,
         } : p));
-        toast({ title: "Conversation scored", description: `Score ${s.conversationScore}/100 • ${s.leadTemperature} • ${s.bookingProbability}% booking` });
+        toast({ title: "Conversation scored", description: `Score ${s.conversationScore}/100 â¢ ${s.leadTemperature} â¢ ${s.bookingProbability}% booking` });
       }
     } catch (e: any) {
       console.error("Scoring error:", e);
