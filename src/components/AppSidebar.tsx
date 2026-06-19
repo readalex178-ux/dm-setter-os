@@ -1,6 +1,6 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
-  GraduationCap, Target, BarChart3, Settings, Activity, Link2, Chrome, Package, Library, Clock, LogOut,
+  GraduationCap, Target, BarChart3, Settings, Activity, Chrome, Package, Library, Clock, LogOut,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,7 +48,6 @@ const groups: { label: string; items: Item[] }[] = [
   {
     label: "System",
     items: [
-      { title: "Integrations", url: "/app/integrations", icon: Link2 },
       { title: "Chrome Extension", url: "/app/extension", icon: Chrome },
       { title: "Settings", url: "/app/settings", icon: Settings },
     ],
