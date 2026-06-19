@@ -17,7 +17,7 @@ const steps = [
   "Open chrome://extensions in your browser",
   "Enable Developer mode (toggle top-right)",
   "Click Load unpacked and select the unzipped folder",
-  "Click the extension icon → open Account → sign in with the SAME email & password you use here",
+  "Click the extension icon and sign in with Google — the same account you use here",
   "Open a DM on Instagram/TikTok/X/Facebook → analyse → Save. It syncs straight to your Inbox.",
 ];
 
@@ -102,7 +102,7 @@ export default function ExtensionPage() {
             <p className="text-xs text-emerald-500">Check your Downloads folder for <strong>dm-setter-os-extension.zip</strong></p>
           )}
 
-          <p className="text-xs text-muted-foreground">v4.0.0 · Syncs to your account · No API keys needed</p>
+          <p className="text-xs text-muted-foreground">v6.0.0 · Syncs to your account · No API keys needed</p>
 
           {/* Fallback direct link */}
           <a
