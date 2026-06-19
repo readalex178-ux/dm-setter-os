@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -13,7 +13,7 @@ import {
 import { EmptyState } from "@/components/EmptyState";
 import { useScripts, useSaveScript, useDeleteScript, SCRIPT_CATEGORIES, type ScriptEntry } from "@/hooks/useKnowledge";
 import { Search, Star, Copy, Plus, Pencil, Trash2, BookOpen } from "lucide-react";
-import { toast } from "sonner";
+import { useToast } from "@/hooks/use-toast";
 
 const empty = { title: "", category: "opener", body: "" };
 
@@ -21,6 +21,7 @@ export default function ScriptsPage() {
   const { data: scripts = [], isLoading } = useScripts();
   const save = useSaveScript();
   const del = useDeleteScript();
+  const { toast } = useToast();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -39,11 +40,11 @@ export default function ScriptsPage() {
 
   const handleSave = async () => {
     if (!form.title.trim() || !form.body.trim()) {
-      toast.error("Title and script body are required");
+      toast({ title: "Title and script body are required", variant: "destructive" });
       return;
     }
     await save.mutateAsync(form);
-    toast.success("Script saved");
+    toast({ title: "Script saved" });
     setOpen(false);
   };
 
