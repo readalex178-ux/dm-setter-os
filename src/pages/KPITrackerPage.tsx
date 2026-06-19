@@ -208,7 +208,7 @@ export default function KPITrackerPage() {
 
       {/* Key Metrics Row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Today's Conversion</p><p className="text-2xl font-bold">{conversionRate}%</p><p className="text-xs text-muted-foreground">DM â Call</p></CardContent></Card>
+        <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Today's Conversion</p><p className="text-2xl font-bold">{conversionRate}%</p><p className="text-xs text-muted-foreground">DM Ã¢ÂÂ Call</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Weekly Conversion</p><p className="text-2xl font-bold">{weekConversion}%</p><p className="text-xs text-muted-foreground">{weekCallsBooked} calls / {weekDmsSent} DMs</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">Objections Handled</p><p className="text-2xl font-bold">{today.objections_handled}</p><p className="text-xs text-muted-foreground">Today</p></CardContent></Card>
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground mb-1">No-Shows</p><p className="text-2xl font-bold">{today.no_shows}</p><p className="text-xs text-muted-foreground">{getWeekTotal(kpis, "no_shows")} this week</p></CardContent></Card>
@@ -271,7 +271,7 @@ export default function KPITrackerPage() {
                       <th className="text-center py-2 px-2">Calls Booked</th>
                       <th className="text-center py-2 px-2">Completed</th>
                       <th className="text-center py-2 px-2">No-Shows</th>
-                      <th className="text-center py-2 px-2">Hours</th~
+                      <th className="text-center py-2 px-2">Hours</th>
                       <th className="text-left py-2 pl-4">Notes</th>
                       <th className="text-center py-2 px-2">Actions</th>
                     </tr>
