@@ -4,10 +4,23 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { User, Link2, Shield, Loader2, Target, Download, Sprout } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { User, Link2, Shield, Loader2, Target, Download, Sprout, AlertTriangle, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { useProfile, useProspects, useKPIs } from "@/hooks/useSetterData";
+import {
+  useProfile, useProspects, useKPIs,
+  useDeleteAllProspects, useDeleteAllKPIs, useDeleteAllMessages,
+} from "@/hooks/useSetterData";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { kpiGoals, type KPIGoal } from "@/lib/kpi";
@@ -73,6 +86,78 @@ const SEED_KPIS = Array.from({ length: 7 }, (_, i) => {
   };
 });
 
+// Sample conversation history for each seeded prospect, keyed by handle.
+// Content is tuned to roughly match each prospect's pipeline stage so the
+// seeded Inbox feels realistic rather than generic placeholder text.
+type SeedMessage = { sender: "prospect" | "setter"; content: string };
+
+const SEED_MESSAGES_BY_HANDLE: Record<string, SeedMessage[]> = {
+  "@sarah_fitness": [
+    { sender: "setter", content: "Hey Sarah! Loved your reel on client transformations this week 👏 What's been the biggest bottleneck in growing past 1-on-1 training?" },
+    { sender: "prospect", content: "Hey! Thank you :) Honestly it's just hours in the day — I'm capped on how many clients I can train in person." },
+    { sender: "setter", content: "Totally get that. A lot of trainers we work with hit that exact ceiling and build an online program so income isn't tied to your calendar. Worth a quick call to see if that's a fit?" },
+    { sender: "prospect", content: "Yeah, I'd be open to that. I've been thinking about going online for a while. What does the call usually cover?" },
+  ],
+  "@marcuscoaching": [
+    { sender: "setter", content: "Hey Marcus, saw your post about scaling coaching calls — how many clients are you running right now?" },
+    { sender: "prospect", content: "About 15 right now, mostly 1:1. Trying to figure out group coaching but not sure how to structure it." },
+    { sender: "setter", content: "That's exactly the stage where a lot of coaches plateau. Can I ask — what's your current monthly revenue looking like, roughly?" },
+    { sender: "prospect", content: "Around $4k/month. Want to get to 10k but switching to a group format feels risky." },
+  ],
+  "@emma.wellness": [
+    { sender: "setter", content: "Hi Emma! Came across your nutrition page — really like how you break down macros for clients. Are you doing this full-time?" },
+    { sender: "prospect", content: "Hi! Thank you, and not quite — still part-time alongside my day job, but trying to grow it." },
+  ],
+  "@jakethompsonfit": [
+    { sender: "setter", content: "Jake — your gym's growth this year is impressive. What's the plan for scaling beyond the one location?" },
+    { sender: "prospect", content: "Appreciate it! Looking at licensing the model or adding an online coaching arm, just need the right structure." },
+    { sender: "prospect", content: "Honestly I'm ready to move on this soon, just want to make sure I talk to the right people first." },
+    { sender: "setter", content: "Makes sense — let's get 20 minutes on the calendar this week so I can walk you through how other gym owners have structured it. Thursday or Friday work better?" },
+  ],
+  "@priya_wellness": [
+    { sender: "setter", content: "Hey Priya! Your yoga + mindset content is great. Have you thought about turning that into a paid coaching program?" },
+    { sender: "prospect", content: "I have, but I'm honestly a bit nervous about charging more — not sure people would pay for it." },
+    { sender: "setter", content: "That's the #1 thing we hear, and it usually comes down to packaging, not price. We've helped instructors in your exact spot get past that. Want me to show you how?" },
+    { sender: "prospect", content: "Maybe — I just don't want to come across as salesy to my followers. How does that usually work?" },
+  ],
+  "@luisfitness": [
+    { sender: "setter", content: "Luis! Following up — does Wednesday 2pm EST still work for our call?" },
+    { sender: "prospect", content: "Yes, that works for me. Should I prepare anything beforehand?" },
+    { sender: "setter", content: "Nope, just come as you are — we'll map out the fastest path to your $8k/month goal. Talk Wednesday!" },
+  ],
+  "@amychen_health": [
+    { sender: "setter", content: "Hi Amy, noticed you post a lot about gut health for clients — are you coaching them 1-on-1 or do you have programs set up?" },
+    { sender: "prospect", content: "Mostly 1-on-1 consults right now. I've thought about building a program but don't know where to start." },
+    { sender: "setter", content: "Really common spot to be in. What would feel like a win for you in the next 90 days — more clients, more income, or more time back?" },
+  ],
+  "@ryanobrienpro": [
+    { sender: "setter", content: "Hey Ryan, saw your coaching page — are you currently taking on new sports clients?" },
+    { sender: "prospect", content: "Hey, yeah a few spots open. What's this about?" },
+  ],
+};
+
+// Build message rows for a seeded prospect, anchored to its last_contact_at
+// timestamp so the conversation reads in chronological order with the most
+// recent message landing right on last_contact_at.
+function buildSeedMessageRows(userId: string, prospectId: string, handle: string, lastContact: Date) {
+  const seed = SEED_MESSAGES_BY_HANDLE[handle];
+  if (!seed || seed.length === 0) return [];
+  const gapsMinutes = [0, 35, 70, 130]; // gaps back from lastContact, most-recent first
+  const rows = seed.map((m, idxFromStart) => {
+    const idxFromEnd = seed.length - 1 - idxFromStart;
+    const offset = gapsMinutes[idxFromEnd] ?? idxFromEnd * 60;
+    const sentAt = new Date(lastContact.getTime() - offset * 60000);
+    return {
+      user_id: userId,
+      prospect_id: prospectId,
+      sender: m.sender,
+      content: m.content,
+      sent_at: sentAt.toISOString(),
+    };
+  });
+  return rows;
+}
+
 export default function SettingsPage() {
   const { user } = useAuth();
   const { data: profile, isLoading } = useProfile();
@@ -82,6 +167,13 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const { toast } = useToast();
+
+  const deleteAllProspects = useDeleteAllProspects();
+  const deleteAllKPIs = useDeleteAllKPIs();
+  const deleteAllMessages = useDeleteAllMessages();
+  const [confirmDeleteProspects, setConfirmDeleteProspects] = useState(false);
+  const [confirmDeleteKPIs, setConfirmDeleteKPIs] = useState(false);
+  const [confirmDeleteMessages, setConfirmDeleteMessages] = useState(false);
 
   // KPI goals state — loaded from localStorage, saved back on change
   const [goalDrafts, setGoalDrafts] = useState<KPIGoal[]>(loadStoredGoals);
@@ -154,15 +246,34 @@ export default function SettingsPage() {
     if (!user) return;
     setSeeding(true);
     try {
-      // Insert prospects
-      const prospectData = SEED_PROSPECTS.map((p) => ({
-        ...p,
-        user_id: user.id,
-        source: "seed",
-        last_contact_at: new Date(Date.now() - Math.random() * 7 * 86400000).toISOString(),
-      }));
-      const { error: pErr } = await supabase.from("prospects").insert(prospectData);
+      // Insert prospects — capture each one's randomized last_contact_at so the
+      // seeded messages below can be anchored to it and read in order.
+      const lastContactByHandle: Record<string, Date> = {};
+      const prospectData = SEED_PROSPECTS.map((p) => {
+        const lastContact = new Date(Date.now() - Math.random() * 7 * 86400000);
+        lastContactByHandle[p.handle] = lastContact;
+        return {
+          ...p,
+          user_id: user.id,
+          source: "seed",
+          last_contact_at: lastContact.toISOString(),
+        };
+      });
+      const { data: insertedProspects, error: pErr } = await supabase
+        .from("prospects")
+        .insert(prospectData)
+        .select();
       if (pErr) throw pErr;
+
+      // Insert sample conversation messages for each seeded prospect so the
+      // Inbox isn't empty after seeding.
+      const messageRows = (insertedProspects || []).flatMap((row: any) =>
+        buildSeedMessageRows(user.id, row.id, row.handle, lastContactByHandle[row.handle] || new Date())
+      );
+      if (messageRows.length > 0) {
+        const { error: mErr } = await supabase.from("messages").insert(messageRows);
+        if (mErr) throw mErr;
+      }
 
       // Insert KPIs
       const kpiData = SEED_KPIS.map((k) => ({ ...k, user_id: user.id }));
@@ -171,11 +282,47 @@ export default function SettingsPage() {
         .upsert(kpiData, { onConflict: "user_id,date" });
       if (kErr) throw kErr;
 
-      toast({ title: "Test data seeded", description: `${SEED_PROSPECTS.length} prospects + 7 days of KPIs added.` });
+      toast({
+        title: "Test data seeded",
+        description: `${SEED_PROSPECTS.length} prospects, ${messageRows.length} messages + 7 days of KPIs added.`,
+      });
     } catch (e) {
       toast({ title: "Seed failed", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
     } finally {
       setSeeding(false);
+    }
+  }
+
+  async function handleDeleteAllProspects() {
+    try {
+      await deleteAllProspects.mutateAsync();
+      toast({ title: "All prospects deleted", description: "Their messages and timeline history were removed too." });
+    } catch (e) {
+      toast({ title: "Could not delete prospects", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    } finally {
+      setConfirmDeleteProspects(false);
+    }
+  }
+
+  async function handleDeleteAllKPIs() {
+    try {
+      await deleteAllKPIs.mutateAsync();
+      toast({ title: "All KPI entries deleted" });
+    } catch (e) {
+      toast({ title: "Could not delete KPI entries", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    } finally {
+      setConfirmDeleteKPIs(false);
+    }
+  }
+
+  async function handleDeleteAllMessages() {
+    try {
+      await deleteAllMessages.mutateAsync();
+      toast({ title: "Inbox cleared", description: "All messages were deleted. Prospects were not affected." });
+    } catch (e) {
+      toast({ title: "Could not clear inbox", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    } finally {
+      setConfirmDeleteMessages(false);
     }
   }
 
@@ -293,13 +440,54 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
-            Populate your account with {SEED_PROSPECTS.length} sample prospects across all pipeline stages and 7 days of KPI history.
-            Useful for exploring the app or demoing to clients.
+            Populate your account with {SEED_PROSPECTS.length} sample prospects across all pipeline stages, sample conversation
+            messages for each, and 7 days of KPI history. Useful for exploring the app or demoing to clients.
           </p>
           <Button size="sm" variant="outline" onClick={seedData} disabled={seeding}>
             {seeding ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Sprout className="h-3.5 w-3.5 mr-1" />}
             {seeding ? "Seeding..." : "Add Test Data"}
           </Button>
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone — bulk delete */}
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2 text-destructive"><AlertTriangle className="h-4 w-4" /> Danger Zone</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Permanently wipe data from your account — useful for clearing out demo data or starting fresh with a new offer or niche.
+            These actions cannot be undone.
+          </p>
+          <div className="flex gap-3 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setConfirmDeleteProspects(true)}
+              disabled={prospects.length === 0}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All Prospects ({prospects.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setConfirmDeleteKPIs(true)}
+              disabled={kpis.length === 0}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete All KPI Entries ({kpis.length})
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => setConfirmDeleteMessages(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Clear Inbox / Delete All Messages
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -315,6 +503,74 @@ export default function SettingsPage() {
           </p>
         </CardContent>
       </Card>
+
+      {/* Delete All Prospects confirmation */}
+      <AlertDialog open={confirmDeleteProspects} onOpenChange={setConfirmDeleteProspects}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all {prospects.length} prospects?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all {prospects.length} prospects in your account, along with their conversation
+              messages and timeline history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteAllProspects.isPending}
+              onClick={handleDeleteAllProspects}
+            >
+              {deleteAllProspects.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete All KPI Entries confirmation */}
+      <AlertDialog open={confirmDeleteKPIs} onOpenChange={setConfirmDeleteKPIs}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete all {kpis.length} KPI entries?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes all {kpis.length} days of KPI history in your account. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteAllKPIs.isPending}
+              onClick={handleDeleteAllKPIs}
+            >
+              {deleteAllKPIs.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Delete All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Clear Inbox / Delete All Messages confirmation */}
+      <AlertDialog open={confirmDeleteMessages} onOpenChange={setConfirmDeleteMessages}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all messages?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This deletes every message across all of your prospects' conversations in the Inbox. Your prospects
+              themselves are NOT deleted — only their conversation history. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteAllMessages.isPending}
+              onClick={handleDeleteAllMessages}
+            >
+              {deleteAllMessages.isPending && <Loader2 className="h-4 w-4 mr-1 animate-spin" />} Delete All Messages
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
