@@ -23,7 +23,7 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
       incomeGoal: d.incomeGoal, timeAvailability: d.timeAvailability, source: d.source,
       platform: null, avatar: d.avatar, unread: d.unread,
       conversationScore: null, bookingProbability: null, leadTemperature: null,
-
+      stageConfidence: null, stageSuggested: null, suggestedAction: null,
     };
   }
   const p = selected as DBProspect;
