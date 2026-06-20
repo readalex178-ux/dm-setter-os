@@ -31,7 +31,7 @@ export default function KnowledgeBasePage() {
       <div>
         <h1 className="text-2xl font-bold">Knowledge Base</h1>
         <p className="text-sm text-muted-foreground">
-          Everything the AI uses to ground its suggestions â your ideal client, objection responses, FAQs, and lessons learned.
+          Everything the AI uses to ground its suggestions — your ideal client, objection responses, FAQs, and lessons learned.
         </p>
       </div>
       <Tabs defaultValue="icp">
@@ -72,7 +72,7 @@ function ICPTab() {
 
   const handleSave = async () => {
     await save.mutateAsync(form);
-    toast({ title: "ICP saved â the AI will now speak to this person" });
+    toast({ title: "ICP saved — the AI will now speak to this person" });
   };
 
   return (
@@ -302,7 +302,7 @@ function ConversationsTab() {
       return;
     }
     await save.mutateAsync(form);
-    toast({ title: "Example saved â the AI will model these conversations" });
+    toast({ title: "Example saved — the AI will model these conversations" });
     setOpen(false);
   };
 
@@ -349,7 +349,7 @@ function ConversationsTab() {
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>{CONVERSATION_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
             </Select>
-            <Textarea rows={8} placeholder={"Paste the conversation, one line per message, e.g.\nProspect: hey saw your post\nSetter: love that â what made it resonate?"} value={form.transcript} onChange={(e) => setForm({ ...form, transcript: e.target.value })} />
+            <Textarea rows={8} placeholder={"Paste the conversation, one line per message, e.g.\nProspect: hey saw your post\nSetter: love that — what made it resonate?"} value={form.transcript} onChange={(e) => setForm({ ...form, transcript: e.target.value })} />
             <Input placeholder="Why this worked (optional)" value={form.notes ?? ""} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
           </div>
           <DialogFooter><Button onClick={handleSave} disabled={save.isPending}>Save</Button></DialogFooter>
