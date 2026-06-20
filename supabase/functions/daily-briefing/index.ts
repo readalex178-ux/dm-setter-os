@@ -1,104 +1,124 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
+import { loadContext } from "../_shared/context.ts";
 
-const CORS = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const STALE_DAYS = 3;
+const ACTIVE_STAGES = ["New Lead", "Discovery", "Qualification", "Interested", "Objection Handling", "Ready for Call"];
+
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
+      { global: { headers: { Authorization: req.headers.get("Authorization")! } } },
     );
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
 
-    const today = new Date().toISOString().split("T")[0];
-    const [prospectsRes, kpisRes, trainingRes] = await Promise.all([
-      supabase.from("prospects").select("id, name, stage, platform, updated_at").order("updated_at", { ascending: false }).limit(10),
-      supabase.from("daily_kpis").select("*").eq("date", today).single(),
-      supabase.from("training_attempts").select("score, created_at").order("created_at", { ascending: false }).limit(5),
+    const [prospectsRes, kpisRes] = await Promise.all([
+      supabase.from("prospects").select("name,stage,lead_score,call_readiness,last_contact_at,concerns"),
+      supabase.from("daily_kpis").select("*").order("date", { ascending: false }).limit(7),
     ]);
 
     const prospects = prospectsRes.data || [];
-    const kpis = kpisRes.data || {};
-    const training = trainingRes.data || [];
+    const kpis = kpisRes.data || [];
+    const now = Date.now();
 
-    const body = await req.json().catch(() => ({}));
-    const { userName = "Setter" } = body;
-
-    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
-
-    const stageCounts = {};
-    prospects.forEach((p) => {
-      const s = p.stage || "unknown";
-      stageCounts[s] = (stageCounts[s] || 0) + 1;
+    // Follow-up queue: active prospects not contacted in STALE_DAYS
+    const followUps = prospects.filter((p: any) => {
+      if (!ACTIVE_STAGES.includes(p.stage)) return false;
+      if (!p.last_contact_at) return true;
+      return (now - new Date(p.last_contact_at).getTime()) / 86400000 >= STALE_DAYS;
     });
 
-    const avgScore = training.length > 0
-      ? Math.round(training.reduce((a, t) => a + (t.score || 0), 0) / training.length)
-      : null;
+    // Pipeline distribution
+    const stageCounts: Record<string, number> = {};
+    for (const p of prospects) stageCounts[p.stage] = (stageCounts[p.stage] || 0) + 1;
 
-    const prompt = `You are an AI daily briefing assistant for ${userName}, a DM setter.
+    // Concern / objection patterns
+    const concerns = prospects.map((p: any) => p.concerns).filter(Boolean);
 
-TODAY'S DATA (${today}):
+    // KPI summary (last day vs avg)
+    const today = kpis[0] || {};
+    const avg = (key: string) =>
+      kpis.length ? Math.round(kpis.reduce((s: number, k: any) => s + (k[key] || 0), 0) / kpis.length) : 0;
 
-PIPELINE:
-${Object.entries(stageCounts).map(([stage, count]) => `- ${stage}: ${count} prospects`).join("\n") || "- No prospects yet"}
-Total active prospects: ${prospects.length}
+    const offerContext = await loadContext(req);
 
-TODAY'S KPIs:
-- DMs sent: ${kpis.dms_sent || 0}
-- Replies received: ${kpis.replies_received || 0}
-- Calls booked: ${kpis.calls_booked || 0}
-- Deals closed: ${kpis.deals_closed || 0}
+    const dataSummary = `
+PIPELINE: ${prospects.length} total prospects. Distribution: ${JSON.stringify(stageCounts)}.
+FOLLOW-UP QUEUE: ${followUps.length} active prospects not contacted in ${STALE_DAYS}+ days: ${followUps.slice(0, 10).map((p: any) => p.name).join(", ") || "none"}.
+TODAY'S KPIs: DMs sent ${today.dms_sent ?? 0}, calls booked ${today.calls_booked ?? 0}, conversions ${today.conversions_to_qualified ?? 0}, objections handled ${today.objections_handled ?? 0}.
+7-DAY AVG: DMs ${avg("dms_sent")}, booked ${avg("calls_booked")}, conversions ${avg("conversions_to_qualified")}.
+COMMON CONCERNS RAISED: ${concerns.slice(0, 15).join(" | ") || "none recorded"}.
+`;
 
-RECENT TRAINING:
-${avgScore !== null ? `- Recent average score: ${avgScore}/100 (${training.length} sessions)` : "- No recent training sessions"}
+    const systemPrompt = `You are an elite DM-setting sales manager giving your setter a concise end-of-day briefing. Be specific, direct, and actionable — like a top 1% coach. Use the setter's real numbers. Prioritise the highest-leverage actions for tomorrow.${offerContext}`;
 
-Generate a sharp, motivating daily briefing in 3-4 sentences. Include:
-1. One key observation about the pipeline
-2. One actionable focus for today based on the data
-3. A brief motivational closer
-
-Be direct, specific, and conversational. Use the actual numbers. No fluff.`;
-
-    const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
-        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
-        "X-Title": "DM Setter OS",
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content: prompt }],
-        max_tokens: 200,
-        temperature: 0.6,
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Here is today's performance data:\n${dataSummary}\nGive me my daily briefing.` },
+        ],
+        tools: [{
+          type: "function",
+          function: {
+            name: "daily_briefing",
+            description: "Return a structured end-of-day briefing for the setter",
+            parameters: {
+              type: "object",
+              properties: {
+                headline: { type: "string", description: "One-sentence summary of the day" },
+                wins: { type: "array", items: { type: "string" }, description: "1-3 things that went well" },
+                concerns: { type: "array", items: { type: "string" }, description: "1-3 metrics or patterns that need attention" },
+                priority_actions: { type: "array", items: { type: "string" }, description: "3-5 specific actions for tomorrow, most important first" },
+                objection_insight: { type: "string", description: "One insight about the objection/concern patterns and how to handle them better" },
+              },
+              required: ["headline", "wins", "concerns", "priority_actions", "objection_insight"],
+              additionalProperties: false,
+            },
+          },
+        }],
+        tool_choice: { type: "function", function: { name: "daily_briefing" } },
       }),
     });
 
-    if (!orResponse.ok) {
-      const err = await orResponse.text();
-      return new Response(JSON.stringify({ error: "AI error", detail: err }), { status: 502, headers: CORS });
+    if (!response.ok) {
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const orData = await orResponse.json();
-    const briefing = orData.choices?.[0]?.message?.content || "No briefing available.";
+    const data = await response.json();
+    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+    if (!toolCall?.function?.arguments) throw new Error("No structured response from AI");
+    const parsed = JSON.parse(toolCall.function.arguments);
 
-    return new Response(JSON.stringify({ briefing, date: today, stats: { prospects: prospects.length, stageCounts, kpis, avgTrainingScore: avgScore } }), {
-      headers: { ...CORS, "Content-Type": "application/json" },
+    return new Response(JSON.stringify({ ...parsed, followUpCount: followUps.length, totalProspects: prospects.length }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS });
+  } catch (e) {
+    console.error("daily-briefing error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
