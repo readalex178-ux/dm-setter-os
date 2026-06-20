@@ -177,9 +177,9 @@ export default function AnalyticsPage() {
             <CardHeader><CardTitle className="text-sm">Funnel Conversion</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               {[
-                { label: "Prospects â Qualified", value: totalConversations ? Math.round((qualified / totalConversations) * 100) : 0 },
-                { label: "Qualified â Booked", value: qualified ? Math.round((booked / qualified) * 100) : 0 },
-                { label: "Prospects â Booked", value: conversionRate },
+                { label: "Prospects → Qualified", value: totalConversations ? Math.round((qualified / totalConversations) * 100) : 0 },
+                { label: "Qualified → Booked", value: qualified ? Math.round((booked / qualified) * 100) : 0 },
+                { label: "Prospects → Booked", value: conversionRate },
               ].map((row) => (
                 <div key={row.label}>
                   <div className="flex justify-between text-sm mb-1"><span className="text-muted-foreground">{row.label}</span><span className="font-semibold">{row.value}%</span></div>
