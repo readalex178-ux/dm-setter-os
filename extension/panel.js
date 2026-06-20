@@ -18,8 +18,9 @@ let threadObserver = null;
 let observerTimer = null;
 
 const STAGES = [
-  "New Lead", "Rapport", "Discovery", "Qualifying",
-  "Objection Handling", "Call Booking", "Booked", "Lost",
+  "New Lead", "Discovery", "Qualification", "Interested",
+  "Objection Handling", "Ready for Call", "Call Booked",
+  "Not Qualified", "Cold Lead",
 ];
 
 // ── Build panel HTML ─────────────────────────────────────────────────────────
