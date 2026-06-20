@@ -714,7 +714,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      platform_type: "instagram" | "facebook" | "whatsapp" | "hubspot"
+      platform_type: "instagram" | "facebook" | "whatsapp" | "hubspot" | "tiktok" | "twitter" | "linkedin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -842,7 +842,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      platform_type: ["instagram", "facebook", "whatsapp", "hubspot"],
+      platform_type: ["instagram", "facebook", "whatsapp", "hubspot", "tiktok", "twitter", "linkedin"],
     },
   },
 } as const
