@@ -91,7 +91,7 @@ export default function TrainingPage() {
   const [speaking, setSpeaking] = useState(false);
   const minTurnsToEnd = Math.max(2, Math.ceil(maxTurns / 2));
 
-  // Nav guard Ã¢ÂÂ warn before leaving an active training session
+  // Nav guard — warn before leaving an active training session
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
       messages.length > 0 && !completed && currentLocation.pathname !== nextLocation.pathname
@@ -174,7 +174,7 @@ export default function TrainingPage() {
 Conversation:
 ${convoText}
 
-Scenario: ${scenario?.name} (${scenario?.difficulty}) Ã¢ÂÂ ${scenario?.description}
+Scenario: ${scenario?.name} (${scenario?.difficulty}) — ${scenario?.description}
 
 Respond with ONLY a JSON object (no markdown, no code blocks):
 {"grade":"A/B/C/D","strengths":["point1","point2"],"improvements":["point1","point2","point3"],"summary":"One sentence overall assessment"}`,
@@ -272,7 +272,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     setError(null);
     setAiThinking(false);
     // Generate a fresh random prospect persona. The AI never sends the first
-    // message Ã¢ÂÂ the user must initiate the conversation.
+    // message — the user must initiate the conversation.
     setPersona(generatePersona());
   }
 
@@ -354,7 +354,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-sm">{scenario?.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect Ã¢ÂÂ¢ Turn {turnCount}/{maxTurns}</p>
+                    <p className="text-xs text-muted-foreground">{scenario?.personaType} Prospect • Turn {turnCount}/{maxTurns}</p>
                   </div>
                   <div className="flex gap-2">
                     {turnCount >= minTurnsToEnd && !completed && (
@@ -379,7 +379,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                       {persona && (
                         <div className="rounded-md bg-background/60 border border-border p-3">
                           <p className="text-xs font-medium text-muted-foreground mb-1">Your prospect</p>
-                          <p className="font-medium">{persona.name}, {persona.age} ÃÂ· {persona.job}</p>
+                          <p className="font-medium">{persona.name}, {persona.age} · {persona.job}</p>
                           <p className="text-muted-foreground text-xs mt-1">{persona.trait}. They {persona.context}.</p>
                         </div>
                       )}
@@ -425,7 +425,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 ) : (
                   <div className="text-center py-2">
                     <Badge variant="success" className="mb-2">Practice Complete</Badge>
-                    <p className="text-xs text-muted-foreground">See AI feedback on the right Ã¢ÂÂ</p>
+                    <p className="text-xs text-muted-foreground">See AI feedback on the right →</p>
                   </div>
                 )}
               </div>
@@ -461,7 +461,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-success mb-1">Strengths</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.strengths.map((s, i) => (
-                        <li key={i}>Ã¢ÂÂ¢ {s}</li>
+                        <li key={i}>• {s}</li>
                       ))}
                     </ul>
                   </div>
@@ -469,7 +469,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-warning mb-1">Areas to Improve</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.improvements.map((s, i) => (
-                        <li key={i}>Ã¢ÂÂ¢ {s}</li>
+                        <li key={i}>• {s}
                       ))}
                     </ul>
                   </div>
@@ -498,7 +498,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
         </div>
       )}
 
-      {/* Nav guard modal Ã¢ÂÂ must be in TrainingPage scope where blocker is defined */}
+      {/* Nav guard modal — must be in TrainingPage scope where blocker is defined */}
       {blocker.state === "blocked" && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <div className="bg-card border rounded-xl p-6 max-w-sm mx-4 shadow-2xl">
