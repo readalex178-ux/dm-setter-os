@@ -61,6 +61,7 @@ export function useInbox() {
   const [scoring, setScoring] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddProspect, setShowAddProspect] = useState(false);
+  const [contentMatchIds, setContentMatchIds] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoAnalyzeCooldown = useRef<Record<string, number>>({});
   const deleteProspectMutation = useDeleteProspect();
@@ -182,10 +183,36 @@ export function useInbox() {
     ? (suggestedReplies as Record<string, { type: string; content: string }[]>)[selectedId || "p1"] || []
     : [];
 
+  // Search message content (DB mode only) so search also matches text inside
+  // conversations, not just prospect name/handle.
+  useEffect(() => {
+    const term = search.trim();
+    if (useDemo || !term) {
+      setContentMatchIds(new Set());
+      return;
+    }
+    let active = true;
+    const t = setTimeout(async () => {
+      const { data } = await supabase
+        .from("messages")
+        .select("prospect_id")
+        .ilike("content", `%${term}%`)
+        .limit(200);
+      if (active) setContentMatchIds(new Set((data || []).map((m: any) => m.prospect_id)));
+    }, 300);
+    return () => { active = false; clearTimeout(t); };
+  }, [search, useDemo]);
+
   const filtered = prospects.filter((p: any) => {
+    const term = search.toLowerCase();
     const name = (p.name || "").toLowerCase();
     const handle = (p.handle || "").toLowerCase();
-    return name.includes(search.toLowerCase()) || handle.includes(search.toLowerCase());
+    if (!term || name.includes(term) || handle.includes(term)) return true;
+    if (useDemo) {
+      const msgs = demoMessages[p.id] || [];
+      return msgs.some((m: any) => (m.content || "").toLowerCase().includes(term));
+    }
+    return contentMatchIds.has(p.id);
   });
 
   async function handleSend() {
