@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { demoTrainingScenarios } from "@/data/demo-data";
-import { Target, Send, Bot, User, Sparkles, Loader2, ArrowLeft, RotateCcw, Mic, MicOff } from "lucide-react";
+import { Target, Send, Bot, User, Sparkles, Loader2, ArrowLeft, RotateCcw, Mic, MicOff, Volume2, VolumeX } from "lucide-react";
 import { useSpeechToText } from "@/hooks/use-speech-to-text";
 import { useSaveTrainingAttempt } from "@/hooks/useKnowledge";
 import { useICP } from "@/hooks/useKnowledge";
@@ -88,6 +88,7 @@ export default function TrainingPage() {
   const [turnCount, setTurnCount] = useState(0);
   const [maxTurns, setMaxTurns] = useState(6);
   const [persona, setPersona] = useState<Persona | null>(null);
+  const [speaking, setSpeaking] = useState(false);
   const minTurnsToEnd = Math.max(2, Math.ceil(maxTurns / 2));
 
   // Nav guard Ã¢ÂÂ warn before leaving an active training session
@@ -230,7 +231,38 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
     }
   }
 
+  function stopSpeaking() {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+  }
+  setSpeaking(false);
+  }
+
+  function speakFeedback() {
+    if (!feedback || typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    if (speaking) {
+      stopSpeaking();
+      return;
+  }
+    const text = [
+      `Grade: ${feedback.grade}.`,
+      feedback.summary,
+      "Strengths.",
+      ...feedback.strengths,
+      "Areas to improve.",
+      ...feedback.improvements,
+    ].join(" ");
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1;
+    utterance.onend = () => setSpeaking(false);
+    utterance.onerror = () => setSpeaking(false);
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setSpeaking(true);
+  }
+
   function startScenario(id: string) {
+    stopSpeaking();
     setActiveScenario(id);
     setMessages([]);
     setInput("");
@@ -416,7 +448,15 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
               ) : feedback ? (
                 <>
                   <div>
-                    <Badge variant="score" className="text-lg px-3 py-1 mb-3">{feedback.grade}</Badge>
+                    <div className="flex items-center justify-between mb-3">
+                      <Badge variant="score" className="text-lg px-3 py-1">{feedback.grade}</Badge>
+                      {typeof window !== "undefined" && "speechSynthesis" in window && (
+                        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={speakFeedback}>
+                          {speaking ? <VolumeX className="h-3.5 w-3.5 mr-1" /> : <Volume2 className="h-3.5 w-3.5 mr-1" />}
+                          {speaking ? "Stop" : "Read aloud"}
+                        </Button>
+                      )}
+                    </div>
                     <p className="text-xs text-muted-foreground mb-3">{feedback.summary}</p>
                     <h4 className="font-semibold text-success mb-1">Strengths</h4>
                     <ul className="text-muted-foreground space-y-1">
