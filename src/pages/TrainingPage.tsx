@@ -469,7 +469,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                     <h4 className="font-semibold text-warning mb-1">Areas to Improve</h4>
                     <ul className="text-muted-foreground space-y-1">
                       {feedback.improvements.map((s, i) => (
-                        <li key={i}>• {s}
+                        <li key={i}>• {s}</li>
                       ))}
                     </ul>
                   </div>
