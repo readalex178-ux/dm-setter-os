@@ -18,7 +18,6 @@ const ROUTE_MAP: Record<string, string> = {
   "coaching": "/app/coaching",
   "training": "/app/training",
   "settings": "/app/settings",
-  "integrations": "/app/integrations",
   "extension": "/app/extension",
   "kpi": "/app/kpi",
   "kpi tracker": "/app/kpi",
