@@ -4,13 +4,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { Phone, Sparkles, GitBranch, Loader2, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 import { useProspects, useUpdateProspectStage, PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 const stageColors: Record<string, string> = {
   "New Lead": "bg-muted",
@@ -34,6 +35,24 @@ export default function PipelinePage() {
   const updateStage = useUpdateProspectStage();
 
   const analyzeTarget = analyzeId ? prospects.find((p) => p.id === analyzeId) : null;
+  const [analyzeMessages, setAnalyzeMessages] = useState<{ sender: string; content: string }[]>([]);
+
+  useEffect(() => {
+    if (!analyzeId) {
+      setAnalyzeMessages([]);
+      return;
+    }
+    let active = true;
+    supabase
+    .from("messages")
+    .select("sender, content")
+    .eq("prospect_id", analyzeId)
+    .order("sent_at", { ascending: true })
+    .then(({ data }) => {
+      if (active) setAnalyzeMessages((data || []).map((m: any) => ({ sender: m.sender, content: m.content })));
+    });
+    return () => { active = false; };
+  }, [analyzeId]);
 
   const filteredProspects = prospects.filter((p) => {
     const term = search.toLowerCase();
@@ -212,7 +231,7 @@ export default function PipelinePage() {
         prospectName={analyzeTarget?.name || ""}
         currentStage={analyzeTarget?.stage || ""}
         prospect={analyzeTarget || {}}
-        messages={[]}
+        messages={analyzeMessages}
         onApply={(stage) => analyzeId && move(analyzeId, stage)}
       />
     </div>
