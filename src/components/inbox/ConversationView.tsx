@@ -88,7 +88,7 @@ export function ConversationView(props: Props) {
           <p className="text-[10px] text-muted-foreground text-center mt-1.5">Sends via {sel.platform} • You are in control of every message</p>
         )}
         {useDemo && (
-          <p className="text-[10px] text-muted-foreground text-center mt-1.5">Demo mode — connect an account in Integrations to send real messages</p>
+          <p className="text-[10px] text-muted-foreground text-center mt-1.5">Demo mode — connect a platform via the Chrome extension to send real messages</p>
         )}
       </div>
     </div>
