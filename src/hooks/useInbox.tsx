@@ -23,7 +23,7 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
       incomeGoal: d.incomeGoal, timeAvailability: d.timeAvailability, source: d.source,
       platform: null, avatar: d.avatar, unread: d.unread,
       conversationScore: null, bookingProbability: null, leadTemperature: null,
-      stageConfidence: null, stageSuggested: null, suggestedAction: null,
+
     };
   }
   const p = selected as DBProspect;
@@ -32,9 +32,9 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
     callReadiness: p.call_readiness, intentLevel: p.intent_level || "Unknown",
     intentConfidence: p.intent_confidence || 0, motivation: p.motivation || "Unknown",
     motivationConfidence: p.motivation_confidence || 0, concerns: p.concerns || "None",
-    concernsConfidence: p.concerns_confidence || 0, location: p.location || "â",
-    currentJob: p.current_job || "â", incomeGoal: p.income_goal || "â",
-    timeAvailability: p.time_availability || "â", source: p.source || "â",
+    concernsConfidence: p.concerns_confidence || 0, location: p.location || "—",
+    currentJob: p.current_job || "—", incomeGoal: p.income_goal || "—",
+    timeAvailability: p.time_availability || "—", source: p.source || "—",
     platform: p.platform, avatar: p.name.split(" ").map((w) => w[0]).join("").slice(0, 2),
     unread: false,
     conversationScore: p.conversation_score, bookingProbability: p.booking_probability,
@@ -97,8 +97,8 @@ export function useInbox() {
       if (!analysis) return;
       if (analysis.suggestedStage !== pData.stage && analysis.confidence >= 65) {
         toast({
-          title: `ð¯ Stage suggestion: ${pData.name}`,
-          description: `${pData.stage} â ${analysis.suggestedStage} (${analysis.confidence}%) â open "Analyze Stage" to review & apply`,
+          title: `🎯 Stage suggestion: ${pData.name}`,
+          description: `${pData.stage} → ${analysis.suggestedStage} (${analysis.confidence}%) — open "Analyze Stage" to review & apply`,
         });
       }
     } catch (e) {
@@ -291,7 +291,7 @@ export function useInbox() {
           stage_suggested: s.suggestedStage ?? p.stage_suggested,
           suggested_action: s.suggestedAction ?? p.suggested_action,
         } : p));
-        toast({ title: "Conversation scored", description: `Score ${s.conversationScore}/100 â¢ ${s.leadTemperature} â¢ ${s.bookingProbability}% booking` });
+        toast({ title: "Conversation scored", description: `Score ${s.conversationScore}/100 • ${s.leadTemperature} • ${s.bookingProbability}% booking` });
       }
     } catch (e: any) {
       console.error("Scoring error:", e);
