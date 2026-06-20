@@ -3,9 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Phone, Sparkles, GitBranch, Loader2 } from "lucide-react";
+import { Phone, Sparkles, GitBranch, Loader2, Search } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
 import { useProspects, useUpdateProspectStage, PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
@@ -26,10 +27,18 @@ const stageColors: Record<string, string> = {
 export default function PipelinePage() {
   const [view, setView] = useState<"kanban" | "table">("kanban");
   const [analyzeId, setAnalyzeId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const { data: prospects = [], isLoading } = useProspects();
   const updateStage = useUpdateProspectStage();
 
   const analyzeTarget = analyzeId ? prospects.find((p) => p.id === analyzeId) : null;
+
+  const filteredProspects = prospects.filter((p) => {
+    const term = search.toLowerCase();
+    return !term || p.name.toLowerCase().includes(term) || (p.handle ?? "").toLowerCase().includes(term);
+  });
 
   async function move(id: string, stage: string) {
     try {
@@ -53,6 +62,18 @@ export default function PipelinePage() {
         </div>
       </div>
 
+      {prospects.length > 0 && (
+        <div className="relative max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or handle..."
+            className="pl-9 h-9 text-sm"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+      )}
+
       {isLoading ? (
         <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
       ) : prospects.length === 0 ? (
@@ -66,16 +87,38 @@ export default function PipelinePage() {
       ) : view === "kanban" ? (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {PIPELINE_STAGES.map((stage) => {
-            const list = prospects.filter((p) => p.stage === stage);
+            const list = filteredProspects.filter((p) => p.stage === stage);
             return (
-              <div key={stage} className="min-w-[240px] flex flex-col">
+              <div
+                key={stage}
+                className={`min-w-[240px] flex flex-col rounded-lg transition-colors ${dragOverStage === stage ? "bg-primary/5 ring-2 ring-primary/30" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setDragOverStage(stage); }}
+                onDragLeave={() => setDragOverStage((s) => (s === stage ? null : s))}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const id = e.dataTransfer.getData("text/prospect-id");
+                  setDragOverStage(null);
+                  setDraggedId(null);
+                  if (id) move(id, stage);
+                }}
+              >
                 <div className="flex items-center gap-2 mb-3">
                   <h3 className="text-sm font-semibold">{stage}</h3>
                   <Badge variant="secondary" className="text-xs">{list.length}</Badge>
                 </div>
                 <div className="space-y-2 flex-1">
                   {list.map((p) => (
-                    <Card key={p.id} className={`${stageColors[stage]} border group relative`}>
+                    <Card
+                      key={p.id}
+                      draggable
+                      onDragStart={(e) => {
+                        setDraggedId(p.id);
+                        e.dataTransfer.setData("text/prospect-id", p.id);
+                        e.dataTransfer.effectAllowed = "move";
+                      }}
+                      onDragEnd={() => { setDraggedId(null); setDragOverStage(null); }}
+                      className={`${stageColors[stage]} border group relative cursor-grab active:cursor-grabbing ${draggedId === p.id ? "opacity-40" : ""}`}
+                    >
                       <CardContent className="p-3">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">
@@ -127,7 +170,7 @@ export default function PipelinePage() {
                 </tr>
               </thead>
               <tbody>
-                {prospects.map((p) => (
+                {filteredProspects.map((p) => (
                   <tr key={p.id} className="border-b border-border hover:bg-muted/50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
