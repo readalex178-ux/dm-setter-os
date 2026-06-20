@@ -257,3 +257,49 @@ export function useDeleteKPI() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["daily_kpis"] }),
   });
 }
+
+export function useDeleteAllProspects() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not authenticated");
+      // Scoped to the current user only — RLS also enforces this, but we
+      // filter explicitly so this is never a global wipe.
+      const { error } = await supabase.from("prospects").delete().eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["prospects"] });
+      qc.invalidateQueries({ queryKey: ["timeline"] });
+    },
+  });
+}
+
+export function useDeleteAllKPIs() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not authenticated");
+      const { error } = await supabase.from("daily_kpis").delete().eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["daily_kpis"] }),
+  });
+}
+
+export function useDeleteAllMessages() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not authenticated");
+      // Deletes messages only — prospects are left intact. Scoped to the
+      // current user via user_id, matching the RLS policy on this table.
+      const { error } = await supabase.from("messages").delete().eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["messages"] }),
+  });
+}
