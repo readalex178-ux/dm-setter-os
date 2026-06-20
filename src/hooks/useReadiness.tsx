@@ -41,7 +41,7 @@ export function useReadiness() {
         { key: "conversations", label: "Add a winning conversation", done: convos > 0, to: "/app/knowledge", hint: "Give the AI a proven thread to model." },
         { key: "prospects", label: "Add your first prospect", done: prospects > 0, to: "/app/prospects", hint: "Start tracking real conversations." },
         { key: "kpis", label: "Log your first KPIs", done: kpis > 0, to: "/app/kpi", hint: "Track daily output from Day 1." },
-        { key: "platform", label: "Connect a platform", done: accounts > 0, to: "/app/integrations", hint: "Sync DMs from Instagram, Facebook, or your CRM." },
+        { key: "platform", label: "Connect the Chrome extension", done: accounts > 0, to: "/app/extension", hint: "Sync DMs from Instagram, Facebook, or TikTok via the browser extension." },
       ];
     },
   });
