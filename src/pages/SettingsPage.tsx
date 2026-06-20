@@ -279,9 +279,9 @@ export default function SettingsPage() {
           <CardTitle className="text-sm flex items-center gap-2"><Link2 className="h-4 w-4" /> Integrations</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground mb-3">Manage your Instagram, Facebook, and CRM connections.</p>
-          <Link to="/app/integrations">
-            <Button variant="outline" size="sm">Go to Integrations</Button>
+          <p className="text-sm text-muted-foreground mb-3">Sync Instagram, Facebook, and TikTok DMs via the Chrome extension.</p>
+          <Link to="/app/extension">
+            <Button variant="outline" size="sm">Go to Extension</Button>
           </Link>
         </CardContent>
       </Card>
