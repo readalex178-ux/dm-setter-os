@@ -9,6 +9,7 @@ function getCurrentPlatform() {
   if (h.includes("twitter.com") || h.includes("x.com")) return { id: "twitter", name: "Twitter/X", emoji: "𝕏" };
   if (h.includes("facebook.com") || h.includes("messenger.com")) return { id: "facebook", name: "Facebook", emoji: "👤" };
   if (h.includes("linkedin.com")) return { id: "linkedin", name: "LinkedIn", emoji: "💼" };
+  if (h.includes("web.whatsapp.com")) return { id: "whatsapp", name: "WhatsApp", emoji: "💬" };
   return null;
 }
 
@@ -85,6 +86,11 @@ function getChatContainer(platformId) {
       '.msg-s-message-list',
       '.scaffold-layout__detail .msg-thread',
       '.msg-conversation-card__content',
+    ],
+    whatsapp: [
+      '#main .copyable-area',
+      '#main [role="application"]',
+      '#main',
     ],
   };
 
@@ -181,6 +187,25 @@ function getProspectName(platformId) {
     }
     const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Messaging\s*\|?\s*/i, "").trim();
     if (title && title !== "LinkedIn" && title !== "Messaging" && title.length < 60) return title;
+  }
+
+  // WhatsApp Web: contact name shown in the chat header, usually with a
+  // title attribute (full name, since the visible text can be truncated).
+  if (platformId === "whatsapp") {
+    const selectors = [
+      'header span[title]',
+      '#main header span[dir="auto"]',
+      '[data-testid="conversation-info-header"] span[title]',
+    ];
+    for (const sel of selectors) {
+      const els = document.querySelectorAll(sel);
+      for (const el of els) {
+        const text = el.getAttribute('title') || el.textContent?.trim();
+        if (text && text.length > 0 && text.length < 60 && text !== "WhatsApp") return text;
+      }
+    }
+    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").trim();
+    if (title && title !== "WhatsApp" && title.length < 60) return title;
   }
 
   return null;
@@ -295,6 +320,28 @@ function extractMessages(container, platformId) {
     }
   }
 
+  else if (platformId === "whatsapp") {
+    // WhatsApp Web marks each message row with "message-in" (received) or
+    // "message-out" (sent) somewhere in its class list. These literal class
+    // names survive WhatsApp's hashed/obfuscated CSS churn better than most
+    // other selectors, so they're used as the primary signal here.
+    const rows = container.querySelectorAll('div[class*="message-in"], div[class*="message-out"]');
+    rows.forEach(el => {
+      const textEl = el.querySelector('[class*="selectable-text"]');
+      const text = textEl?.textContent?.trim();
+      const isOutgoing = Array.from(el.classList).some(c => c.includes('message-out'));
+      add(text, isOutgoing ? "setter" : "prospect");
+    });
+
+    // Scoped fallback if WhatsApp's markup has drifted: walk selectable-text
+    // spans directly and fall back to layout-based sender detection.
+    if (msgs.length === 0) {
+      container.querySelectorAll('[class*="selectable-text"]').forEach(el => {
+        add(el.textContent?.trim(), detectSender(el));
+      });
+    }
+  }
+
   return msgs;
 }
 
@@ -308,7 +355,7 @@ function getDebugInfo(platformId, container) {
     "Container: " + (!container ? "none found (try scrolling into the conversation, or use Paste fallback)" : container.tagName + "." + container.className?.toString().slice(0, 40)),
   ];
   if (container) {
-    const checks = ['[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]'];
+    const checks = ['[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]', 'div[class*="message-in"]', 'div[class*="message-out"]'];
     checks.forEach(sel => {
       const n = container.querySelectorAll(sel).length;
       if (n > 0) lines.push("Found " + n + "x " + sel);
