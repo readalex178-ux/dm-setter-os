@@ -118,6 +118,7 @@ Deno.serve(async (req) => {
       .from('messages')
       .insert({
         prospect_id: prospectId,
+        user_id: user.id,
         sender: 'setter',
         content,
         platform_message_id: platformMessageId,
