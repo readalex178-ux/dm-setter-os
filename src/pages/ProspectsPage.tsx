@@ -8,14 +8,18 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Pencil, Filter,
+  Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Pencil, Filter, Trash2,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
-  useProspects, useTimeline, useUpdateProspect, PIPELINE_STAGES,
+  useProspects, useTimeline, useUpdateProspect, useDeleteProspect, PIPELINE_STAGES,
 } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,9 +35,11 @@ export default function ProspectsPage() {
   const [savingNotes, setSavingNotes] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const { data: prospects = [], isLoading } = useProspects();
   const updateProspect = useUpdateProspect();
+  const deleteProspect = useDeleteProspect();
   const qc = useQueryClient();
   const { toast } = useToast();
 
@@ -106,6 +112,18 @@ export default function ProspectsPage() {
     }
   }
 
+  async function confirmDelete() {
+    if (!selected) return;
+    try {
+      await deleteProspect.mutateAsync(selected.id);
+      toast({ title: "Prospect deleted" });
+      setSelectedId(null);
+      setShowDeleteConfirm(false);
+    } catch (e) {
+      toast({ title: "Could not delete prospect", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
+    }
+  }
+
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -174,7 +192,7 @@ export default function ProspectsPage() {
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{p.name.slice(0, 2).toUpperCase()}</div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.handle || "Ã¢ÂÂ"}</div>
+                  <div className="text-xs text-muted-foreground">{p.handle || "â€”"}</div>
                   <div className="flex gap-1 mt-1">
                     <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
                     <Badge variant="outline" className="text-[10px]">{p.stage}</Badge>
@@ -193,7 +211,7 @@ export default function ProspectsPage() {
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">{selected.name.slice(0, 2).toUpperCase()}</div>
             <div className="flex-1">
               <h1 className="text-xl font-bold">{selected.name}</h1>
-              <p className="text-sm text-muted-foreground">{selected.handle || "Ã¢ÂÂ"}{selected.platform ? ` ÃÂ· ${selected.platform}` : ""}</p>
+              <p className="text-sm text-muted-foreground">{selected.handle || "â€”"}{selected.platform ? ` Â· ${selected.platform}` : ""}</p>
               <div className="flex gap-2 mt-1">
                 <Badge variant="score">{selected.lead_score}/10</Badge>
                 <Badge variant={selected.call_readiness >= 70 ? "success" : "warning"}>{selected.call_readiness}%</Badge>
@@ -203,26 +221,29 @@ export default function ProspectsPage() {
             <Button size="sm" variant="outline" onClick={openEdit}>
               <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
             </Button>
+            <Button size="sm" variant="outline" className="text-destructive hover:text-destructive" onClick={() => setShowDeleteConfirm(true)}>
+              <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+            </Button>
           </div>
 
           <div className="grid md:grid-cols-2 gap-4">
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Qualification Data</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Location:</span> {selected.location || "Ã¢ÂÂ"}</div>
-                <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Job:</span> {selected.current_job || "Ã¢ÂÂ"}</div>
-                <div className="flex items-center gap-2"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Income Goal:</span> {selected.income_goal || "Ã¢ÂÂ"}</div>
-                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Availability:</span> {selected.time_availability || "Ã¢ÂÂ"}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Location:</span> {selected.location || "â€”"}</div>
+                <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Job:</span> {selected.current_job || "â€”"}</div>
+                <div className="flex items-center gap-2"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Income Goal:</span> {selected.income_goal || "â€”"}</div>
+                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Availability:</span> {selected.time_availability || "â€”"}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">AI Analysis</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Intent</span><Badge variant="score">{selected.intent_level || "Ã¢ÂÂ"} {selected.intent_confidence ? `${selected.intent_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Motivation</span><Badge variant="score">{selected.motivation || "Ã¢ÂÂ"} {selected.motivation_confidence ? `${selected.motivation_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant="warning">{selected.concerns || "Ã¢ÂÂ"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{selected.source || "Ã¢ÂÂ"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Intent</span><Badge variant="score">{selected.intent_level || "â€”"} {selected.intent_confidence ? `${selected.intent_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Motivation</span><Badge variant="score">{selected.motivation || "â€”"} {selected.motivation_confidence ? `${selected.motivation_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant="warning">{selected.concerns || "â€”"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{selected.source || "â€”"}</span></div>
               </CardContent>
             </Card>
           </div>
@@ -289,7 +310,7 @@ export default function ProspectsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Platform</Label>
-                <Input className="mt-1" placeholder="instagram, facebookÃ¢ÂÂ¦" value={editForm.platform ?? ""} onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })} />
+                <Input className="mt-1" placeholder="instagram, facebookâ€¦" value={editForm.platform ?? ""} onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })} />
               </div>
               <div>
                 <Label className="text-xs">Stage</Label>
@@ -326,6 +347,24 @@ export default function ProspectsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {selected?.name}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove this prospect and all their messages. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
