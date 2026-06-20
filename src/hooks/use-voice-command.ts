@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
-import { demoProspects, demoScripts } from "@/data/demo-data";
+import { useProspects } from "@/hooks/useSetterData";
+import { useScripts } from "@/hooks/useKnowledge";
 
 // Route mapping for navigation commands
 const ROUTE_MAP: Record<string, string> = {
@@ -53,6 +54,8 @@ export function useVoiceCommand() {
   const [lastResult, setLastResult] = useState<VoiceCommandResult | null>(null);
   const recognitionRef = useRef<any>(null);
   const navigate = useNavigate();
+  const { data: prospects = [] } = useProspects();
+  const { data: scripts = [] } = useScripts();
 
   const isSupported = typeof window !== "undefined" && 
     ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
@@ -109,11 +112,11 @@ export function useVoiceCommand() {
         if (type === "send_script") {
           const scriptQuery = match[2].trim().toLowerCase();
           const targetName = match[3].trim().toLowerCase();
-          const script = demoScripts.find(s =>
+          const script = scripts.find(s =>
             s.title.toLowerCase().includes(scriptQuery) ||
             s.category.toLowerCase().includes(scriptQuery)
           );
-          const prospect = demoProspects.find(p =>
+          const prospect = prospects.find(p =>
             p.name.toLowerCase().includes(targetName)
           );
           if (script && prospect) {
@@ -121,20 +124,20 @@ export function useVoiceCommand() {
             // Store in sessionStorage for the inbox to pick up
             sessionStorage.setItem("voice_prefill", JSON.stringify({
               prospectId: prospect.id,
-              message: script.content.replace("[Name]", prospect.name.split(" ")[0]),
+              message: script.body.replace("[Name]", prospect.name.split(" ")[0]),
             }));
             return { type: "send_script", target: prospect.name, value: script.title, raw: text };
           }
           if (script) {
             navigate("/app/inbox");
-            sessionStorage.setItem("voice_prefill", JSON.stringify({ message: script.content }));
+            sessionStorage.setItem("voice_prefill", JSON.stringify({ message: script.body }));
             return { type: "send_script", value: script.title, raw: text };
           }
           return { type: "send_script_failed", raw: text };
         }
         if (type === "reply_to") {
           const targetName = match[2].trim().toLowerCase();
-          const prospect = demoProspects.find(p =>
+          const prospect = prospects.find(p =>
             p.name.toLowerCase().includes(targetName)
           );
           if (prospect) {
@@ -146,7 +149,7 @@ export function useVoiceCommand() {
         }
         if (type === "analyze_stage" || type === "analyze_stage_q") {
           const targetName = (type === "analyze_stage_q" ? match[1] : match[2]).trim().toLowerCase();
-          const prospect = demoProspects.find(p => p.name.toLowerCase().includes(targetName));
+          const prospect = prospects.find(p => p.name.toLowerCase().includes(targetName));
           if (prospect) {
             navigate("/app/inbox");
             sessionStorage.setItem("voice_prefill", JSON.stringify({
@@ -187,7 +190,7 @@ export function useVoiceCommand() {
     }
 
     return { type: "unknown", raw: text };
-  }, [navigate]);
+  }, [navigate, prospects, scripts]);
 
   const startListening = useCallback(() => {
     if (!isSupported) {
