@@ -11,6 +11,14 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+// Canonical stage vocabulary — must match PIPELINE_STAGES in src/hooks/useSetterData.tsx
+// so prospects analysed via the extension show up correctly in the Pipeline/Prospects views.
+const PIPELINE_STAGES = [
+  "New Lead", "Discovery", "Qualification", "Interested",
+  "Objection Handling", "Ready for Call", "Call Booked",
+  "Not Qualified", "Cold Lead",
+];
+
 interface ExtMessage {
   sender?: string;
   content?: string;
@@ -76,7 +84,7 @@ Deno.serve(async (req) => {
 You analyse a sales DM conversation and return a single, complete JSON object. You NEVER send messages — you only advise the human setter.
 
 Methodology:
-- Stages: New Lead → Rapport → Discovery → Qualifying (BANT) → Objection Handling → Call Booking → Booked.
+- Stages (use exactly one of these): New Lead → Discovery → Qualification (BANT) → Interested → Objection Handling → Ready for Call → Call Booked. Use "Not Qualified" or "Cold Lead" for dead-end conversations.
 - BANT = Budget, Authority, Need, Timeline.
 - Temperature: "hot" (ready to book / strong intent), "warm" (engaged, needs nurture), "cold" (low intent / unresponsive).
 
@@ -145,7 +153,7 @@ Analyse this conversation and return the JSON object.`;
       conversation_score: clamp(analysis.conversation_score),
       booking_probability: clamp(analysis.booking_probability),
       temperature: ["hot", "warm", "cold"].includes(analysis.temperature) ? analysis.temperature : "warm",
-      stage: typeof analysis.stage === "string" ? analysis.stage : "New Lead",
+      stage: typeof analysis.stage === "string" && PIPELINE_STAGES.includes(analysis.stage) ? analysis.stage : "New Lead",
       intent: typeof analysis.intent === "string" ? analysis.intent.slice(0, 300) : "",
       objections: Array.isArray(analysis.objections)
         ? analysis.objections.filter((o: any) => typeof o === "string").slice(0, 6)
