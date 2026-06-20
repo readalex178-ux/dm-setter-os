@@ -192,7 +192,7 @@ export default function ProspectsPage() {
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{p.name.slice(0, 2).toUpperCase()}</div>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">{p.handle || "â€”"}</div>
+                  <div className="text-xs text-muted-foreground">{p.handle || "—"}</div>
                   <div className="flex gap-1 mt-1">
                     <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
                     <Badge variant="outline" className="text-[10px]">{p.stage}</Badge>
@@ -211,7 +211,7 @@ export default function ProspectsPage() {
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">{selected.name.slice(0, 2).toUpperCase()}</div>
             <div className="flex-1">
               <h1 className="text-xl font-bold">{selected.name}</h1>
-              <p className="text-sm text-muted-foreground">{selected.handle || "â€”"}{selected.platform ? ` Â· ${selected.platform}` : ""}</p>
+              <p className="text-sm text-muted-foreground">{selected.handle || "—"}{selected.platform ? ` · ${selected.platform}` : ""}</p>
               <div className="flex gap-2 mt-1">
                 <Badge variant="score">{selected.lead_score}/10</Badge>
                 <Badge variant={selected.call_readiness >= 70 ? "success" : "warning"}>{selected.call_readiness}%</Badge>
@@ -230,20 +230,20 @@ export default function ProspectsPage() {
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">Qualification Data</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Location:</span> {selected.location || "â€”"}</div>
-                <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Job:</span> {selected.current_job || "â€”"}</div>
-                <div className="flex items-center gap-2"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Income Goal:</span> {selected.income_goal || "â€”"}</div>
-                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Availability:</span> {selected.time_availability || "â€”"}</div>
+                <div className="flex items-center gap-2"><MapPin className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Location:</span> {selected.location || "—"}</div>
+                <div className="flex items-center gap-2"><Briefcase className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Job:</span> {selected.current_job || "—"}</div>
+                <div className="flex items-center gap-2"><DollarSign className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Income Goal:</span> {selected.income_goal || "—"}</div>
+                <div className="flex items-center gap-2"><Clock className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-muted-foreground">Availability:</span> {selected.time_availability || "—"}</div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader className="pb-2"><CardTitle className="text-sm">AI Analysis</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Intent</span><Badge variant="score">{selected.intent_level || "â€”"} {selected.intent_confidence ? `${selected.intent_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Motivation</span><Badge variant="score">{selected.motivation || "â€”"} {selected.motivation_confidence ? `${selected.motivation_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant="warning">{selected.concerns || "â€”"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{selected.source || "â€”"}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Intent</span><Badge variant="score">{selected.intent_level || "—"} {selected.intent_confidence ? `${selected.intent_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Motivation</span><Badge variant="score">{selected.motivation || "—"} {selected.motivation_confidence ? `${selected.motivation_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant="warning">{selected.concerns || "—"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{selected.source || "—"}</span></div>
               </CardContent>
             </Card>
           </div>
@@ -310,7 +310,7 @@ export default function ProspectsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs">Platform</Label>
-                <Input className="mt-1" placeholder="instagram, facebookâ€¦" value={editForm.platform ?? ""} onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })} />
+                <Input className="mt-1" placeholder="instagram, facebook…" value={editForm.platform ?? ""} onChange={(e) => setEditForm({ ...editForm, platform: e.target.value })} />
               </div>
               <div>
                 <Label className="text-xs">Stage</Label>
