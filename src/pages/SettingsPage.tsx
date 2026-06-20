@@ -69,7 +69,7 @@ const SEED_KPIS = Array.from({ length: 7 }, (_, i) => {
     conversions_to_qualified: Math.floor(Math.random() * 4),
     objections_handled: Math.floor(Math.random() * 5),
     hours_worked: 3 + Math.floor(Math.random() * 4),
-    notes: i === 0 ? "Great day â lots of engagement on the new reel" : null,
+    notes: i === 0 ? "Great day — lots of engagement on the new reel" : null,
   };
 });
 
@@ -83,7 +83,7 @@ export default function SettingsPage() {
   const [seeding, setSeeding] = useState(false);
   const { toast } = useToast();
 
-  // KPI goals state â loaded from localStorage, saved back on change
+  // KPI goals state — loaded from localStorage, saved back on change
   const [goalDrafts, setGoalDrafts] = useState<KPIGoal[]>(loadStoredGoals);
   const [goalsSaved, setGoalsSaved] = useState(false);
 
@@ -249,7 +249,7 @@ export default function SettingsPage() {
             ))}
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={saveGoals}>{goalsSaved ? "Saved â" : "Save Targets"}</Button>
+            <Button size="sm" onClick={saveGoals}>{goalsSaved ? "Saved ✓" : "Save Targets"}</Button>
             <Button size="sm" variant="outline" onClick={resetGoals}>Reset to Defaults</Button>
           </div>
         </CardContent>
