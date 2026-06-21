@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Search, UserPlus } from "lucide-react";
+import { ExternalLink, Search, UserPlus } from "lucide-react";
 import { stageColor, platformIcon, type DBProspect } from "@/components/inbox/types";
 import type { Prospect as DemoProspect } from "@/data/demo-data";
 
@@ -46,11 +46,17 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
           const unread = useDemo ? (p as DemoProspect).unread : false;
           const plat = useDemo ? null : (p as DBProspect).platform;
           const temp = useDemo ? null : (p as DBProspect).lead_temperature;
+          const profileUrl = useDemo ? null : (p as DBProspect).profile_url;
           return (
-            <button
+            <div
               key={p.id}
+              role="button"
+              tabIndex={0}
               onClick={() => onSelect(p.id)}
-              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors ${selectedId === p.id ? "bg-accent" : ""}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p.id); }
+              }}
+              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors cursor-pointer ${selectedId === p.id ? "bg-accent" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -58,7 +64,21 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
                   {unread && <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium truncate flex items-center gap-1">{platformIcon(plat)} {name}</span>
+                  <span className="text-sm font-medium truncate flex items-center gap-1">
+                    {platformIcon(plat)} {name}
+                    {profileUrl && (
+                      <a
+                        href={profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open profile"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-primary shrink-0"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </span>
                   <div className="text-xs text-muted-foreground truncate">{handle}</div>
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <Badge variant={stageColor[stage] as any} className="text-[10px] px-1.5 py-0">{stage}</Badge>
@@ -67,7 +87,7 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           );
         })}
         {/* Reserves space on mobile so the last conversation isn't hidden
