@@ -471,6 +471,7 @@ export type Database = {
           notes: string | null
           platform: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id: string | null
+          profile_url: string | null
           source: string | null
           stage: string
           stage_confidence: number | null
@@ -507,6 +508,7 @@ export type Database = {
           notes?: string | null
           platform?: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id?: string | null
+          profile_url?: string | null
           source?: string | null
           stage?: string
           stage_confidence?: number | null
@@ -543,6 +545,7 @@ export type Database = {
           notes?: string | null
           platform?: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id?: string | null
+          profile_url?: string | null
           source?: string | null
           stage?: string
           stage_confidence?: number | null
