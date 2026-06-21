@@ -1,78 +1,63 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { getAuthUser, unauthorized } from "../_shared/auth.ts";
+import { loadContext } from "../_shared/context.ts";
 
-const CORS = {
+const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+    const { user } = await getAuthUser(req);
+    if (!user) return unauthorized(corsHeaders);
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
-    const body = await req.json();
-    const { prospect, messages = [], offer, icp, objections = [], scripts = [], conversationContext = "" } = body;
+    const { messages = [], prospect = {}, prospectId } = await req.json();
 
-    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
+    const offerContext = await loadContext(req, { prospectId });
 
-    const systemPrompt = `You are an expert DM setter AI co-pilot for high-ticket sales.
+    const convoText = messages
+      .map((m: any) => `${m.sender === "setter" ? "Setter" : "Prospect"}: ${m.content}`)
+      .join("\n");
 
-OFFER:
-${offer ? `Name: ${offer.name || "Unknown"}
-What it is: ${offer.description || ""}
-Price: ${offer.price || ""}
-Target: ${offer.target_audience || ""}
-Main result: ${offer.main_result || ""}` : "No offer defined yet."}
-
-IDEAL CLIENT PROFILE:
-${icp ? `Demographics: ${icp.demographics || ""}
-Goals: ${icp.goals || ""}
-Pain points: ${icp.pain_points || ""}
-Language: ${icp.language_patterns || ""}` : "No ICP defined yet."}
-
-OBJECTION RESPONSES:
-${objections.slice(0, 5).map((o) => `- Objection: "${o.objection}" → Response: "${o.response}"`).join("\n") || "None saved."}
-
-SCRIPT EXAMPLES:
-${scripts.slice(0, 3).map((s) => `[${s.title}]: ${s.content?.substring(0, 150)}`).join("\n") || "None saved."}
+    const systemPrompt = `You are an expert DM setter AI co-pilot for high-ticket sales, coaching a setter in real time.${offerContext}
 
 TASK:
-Generate exactly 3 distinct reply options for the setter to send next. Each reply should:
+Generate exactly 3 distinct reply options the setter could send next. Each option should take a different angle (for example: a discovery/question angle, a rapport/empathy angle, and a call-transition/booking angle) and should:
 - Match the prospect's current stage and energy
 - Sound natural, human, and conversational (not salesy)
 - Be concise (under 50 words each)
 - Move the conversation forward toward qualification or booking
 
-Return ONLY a JSON array of 3 strings. No explanation. No markdown. Just the JSON array.`;
+Respond with ONLY a single JSON array (no markdown, no code fences, no explanation) of exactly 3 objects matching this exact shape:
+[{"type": string (a short 1-3 word label for the angle, e.g. "Discovery", "Rapport", "Call Transition"), "content": string (the actual reply text to send), "coaching_note": string (one short sentence explaining why this reply works)}]`;
 
-    const userPrompt = `PROSPECT:
-Name: ${prospect?.name || "Unknown"}
-Platform: ${prospect?.platform || "Unknown"}
-Stage: ${prospect?.stage || "new_lead"}
-Notes: ${prospect?.notes || "None"}
+    const userPrompt = `Prospect info:
+- Name: ${prospect.name || "Unknown"}
+- Current stage: ${prospect.stage || "Unknown"}
+- Intent level: ${prospect.intentLevel || "Unknown"}
+- Motivation: ${prospect.motivation || "Unknown"}
+- Concerns: ${prospect.concerns || "None noted"}
+- Call readiness: ${prospect.callReadiness ?? "Unknown"}
+- Lead score: ${prospect.leadScore ?? "Unknown"}
 
-CONVERSATION SO FAR:
-${messages.slice(-10).map((m) => `${m.role === "user" ? "SETTER" : "PROSPECT"}: ${m.content}`).join("\n") || "No messages yet. This is the opening."}
+Conversation so far:
+${convoText || "(no messages yet — this is the opening)"}
 
-${conversationContext ? `CONTEXT: ${conversationContext}` : ""}
+Generate the 3 reply options now as the JSON array described.`;
 
-Generate 3 reply options now.`;
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
 
-    const orResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${Deno.env.get("OPENROUTER_API_KEY")}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
         "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
         "X-Title": "DM Setter OS",
         "Content-Type": "application/json",
@@ -83,31 +68,52 @@ Generate 3 reply options now.`;
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_tokens: 400,
+        max_tokens: 600,
         temperature: 0.7,
       }),
     });
 
-    if (!orResponse.ok) {
-      const err = await orResponse.text();
-      return new Response(JSON.stringify({ error: "AI error", detail: err }), { status: 502, headers: CORS });
+    if (!response.ok) {
+      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Check your OpenRouter account balance." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const errText = await response.text();
+      console.error("AI gateway error:", response.status, errText);
+      throw new Error(`AI gateway error: ${response.status}`);
     }
 
-    const orData = await orResponse.json();
-    const content = orData.choices?.[0]?.message?.content || "[]";
+    const data = await response.json();
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) throw new Error("No response from AI");
 
-    let suggestions = [];
+    let suggestions: Array<{ type: string; content: string; coaching_note: string }> = [];
     try {
-      suggestions = JSON.parse(content);
-    } catch {
-      const matches = content.match(/"([^"]{10,})"/g) || [];
-      suggestions = matches.slice(0, 3).map((s) => s.slice(1, -1));
+      // Models occasionally wrap JSON in a markdown code fence despite instructions.
+      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+      const parsed = JSON.parse(cleaned);
+      if (Array.isArray(parsed)) {
+        suggestions = parsed
+          .filter((s: any) => s && typeof s.content === "string" && s.content.trim())
+          .map((s: any) => ({
+            type: typeof s.type === "string" && s.type.trim() ? s.type : "Suggestion",
+            content: s.content,
+            coaching_note: typeof s.coaching_note === "string" ? s.coaching_note : "",
+          }))
+          .slice(0, 3);
+      }
+    } catch (e) {
+      console.error("suggest-replies: failed to parse AI response", e, raw);
+      throw new Error("Could not parse AI response");
     }
+
+    if (suggestions.length === 0) throw new Error("AI returned no usable suggestions");
 
     return new Response(JSON.stringify({ suggestions }), {
-      headers: { ...CORS, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS });
+  } catch (e) {
+    console.error("suggest-replies error:", e);
+    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
