@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Phone, Sparkles, GitBranch, Loader2, Search } from "lucide-react";
+import { Phone, Sparkles, GitBranch, Loader2, Search, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -158,7 +158,22 @@ export default function PipelinePage() {
                             {p.name.slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium truncate">{p.name}</div>
+                            <div className="text-sm font-medium truncate flex items-center gap-1">
+                              {p.name}
+                              {p.profile_url && (
+                                <a
+                                  href={p.profile_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  title="Open profile"
+                                  onMouseDown={(e) => e.stopPropagation()}
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="text-muted-foreground hover:text-primary shrink-0"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </a>
+                              )}
+                            </div>
                             <div className="text-[10px] text-muted-foreground truncate">{p.handle || "—"}</div>
                           </div>
                           <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" title="AI: Analyze stage" onClick={() => setAnalyzeId(p.id)}>
@@ -209,7 +224,20 @@ export default function PipelinePage() {
                       <div className="flex items-center gap-2">
                         <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary">{p.name.slice(0, 2).toUpperCase()}</div>
                         <div>
-                          <div className="font-medium">{p.name}</div>
+                          <div className="font-medium flex items-center gap-1">
+                            {p.name}
+                            {p.profile_url && (
+                              <a
+                                href={p.profile_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open profile"
+                                className="text-muted-foreground hover:text-primary shrink-0"
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            )}
+                          </div>
                           <div className="text-xs text-muted-foreground">{p.handle || "—"}</div>
                         </div>
                       </div>
