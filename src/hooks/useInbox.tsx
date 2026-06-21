@@ -9,7 +9,7 @@ import {
 import type {
   DBProspect, DBMessage, AISuggestion, NormalizedProspect, UIMessage,
 } from "@/components/inbox/types";
-import { useDeleteProspect } from "@/hooks/useSetterData";
+import { useDeleteProspect, useDeleteMessage } from "@/hooks/useSetterData";
 
 function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
   if (!selected) return null;
@@ -48,6 +48,7 @@ export function useInbox() {
   const [dbProspects, setDbProspects] = useState<DBProspect[]>([]);
   const [dbMessages, setDbMessages] = useState<DBMessage[]>([]);
   const [localDemoMessages, setLocalDemoMessages] = useState<Record<string, UIMessage[]>>({});
+  const [hiddenDemoMessageIds, setHiddenDemoMessageIds] = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showChat, setShowChat] = useState(false);
   const [search, setSearch] = useState("");
@@ -65,6 +66,7 @@ export function useInbox() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoAnalyzeCooldown = useRef<Record<string, number>>({});
   const deleteProspectMutation = useDeleteProspect();
+  const deleteMessageMutation = useDeleteMessage();
 
   const selectProspect = useCallback((id: string) => {
     setSelectedId(id);
@@ -167,9 +169,11 @@ export function useInbox() {
 
   const messages: UIMessage[] = useMemo(() => {
     if (useDemo) {
-      const base = (demoMessages[selectedId || "p1"] || []).map((m: any) => ({
-        id: m.id, sender: m.sender, content: m.content, time: m.timestamp,
-      }));
+      const base = (demoMessages[selectedId || "p1"] || [])
+        .filter((m: any) => !hiddenDemoMessageIds.has(m.id))
+        .map((m: any) => ({
+          id: m.id, sender: m.sender, content: m.content, time: m.timestamp,
+        }));
       const local = localDemoMessages[selectedId || "p1"] || [];
       return [...base, ...local];
     }
@@ -177,7 +181,7 @@ export function useInbox() {
       id: m.id, sender: m.sender, content: m.content,
       time: new Date(m.sent_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     }));
-  }, [useDemo, selectedId, dbMessages, localDemoMessages]);
+  }, [useDemo, selectedId, dbMessages, localDemoMessages, hiddenDemoMessageIds]);
 
   const replies = useDemo
     ? (suggestedReplies as Record<string, { type: string; content: string }[]>)[selectedId || "p1"] || []
@@ -281,7 +285,7 @@ export function useInbox() {
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       const s = data?.scoring;
-      if (s) {
+      if  (s) {
         setDbProspects((prev) => prev.map((p) => p.id === selectedId ? {
           ...p,
           conversation_score: s.conversationScore ?? p.conversation_score,
@@ -331,6 +335,35 @@ export function useInbox() {
     }
   }
 
+  // Delete a single message. In demo mode this is in-memory only (there's no
+  // demo backend), elsewhere it deletes the row in Supabase (scoped to the
+  // current user) and removes it from local state immediately — messages
+  // aren't on a React Query cache here, and there's no realtime DELETE
+  // subscription, so we update dbMessages directly rather than relying on
+  // invalidation.
+  async function deleteMessage(messageId: string) {
+    if (useDemo) {
+      setHiddenDemoMessageIds((prev) => new Set(prev).add(messageId));
+      if (selectedId) {
+        setLocalDemoMessages((prev) => {
+          const list = prev[selectedId];
+          if (!list) return prev;
+          return { ...prev, [selectedId]: list.filter((m) => m.id !== messageId) };
+        });
+      }
+      toast({ title: "Message deleted" });
+      return;
+    }
+    try {
+      await deleteMessageMutation.mutateAsync(messageId);
+      setDbMessages((prev) => prev.filter((m) => m.id !== messageId));
+      toast({ title: "Message deleted" });
+    } catch (e: any) {
+      console.error("Delete message error:", e);
+      toast({ title: "Could not delete message", description: e.message || "Try again", variant: "destructive" });
+    }
+  }
+
   function handleProspectAdded(prospect: DBProspect) {
     setDbProspects((prev) => [prospect, ...prev]);
     setSelectedId(prospect.id);
@@ -344,7 +377,7 @@ export function useInbox() {
     messagesEndRef, selectedId, selectProspect, prospects, filtered, sel, messages, replies,
     dbProspectsEmpty: !useDemo && dbProspects.length === 0,
     handleSend, fetchAiSuggestions, scoreConversation, applyStage,
-    deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm,
+    deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm, deleteMessage,
     showAddProspect, setShowAddProspect, handleProspectAdded,
   };
 }
