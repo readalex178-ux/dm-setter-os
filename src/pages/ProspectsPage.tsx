@@ -15,7 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Pencil, Filter, Trash2,
+  Search, MapPin, Briefcase, DollarSign, Clock, Users, Loader2, Save, Pencil, Filter, Trash2, ExternalLink,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -79,6 +79,7 @@ export default function ProspectsPage() {
       name: selected.name,
       handle: selected.handle ?? "",
       platform: selected.platform ?? "",
+      profile_url: selected.profile_url ?? "",
       location: selected.location ?? "",
       current_job: selected.current_job ?? "",
       income_goal: selected.income_goal ?? "",
@@ -99,6 +100,7 @@ export default function ProspectsPage() {
         name: editForm.name,
         handle: editForm.handle || null,
         platform: editForm.platform || null,
+        profile_url: editForm.profile_url || null,
         location: editForm.location || null,
         current_job: editForm.current_job || null,
         income_goal: editForm.income_goal || null,
@@ -183,15 +185,34 @@ export default function ProspectsPage() {
           {filtered.length === 0 ? (
             <p className="text-xs text-muted-foreground p-4 text-center">No prospects match this filter.</p>
           ) : filtered.map((p) => (
-            <button
+            <div
               key={p.id}
+              role="button"
+              tabIndex={0}
               onClick={() => setSelectedId(p.id)}
-              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors ${selected?.id === p.id ? "bg-accent" : ""}`}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedId(p.id); }
+              }}
+              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors cursor-pointer ${selected?.id === p.id ? "bg-accent" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">{p.name.slice(0, 2).toUpperCase()}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate">{p.name}</div>
+                  <div className="text-sm font-medium truncate flex items-center gap-1">
+                    {p.name}
+                    {p.profile_url && (
+                      <a
+                        href={p.profile_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Open profile"
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-muted-foreground hover:text-primary shrink-0"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
+                  </div>
                   <div className="text-xs text-muted-foreground">{p.handle || "—"}</div>
                   <div className="flex gap-1 mt-1">
                     <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
@@ -199,7 +220,7 @@ export default function ProspectsPage() {
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>
@@ -210,7 +231,20 @@ export default function ProspectsPage() {
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center text-xl font-bold text-primary">{selected.name.slice(0, 2).toUpperCase()}</div>
             <div className="flex-1">
-              <h1 className="text-xl font-bold">{selected.name}</h1>
+              <h1 className="text-xl font-bold flex items-center gap-1.5">
+                {selected.name}
+                {selected.profile_url && (
+                  <a
+                    href={selected.profile_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Open profile"
+                    className="text-muted-foreground hover:text-primary shrink-0"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                )}
+              </h1>
               <p className="text-sm text-muted-foreground">{selected.handle || "—"}{selected.platform ? ` · ${selected.platform}` : ""}</p>
               <div className="flex gap-2 mt-1">
                 <Badge variant="score">{selected.lead_score}/10</Badge>
@@ -321,6 +355,18 @@ export default function ProspectsPage() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div>
+              <Label className="text-xs">Profile Link</Label>
+              <Input
+                className="mt-1"
+                placeholder="https://instagram.com/username"
+                value={editForm.profile_url ?? ""}
+                onChange={(e) => setEditForm({ ...editForm, profile_url: e.target.value })}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Auto-guessed from platform + handle when left blank. Paste the exact URL to override (e.g. for LinkedIn or CRM imports).
+              </p>
             </div>
             <div>
               <Label className="text-xs">Location</Label>
