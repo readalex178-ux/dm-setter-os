@@ -25,8 +25,22 @@ const stageColors: Record<string, string> = {
   "Cold Lead": "bg-muted",
 };
 
+// Consistent red/amber/green scale for every row, instead of only ever
+// coloring values above ~75% and leaving everything else looking unstyled.
+function callReadyVariant(value: number): "destructive" | "warning" | "success" {
+  if (value >= 70) return "success";
+  if (value >= 40) return "warning";
+  return "destructive";
+}
+
 export default function PipelinePage() {
-  const [view, setView] = useState<"kanban" | "table">("kanban");
+  // Kanban needs heavy horizontal scrolling through 9 stage columns on
+  // phone-width screens, where Table view already adapts well. Default to
+  // Table below the `lg` breakpoint, but only as the *initial* choice —
+  // users can still switch back to Kanban manually at any time.
+  const [view, setView] = useState<"kanban" | "table">(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 1023px)").matches ? "table" : "kanban"
+  );
   const [analyzeId, setAnalyzeId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [draggedId, setDraggedId] = useState<string | null>(null);
@@ -153,7 +167,7 @@ export default function PipelinePage() {
                         </div>
                         <div className="flex items-center gap-1.5 mb-2">
                           <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
-                          <Badge variant={p.call_readiness >= 70 ? "success" : "secondary"} className="text-[10px]">
+                          <Badge variant={callReadyVariant(p.call_readiness)} className="text-[10px]">
                             <Phone className="h-2.5 w-2.5 mr-0.5" />{p.call_readiness}%
                           </Badge>
                         </div>
@@ -209,7 +223,7 @@ export default function PipelinePage() {
                       </Select>
                     </td>
                     <td className="p-3"><Badge variant="score">{p.lead_score}/10</Badge></td>
-                    <td className="p-3"><Badge variant={p.call_readiness >= 70 ? "success" : "secondary"}>{p.call_readiness}%</Badge></td>
+                    <td className="p-3"><Badge variant={callReadyVariant(p.call_readiness)}>{p.call_readiness}%</Badge></td>
                     <td className="p-3">{p.intent_level || "—"} {p.intent_confidence ? `${p.intent_confidence}%` : ""}</td>
                     <td className="p-3">
                       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAnalyzeId(p.id)}>
