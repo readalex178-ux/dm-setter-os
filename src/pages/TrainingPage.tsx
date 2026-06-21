@@ -323,8 +323,8 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
           </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {scenarios.map((s) => (
-            <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer" onClick={() => startScenario(s.id)}>
-              <CardContent className="p-5">
+            <Card key={s.id} className="hover:shadow-md transition-all cursor-pointer flex flex-col h-full" onClick={() => startScenario(s.id)}>
+              <CardContent className="p-5 flex flex-col flex-1">
                 <div className="flex items-center gap-2 mb-3">
                   <Target className="h-5 w-5 text-primary" />
                   <Badge variant={
@@ -333,7 +333,7 @@ Respond with ONLY a JSON object (no markdown, no code blocks):
                 </div>
                 <h3 className="font-semibold mb-1">{s.name}</h3>
                 <p className="text-sm text-muted-foreground">{s.description}</p>
-                <Button variant="outline" size="sm" className="mt-3 w-full">Start Practice</Button>
+                <Button variant="outline" size="sm" className="mt-auto w-full">Start Practice</Button>
               </CardContent>
             </Card>
           ))}
