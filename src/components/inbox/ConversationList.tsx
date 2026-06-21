@@ -70,6 +70,10 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
             </button>
           );
         })}
+        {/* Reserves space on mobile so the last conversation isn't hidden
+            behind the floating VoiceAssistant button + bottom tab bar,
+            since this list scrolls independently of <main>'s padding. */}
+        <div className="h-32 lg:hidden" aria-hidden="true" />
       </ScrollArea>
     </div>
   );
