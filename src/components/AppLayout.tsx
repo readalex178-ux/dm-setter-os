@@ -17,7 +17,10 @@ export default function AppLayout() {
               DM Setter OS
             </span>
           </header>
-          <main className="flex-1 overflow-auto pb-16 lg:pb-0">
+          {/* pb-36 (not just pb-16) so the floating VoiceAssistant button
+              (which sits ~80-128px above the viewport bottom on mobile) never
+              overlaps the last row of scrollable page content. */}
+          <main className="flex-1 overflow-auto pb-36 lg:pb-0">
             <Outlet />
           </main>
         </div>
