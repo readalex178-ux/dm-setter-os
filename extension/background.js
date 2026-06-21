@@ -118,6 +118,40 @@ async function verifySession() {
   }
 }
 
+// Mirrors deriveProfileUrl() in src/hooks/useSetterData.tsx — derives a
+// best-effort profile URL from platform + handle when the extension's
+// actual page URL (the most accurate source) isn't usable for some reason.
+function deriveProfileUrl(platform, handle) {
+  if (!handle) return null;
+  const cleanHandle = handle.trim().replace(/^@/, "");
+  if (!cleanHandle) return null;
+  switch ((platform || "").toLowerCase()) {
+    case "instagram":
+      return `https://instagram.com/${cleanHandle}`;
+    case "tiktok":
+      return `https://tiktok.com/@${cleanHandle}`;
+    case "facebook":
+      return `https://facebook.com/${cleanHandle}`;
+    case "linkedin":
+      return `https://linkedin.com/in/${cleanHandle}`;
+    case "twitter":
+    case "x":
+      return `https://x.com/${cleanHandle}`;
+    default:
+      return null;
+  }
+}
+
+function isUsableProfileUrl(url) {
+  if (!url || typeof url !== "string") return false;
+  try {
+    const u = new URL(url);
+    return u.protocol === "https:" || u.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 // Looks up an existing prospect for this user by handle+platform — the
 // natural dedup key for "the same person you're DMing." Returns the row id
 // or null. Only handle+platform is used (not name), since names are
@@ -154,6 +188,14 @@ async function saveConversation(payload) {
   // value, so a plain "Save to CRM" click (no analysis run) never clobbers
   // previously-analyzed data with nulls, and never blocks on analysis being
   // present in the first place.
+  // The content script's window.location.href (passed as prospect.profileUrl)
+  // is the most accurate possible profile link since it's the actual page
+  // being scraped — only fall back to a guessed pattern if it's missing or
+  // not a usable http(s) URL.
+  const profileUrl = isUsableProfileUrl(prospect.profileUrl)
+    ? prospect.profileUrl
+    : deriveProfileUrl(platform, handle);
+
   const baseRow = {
     user_id: userId,
     name: prospect.name || "Unknown",
@@ -161,6 +203,7 @@ async function saveConversation(payload) {
     stage: analysis?.stage || prospect.stage || "New Lead",
     source: prospect.source || `${prospect.platform || "Extension"} (Extension)`,
     platform,
+    profile_url: profileUrl,
     last_contact_at: new Date().toISOString(),
   };
   const aiFields = {};
