@@ -20,6 +20,7 @@ export interface DBProspect {
   time_availability: string | null;
   source: string | null;
   platform: string | null;
+  profile_url: string | null;
   last_contact_at: string | null;
   connected_account_id: string | null;
   // AI coach scoring (Phase 5)
@@ -64,6 +65,7 @@ export interface NormalizedProspect {
   timeAvailability: string;
   source: string;
   platform: string | null;
+  profileUrl: string | null;
   avatar: string;
   unread: boolean;
   conversationScore: number | null;
