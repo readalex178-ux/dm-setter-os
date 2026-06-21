@@ -39,7 +39,10 @@ Deno.serve(async (req) => {
       .map((m: any) => `${m.sender === "setter" ? "Setter" : "Prospect"}: ${m.content}`)
       .join("\n");
 
-    const systemPrompt = `You are an expert DM sales coach using the BANT framework (Budget, Authority, Need, Timeline). Analyze a conversation between a setter and a prospect to determine the prospect's true pipeline stage. Be honest and evidence-based — quote directly from the conversation when possible.${offerContext}`;
+    const systemPrompt = `You are an expert DM sales coach using the BANT framework (Budget, Authority, Need, Timeline). Analyze a conversation between a setter and a prospect to determine the prospect's true pipeline stage. Be honest and evidence-based — quote directly from the conversation when possible.${offerContext}
+
+Respond with ONLY a single JSON object (no markdown, no code fences, no explanation) matching this exact shape:
+{"suggestedStage": one of [${STAGES.map((s) => `"${s}"`).join(", ")}], "confidence": number (0-100), "reasoning": string (1-2 sentences), "bant": {"budget": {"score": number (0-100), "evidence": string}, "authority": {"score": number, "evidence": string}, "need": {"score": number, "evidence": string}, "timeline": {"score": number, "evidence": string}}, "nextAction": string}`;
 
     const userPrompt = `Prospect info:
 - Name: ${prospect.name || "Unknown"}
@@ -52,7 +55,7 @@ Deno.serve(async (req) => {
 Conversation:
 ${convoText || "(no messages yet)"}
 
-Analyze and return: suggested stage, confidence, BANT scores with quoted evidence, reasoning, and the recommended next action.`;
+Analyze and return the JSON object described: suggested stage, confidence, BANT scores with quoted evidence, reasoning, and the recommended next action.`;
 
     const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
 
@@ -70,83 +73,8 @@ Analyze and return: suggested stage, confidence, BANT scores with quoted evidenc
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        tools: [
-          {
-            type: "function",
-            function: {
-              name: "submit_stage_analysis",
-              description: "Submit the prospect stage analysis with BANT breakdown.",
-              parameters: {
-                type: "object",
-                properties: {
-                  suggestedStage: {
-                    type: "string",
-                    enum: STAGES,
-                    description: "The pipeline stage that best fits this prospect right now.",
-                  },
-                  confidence: {
-                    type: "number",
-                    description: "Confidence in the suggested stage from 0 to 100.",
-                  },
-                  reasoning: {
-                    type: "string",
-                    description: "1-2 sentences explaining why this stage fits.",
-                  },
-                  bant: {
-                    type: "object",
-                    properties: {
-                      budget: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number", description: "0-100 score for Budget." },
-                          evidence: { type: "string", description: "Quote or short note from the conversation." },
-                        },
-                        required: ["score", "evidence"],
-                        additionalProperties: false,
-                      },
-                      authority: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          evidence: { type: "string" },
-                        },
-                        required: ["score", "evidence"],
-                        additionalProperties: false,
-                      },
-                      need: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          evidence: { type: "string" },
-                        },
-                        required: ["score", "evidence"],
-                        additionalProperties: false,
-                      },
-                      timeline: {
-                        type: "object",
-                        properties: {
-                          score: { type: "number" },
-                          evidence: { type: "string" },
-                        },
-                        required: ["score", "evidence"],
-                        additionalProperties: false,
-                      },
-                    },
-                    required: ["budget", "authority", "need", "timeline"],
-                    additionalProperties: false,
-                  },
-                  nextAction: {
-                    type: "string",
-                    description: "One concrete suggested next move for the setter.",
-                  },
-                },
-                required: ["suggestedStage", "confidence", "reasoning", "bant", "nextAction"],
-                additionalProperties: false,
-              },
-            },
-          },
-        ],
-        tool_choice: { type: "function", function: { name: "submit_stage_analysis" } },
+        max_tokens: 700,
+        temperature: 0.4,
       }),
     });
 
@@ -169,11 +97,17 @@ Analyze and return: suggested stage, confidence, BANT scores with quoted evidenc
     }
 
     const data = await response.json();
-    const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall) {
-      throw new Error("No tool call returned by AI");
+    const raw = data?.choices?.[0]?.message?.content;
+    if (!raw) throw new Error("No response from AI");
+
+    let analysis: Record<string, unknown>;
+    try {
+      // Models occasionally wrap JSON in a markdown code fence despite instructions.
+      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+      analysis = JSON.parse(cleaned);
+    } catch {
+      throw new Error("Could not parse AI response");
     }
-    const analysis = JSON.parse(toolCall.function.arguments);
 
     return new Response(JSON.stringify({ analysis }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
