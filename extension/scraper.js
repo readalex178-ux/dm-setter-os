@@ -9,7 +9,6 @@ function getCurrentPlatform() {
   if (h.includes("twitter.com") || h.includes("x.com")) return { id: "twitter", name: "Twitter/X", emoji: "𝕏" };
   if (h.includes("facebook.com") || h.includes("messenger.com")) return { id: "facebook", name: "Facebook", emoji: "👤" };
   if (h.includes("linkedin.com")) return { id: "linkedin", name: "LinkedIn", emoji: "💼" };
-  if (h.includes("web.whatsapp.com")) return { id: "whatsapp", name: "WhatsApp", emoji: "💬" };
   return null;
 }
 
@@ -42,6 +41,32 @@ function detectSender(el) {
   return null;
 }
 
+// TikTok-specific sender detection. Confirmed against live TikTok DM DOM
+// (June 2026): each message row's "...DivMessageHorizontalContainer..."
+// element uses flex-direction: row-reverse for messages you sent, and
+// row for messages the prospect sent. justify-content/align-self are not
+// used for this on TikTok, so the generic detectSender() above doesn't
+// catch it — hence this dedicated walker.
+function detectSenderTikTok(itemEl) {
+  const horiz = itemEl.querySelector('div[class*="MessageHorizontalContainer"]');
+  if (horiz) {
+    const fd = window.getComputedStyle(horiz).flexDirection;
+    if (fd === "row-reverse") return "setter";
+    if (fd === "row") return "prospect";
+  }
+  // Fallback: walk up from the item itself in case the inner container
+// selector ever changes.
+let cur = itemEl;
+  for (let i = 0; i < 8; i++) {
+    if (!cur || cur === document.body) break;
+    const fd = window.getComputedStyle(cur).flexDirection;
+    if (fd === "row-reverse") return "setter";
+    if (fd === "row") return "prospect";
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
 // ── Find the chat container (NOT the whole page) ───────────────────────────
 //
 // IMPORTANT: if none of a platform's specific selectors match, we return
@@ -58,8 +83,15 @@ function getChatContainer(platformId) {
       '[role="main"] [role="grid"]',
       '[role="main"] ul',
       '[role="main"]',
-    ],
+      ],
     tiktok: [
+      // Confirmed against live TikTok DM DOM (June 2026). data-e2e
+    // attributes are TikTok's own stable test-id convention; the
+    // surrounding "css-xxxxx-hash--DivChatMain" class is unstable
+    // and not relied on.
+    '[data-e2e="dm-new-message-list"]',
+      // Older/alternate TikTok web builds — kept as fallback in case
+      // of A/B test or rollout variance.
       '[data-e2e="chat-detail"]',
       '[data-e2e="chat-message-container"]',
       '[data-e2e="message-list"]',
@@ -69,44 +101,42 @@ function getChatContainer(platformId) {
       '[class*="MessageList"]',
       '[class*="messageList"]',
       '[class*="DivMessageListContainer"]',
-      '[aria-label="Messages"]',
-    ],
+      // NOTE: intentionally no '[aria-label="Messages"]' here — on the
+      // real TikTok DOM that matches the top-nav "Messages" inbox
+      // button (a TUXButton), not the conversation pane, which was
+      // silently producing a wrong container and zero real messages.
+      ],
     twitter: [
       '[data-testid="DMActivity"]',
       '[data-testid="DmActivityViewport"]',
       '[aria-label*="conversation"]',
-    ],
+      ],
     facebook: [
       '[role="main"] [class*="message"]',
       '[aria-label*="Messages"][role="main"]',
       '[data-testid*="message"]',
-    ],
+      ],
     linkedin: [
       '.msg-s-message-list-container',
       '.msg-s-message-list',
       '.scaffold-layout__detail .msg-thread',
       '.msg-conversation-card__content',
-    ],
-    whatsapp: [
-      '#main .copyable-area',
-      '#main [role="application"]',
-      '#main',
-    ],
+      ],
   };
 
-  const selectors = candidates[platformId] || [];
+const selectors = candidates[platformId] || [];
   for (const sel of selectors) {
     const el = document.querySelector(sel);
     if (el) return el;
   }
 
-  // Best-effort fallback for platforms whose primary layout uses a real
-  // role="main" landmark scoped to the conversation pane (Instagram,
-  // Facebook). Platforms without a reliable landmark (TikTok, Twitter,
-  // LinkedIn) get null instead of document.body — see note above.
-  if (platformId === "instagram" || platformId === "facebook") {
-    return document.querySelector('[role="main"]') || null;
-  }
+// Best-effort fallback for platforms whose primary layout uses a real
+// role="main" landmark scoped to the conversation pane (Instagram,
+// Facebook). Platforms without a reliable landmark (TikTok, Twitter,
+// LinkedIn) get null instead of document.body — see note above.
+if (platformId === "instagram" || platformId === "facebook") {
+  return document.querySelector('[role="main"]') || null;
+}
   return null;
 }
 
@@ -114,101 +144,91 @@ function getChatContainer(platformId) {
 
 function getProspectName(platformId) {
   // Instagram: name is in the thread header as a link
-  if (platformId === "instagram") {
-    const selectors = [
-      'div[role="main"] header a span',
-      'div[role="main"] header h2',
-      'div[role="main"] header span[dir="auto"]',
-      'div[role="main"] header [role="button"] span[dir="auto"]',
-      'div[role="main"] header h1',
+if (platformId === "instagram") {
+  const selectors = [
+    'div[role="main"] header a span',
+    'div[role="main"] header h2',
+    'div[role="main"] header span[dir="auto"]',
+    'div[role="main"] header [role="button"] span[dir="auto"]',
+    'div[role="main"] header h1',
     ];
-    for (const sel of selectors) {
-      const els = document.querySelectorAll(sel);
-      for (const el of els) {
-        const text = el.textContent?.trim();
-        if (text && text.length > 0 && text.length < 60 && text !== "Instagram") return text;
-      }
+  for (const sel of selectors) {
+    const els = document.querySelectorAll(sel);
+    for (const el of els) {
+      const text = el.textContent?.trim();
+      if (text && text.length > 0 && text.length < 60 && text !== "Instagram") return text;
     }
-    // Page title — Instagram puts name in title when DM is open
-    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").trim();
-    if (title && title !== "Instagram" && title !== "Direct" && title.length < 60) return title;
   }
+  // Page title — Instagram puts name in title when DM is open
+  const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").trim();
+  if (title && title !== "Instagram" && title !== "Direct" && title.length < 60) return title;
+}
 
-  // TikTok: name in chat header
-  if (platformId === "tiktok") {
-    const selectors = [
-      '[data-e2e="chat-user-name"]',
-      '[data-e2e="chat-detail-header"] [class*="name"]',
-      '[data-e2e="chat-detail-header"] [class*="Name"]',
-      '[data-e2e="chat-detail-header"] span',
-      '[data-e2e="chat-detail-header"] [aria-label]',
-      '[aria-label="Messages"] h1, [aria-label="Messages"] h2',
-      'header [class*="UserName"]',
-      'header [class*="username"]',
+// TikTok: name in chat header. Confirmed against live TikTok DM DOM
+// (June 2026) — the previous selectors here (chat-user-name,
+// chat-detail-header, etc.) don't exist on the real page, which is
+// why name extraction was silently failing ("Unknown Prospect").
+// The header actually renders the contact's display name in a <p>
+// with data-e2e="dm-new-chat-nickname", and their @handle in a
+// sibling <p> with data-e2e="chat-uniqueid". Both are unique on the
+// page (only the open conversation's header has them).
+if (platformId === "tiktok") {
+  const selectors = [
+    '[data-e2e="dm-new-chat-nickname"]',
+    '[data-e2e="chat-uniqueid"]',
+    // Older/alternate TikTok web builds — kept as fallback.
+    '[data-e2e="chat-user-name"]',
+    '[data-e2e="chat-detail-header"] [class*="name"]',
+    '[data-e2e="chat-detail-header"] [class*="Name"]',
+    '[data-e2e="chat-detail-header"] span',
+    '[data-e2e="chat-detail-header"] [aria-label]',
+    'header [class*="UserName"]',
+    'header [class*="username"]',
     ];
-    for (const sel of selectors) {
-      const els = document.querySelectorAll(sel);
-      for (const el of els) {
-        const text = (el.getAttribute && el.getAttribute('aria-label')) || el.textContent?.trim();
-        if (text && text.length > 0 && text.length < 60 && !["TikTok","Messages","DM"].includes(text)) return text.trim();
-      }
+  for (const sel of selectors) {
+    const els = document.querySelectorAll(sel);
+    for (const el of els) {
+      const text = (el.getAttribute && el.getAttribute('aria-label')) || el.textContent?.trim();
+      if (text && text.length > 0 && text.length < 60 && !["TikTok","Messages","DM"].includes(text)) return text.trim();
     }
-    // TikTok title: "Chat with Username | TikTok" or just "TikTok"
-    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Chat with\s*/i, "").trim();
-    if (title && title !== "TikTok" && title !== "Messages" && title.length < 60) return title;
   }
+  // TikTok title: "Chat with Username | TikTok" or just "TikTok"
+  const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Chat with\s*/i, "").trim();
+  if (title && title !== "TikTok" && title !== "Messages" && title.length < 60) return title;
+}
 
-  // Twitter/X
-  if (platformId === "twitter") {
-    const el = document.querySelector('[data-testid="conversation-info-header"] span, [data-testid="UserName"] span');
-    if (el?.textContent?.trim()) return el.textContent.trim();
-    const title = document.title.replace(/\s*[\|/]\s*.*/g, "").trim();
-    if (title && title !== "Twitter" && title !== "X" && title.length < 60) return title;
-  }
+// Twitter/X
+if (platformId === "twitter") {
+  const el = document.querySelector('[data-testid="conversation-info-header"] span, [data-testid="UserName"] span');
+  if (el?.textContent?.trim()) return el.textContent.trim();
+  const title = document.title.replace(/\s*[\|/]\s*.*/g, "").trim();
+  if (title && title !== "Twitter" && title !== "X" && title.length < 60) return title;
+}
 
-  // Facebook
-  if (platformId === "facebook") {
-    const el = document.querySelector('h4[dir="auto"], [aria-label*="conversation"] h4');
-    if (el?.textContent?.trim()) return el.textContent.trim();
-  }
+// Facebook
+if (platformId === "facebook") {
+  const el = document.querySelector('h4[dir="auto"], [aria-label*="conversation"] h4');
+  if (el?.textContent?.trim()) return el.textContent.trim();
+}
 
-  // LinkedIn
-  if (platformId === "linkedin") {
-    const selectors = [
-      '.msg-thread__link-to-profile',
-      '.msg-conversation-card__title-row h2',
-      '.msg-overlay-bubble-header__title',
-      'h2.msg-entity-lockup__entity-title',
+// LinkedIn
+if (platformId === "linkedin") {
+  const selectors = [
+    '.msg-thread__link-to-profile',
+    '.msg-conversation-card__title-row h2',
+    '.msg-overlay-bubble-header__title',
+    'h2.msg-entity-lockup__entity-title',
     ];
-    for (const sel of selectors) {
-      const el = document.querySelector(sel);
-      const text = el?.textContent?.trim();
-      if (text && text.length > 0 && text.length < 60 && text !== "LinkedIn") return text;
-    }
-    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Messaging\s*\|?\s*/i, "").trim();
-    if (title && title !== "LinkedIn" && title !== "Messaging" && title.length < 60) return title;
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    const text = el?.textContent?.trim();
+    if (text && text.length > 0 && text.length < 60 && text !== "LinkedIn") return text;
   }
+  const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Messaging\s*\|?\s*/i, "").trim();
+  if (title && title !== "LinkedIn" && title !== "Messaging" && title.length < 60) return title;
+}
 
-  // WhatsApp Web: contact name shown in the chat header, usually with a
-  // title attribute (full name, since the visible text can be truncated).
-  if (platformId === "whatsapp") {
-    const selectors = [
-      'header span[title]',
-      '#main header span[dir="auto"]',
-      '[data-testid="conversation-info-header"] span[title]',
-    ];
-    for (const sel of selectors) {
-      const els = document.querySelectorAll(sel);
-      for (const el of els) {
-        const text = el.getAttribute('title') || el.textContent?.trim();
-        if (text && text.length > 0 && text.length < 60 && text !== "WhatsApp") return text;
-      }
-    }
-    const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").trim();
-    if (title && title !== "WhatsApp" && title.length < 60) return title;
-  }
-
-  return null;
+return null;
 }
 
 // ── Message extraction scoped to container ──────────────────────────────────
@@ -217,132 +237,127 @@ function extractMessages(container, platformId) {
   const msgs = [];
   const seen = new Set();
 
-  if (!container) return msgs;
+if (!container) return msgs;
 
-  function add(text, sender) {
-    const t = (text || "").trim();
-    if (isJunk(t) || seen.has(t) || !sender) return;
-    seen.add(t);
-    msgs.push({ sender, content: t });
-  }
+function add(text, sender) {
+  const t = (text || "").trim();
+  if (isJunk(t) || seen.has(t) || !sender) return;
+  seen.add(t);
+  msgs.push({ sender, content: t });
+}
 
-  if (platformId === "instagram") {
-    // Instagram messages are in spans/divs with dir="auto" inside the conversation
-    container.querySelectorAll('[dir="auto"]').forEach(el => {
-      // Skip if it contains nested dir="auto" (it's a container not a leaf)
-      if (el.querySelectorAll('[dir="auto"]').length > 0) return;
-      // Skip nav/header elements
-      if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
-      const text = el.textContent?.trim();
-      const sender = detectSender(el);
-      add(text, sender);
-    });
-  }
+if (platformId === "instagram") {
+  // Instagram messages are in spans/divs with dir="auto" inside the conversation
+  container.querySelectorAll('[dir="auto"]').forEach(el => {
+    // Skip if it contains nested dir="auto" (it's a container not a leaf)
+                                                     if (el.querySelectorAll('[dir="auto"]').length > 0) return;
+    // Skip nav/header elements
+                                                     if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
+    const text = el.textContent?.trim();
+    const sender = detectSender(el);
+    add(text, sender);
+  });
+}
 
-  else if (platformId === "tiktok") {
-    // Try data-e2e first (most specific)
+else if (platformId === "tiktok") {
+  // Primary path — confirmed against live TikTok DM DOM (June 2026).
+  // Each message is wrapped in an element with
+  // data-e2e="dm-new-chat-item", and the actual message text (when
+  // the message is plain text) lives in a descendant with
+  // data-e2e="dm-new-message-text". Sender direction comes from
+  // detectSenderTikTok (see above) — TikTok encodes it via
+  // flex-direction (row-reverse = you, row = prospect), not via
+  // justify-content/align-self like the other platforms here.
+  container.querySelectorAll('[data-e2e="dm-new-chat-item"]').forEach(item => {
+    const textEl = item.querySelector('[data-e2e="dm-new-message-text"]');
+    if (!textEl) return; // non-text message (video share, unsupported type, etc.)
+                                                                      add(textEl.textContent, detectSenderTikTok(item) || "prospect");
+  });
+
+  // Try the older data-e2e="chat-message" shape next, in case of
+  // A/B test or rollout variance.
+  if (msgs.length === 0) {
     container.querySelectorAll('[data-e2e="chat-message"]').forEach(el => {
       const textEl = el.querySelector('p') || el.querySelector('span');
-      add((textEl || el).textContent, detectSender(el));
-    });
-
-    // Class-based fallback within container only
-    if (msgs.length === 0) {
-      const classSelectors = ['[class*="DmMessage"]', '[class*="MessageItem"]', '[class*="messageItem"]', '[class*="chatMessage"]', '[class*="ChatMessage"]'];
-      for (const sel of classSelectors) {
-        container.querySelectorAll(sel).forEach(el => {
-          const textEl = el.querySelector('p') || el.querySelector('span');
-          add((textEl || el).textContent, detectSender(el));
-        });
-        if (msgs.length > 0) break;
-      }
-    }
-
-    // Scoped text walker — ONLY runs when getChatContainer found a real,
-    // platform-specific container (never document.body / [role="main"]
-    // fallback — those are excluded upstream by returning null). This is
-    // a narrower net than before, intentionally: it is better to surface
-    // "no messages found" than to scrape page chrome as fake messages.
-    if (msgs.length === 0) {
-      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
-      let node;
-      while ((node = walker.nextNode())) {
-        const text = node.textContent?.trim();
-        if (!text || text.length < 2 || text.length > 400) continue;
-        const parent = node.parentElement;
-        if (!parent || parent.children.length > 0) continue;
-        const tag = parent.tagName?.toLowerCase();
-        if (["script", "style", "noscript"].includes(tag)) continue;
-        // Skip if parent is a button or link (nav elements)
-        if (parent.closest('button, a, nav, header')) continue;
-        const sender = detectSender(parent);
-        add(text, sender);
-      }
-    }
-  }
-
-  else if (platformId === "twitter") {
-    container.querySelectorAll('[data-testid="messageEntry"]').forEach(el => {
-      const textEl = el.querySelector('[data-testid="tweetText"]') || el.querySelector('span:not(:has(*))');
-      const text = textEl?.textContent?.trim();
-      const isOwn = !!el.closest('[data-testid="outgoingMessage"]');
-      add(text, isOwn ? "setter" : "prospect");
+      add((textEl || el).textContent, detectSenderTikTok(el) || detectSender(el));
     });
   }
 
-  else if (platformId === "facebook") {
-    container.querySelectorAll('[dir="auto"]').forEach(el => {
-      if (el.querySelectorAll('[dir="auto"]').length > 0) return;
-      const text = el.textContent?.trim();
-      const sender = detectSender(el);
-      add(text, sender);
-    });
-  }
-
-  else if (platformId === "linkedin") {
-    // LinkedIn groups messages in event list items; the active speaker has a meta header.
-    const events = container.querySelectorAll('.msg-s-event-listitem, li.msg-s-message-list__event');
-    events.forEach(el => {
-      const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
-      const text = bodyEl?.textContent?.trim();
-      // LinkedIn marks the current user's own messages with this modifier class.
-      const isOwn = el.classList.contains('msg-s-event-listitem--other') === false
-        && (el.querySelector('.msg-s-message-group--other') === null)
-        && detectSender(el) === "setter";
-      const sender = isOwn ? "setter" : (detectSender(el) || "prospect");
-      add(text, sender);
-    });
-    // Fallback: scoped dir="auto" leaves
-    if (msgs.length === 0) {
-      container.querySelectorAll('.msg-s-event-listitem__body').forEach(el => {
-        add(el.textContent?.trim(), detectSender(el) || "prospect");
+  // Class-based fallback within container only
+  if (msgs.length === 0) {
+    const classSelectors = ['[class*="DmMessage"]', '[class*="MessageItem"]', '[class*="messageItem"]', '[class*="chatMessage"]', '[class*="ChatMessage"]'];
+    for (const sel of classSelectors) {
+      container.querySelectorAll(sel).forEach(el => {
+        const textEl = el.querySelector('p') || el.querySelector('span');
+        add((textEl || el).textContent, detectSenderTikTok(el) || detectSender(el));
       });
+      if (msgs.length > 0) break;
     }
   }
 
-  else if (platformId === "whatsapp") {
-    // WhatsApp Web marks each message row with "message-in" (received) or
-    // "message-out" (sent) somewhere in its class list. These literal class
-    // names survive WhatsApp's hashed/obfuscated CSS churn better than most
-    // other selectors, so they're used as the primary signal here.
-    const rows = container.querySelectorAll('div[class*="message-in"], div[class*="message-out"]');
-    rows.forEach(el => {
-      const textEl = el.querySelector('[class*="selectable-text"]');
-      const text = textEl?.textContent?.trim();
-      const isOutgoing = Array.from(el.classList).some(c => c.includes('message-out'));
-      add(text, isOutgoing ? "setter" : "prospect");
+  // Scoped text walker — ONLY runs when getChatContainer found a real,
+  // platform-specific container (never document.body / [role="main"]
+  // fallback — those are excluded upstream by returning null). This is
+  // a narrower net than before, intentionally: it is better to surface
+  // "no messages found" than to scrape page chrome as fake messages.
+  if (msgs.length === 0) {
+    const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) {
+      const text = node.textContent?.trim();
+      if (!text || text.length < 2 || text.length > 400) continue;
+      const parent = node.parentElement;
+      if (!parent || parent.children.length > 0) continue;
+      const tag = parent.tagName?.toLowerCase();
+      if (["script", "style", "noscript"].includes(tag)) continue;
+      // Skip if parent is a button or link (nav elements)
+    if (parent.closest('button, a, nav, header')) continue;
+      const sender = detectSenderTikTok(parent) || detectSender(parent);
+      add(text, sender);
+    }
+  }
+}
+
+else if (platformId === "twitter") {
+  container.querySelectorAll('[data-testid="messageEntry"]').forEach(el => {
+    const textEl = el.querySelector('[data-testid="tweetText"]') || el.querySelector('span:not(:has(*))');
+    const text = textEl?.textContent?.trim();
+    const isOwn = !!el.closest('[data-testid="outgoingMessage"]');
+    add(text, isOwn ? "setter" : "prospect");
+  });
+}
+
+else if (platformId === "facebook") {
+  container.querySelectorAll('[dir="auto"]').forEach(el => {
+    if (el.querySelectorAll('[dir="auto"]').length > 0) return;
+    const text = el.textContent?.trim();
+    const sender = detectSender(el);
+    add(text, sender);
+  });
+}
+
+else if (platformId === "linkedin") {
+  // LinkedIn groups messages in event list items; the active speaker has a meta header.
+  const events = container.querySelectorAll('.msg-s-event-listitem, li.msg-s-message-list__event');
+  events.forEach(el => {
+    const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
+    const text = bodyEl?.textContent?.trim();
+    // LinkedIn marks the current user's own messages with this modifier class.
+                 const isOwn = el.classList.contains('msg-s-event-listitem--other') === false
+    && (el.querySelector('.msg-s-message-group--other') === null)
+    && detectSender(el) === "setter";
+    const sender = isOwn ? "setter" : (detectSender(el) || "prospect");
+    add(text, sender);
+  });
+  // Fallback: scoped dir="auto" leaves
+  if (msgs.length === 0) {
+    container.querySelectorAll('.msg-s-event-listitem__body').forEach(el => {
+      add(el.textContent?.trim(), detectSender(el) || "prospect");
     });
-
-    // Scoped fallback if WhatsApp's markup has drifted: walk selectable-text
-    // spans directly and fall back to layout-based sender detection.
-    if (msgs.length === 0) {
-      container.querySelectorAll('[class*="selectable-text"]').forEach(el => {
-        add(el.textContent?.trim(), detectSender(el));
-      });
-    }
   }
+}
 
-  return msgs;
+return msgs;
 }
 
 // ── Debug info when nothing found ──────────────────────────────────────────
@@ -353,9 +368,9 @@ function getDebugInfo(platformId, container) {
     "URL: " + location.pathname,
     "Title: " + document.title,
     "Container: " + (!container ? "none found (try scrolling into the conversation, or use Paste fallback)" : container.tagName + "." + container.className?.toString().slice(0, 40)),
-  ];
+    ];
   if (container) {
-    const checks = ['[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]', 'div[class*="message-in"]', 'div[class*="message-out"]'];
+    const checks = ['[data-e2e="dm-new-chat-item"]', '[data-e2e="dm-new-message-text"]', '[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]'];
     checks.forEach(sel => {
       const n = container.querySelectorAll(sel).length;
       if (n > 0) lines.push("Found " + n + "x " + sel);
