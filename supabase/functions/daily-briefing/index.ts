@@ -4,6 +4,7 @@ import { loadContext } from "../_shared/context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
@@ -18,8 +19,8 @@ Deno.serve(async (req) => {
     const { user } = await getAuthUser(req);
     if (!user) return unauthorized(corsHeaders);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -65,52 +66,52 @@ TODAY'S KPIs: DMs sent ${today.dms_sent ?? 0}, calls booked ${today.calls_booked
 COMMON CONCERNS RAISED: ${concerns.slice(0, 15).join(" | ") || "none recorded"}.
 `;
 
-    const systemPrompt = `You are an elite DM-setting sales manager giving your setter a concise end-of-day briefing. Be specific, direct, and actionable — like a top 1% coach. Use the setter's real numbers. Prioritise the highest-leverage actions for tomorrow.${offerContext}`;
+    const systemPrompt = `You are an elite DM-setting sales manager giving your setter a concise end-of-day briefing. Be specific, direct, and actionable — like a top 1% coach. Use the setter's real numbers. Prioritise the highest-leverage actions for tomorrow.${offerContext}
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+Respond with ONLY a single JSON object (no markdown, no code fences, no explanation) matching this exact shape:
+{"headline": string, "wins": string[] (1-3 items), "concerns": string[] (1-3 items), "priority_actions": string[] (3-5 items, most important first), "objection_insight": string}`;
+
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
-      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+      headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
+        "X-Title": "DM Setter OS",
+        "Content-Type": "application/json",
+      },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Here is today's performance data:\n${dataSummary}\nGive me my daily briefing.` },
+          { role: "user", content: `Here is today's performance data:\n${dataSummary}\nGive me my daily briefing as the JSON object described.` },
         ],
-        tools: [{
-          type: "function",
-          function: {
-            name: "daily_briefing",
-            description: "Return a structured end-of-day briefing for the setter",
-            parameters: {
-              type: "object",
-              properties: {
-                headline: { type: "string", description: "One-sentence summary of the day" },
-                wins: { type: "array", items: { type: "string" }, description: "1-3 things that went well" },
-                concerns: { type: "array", items: { type: "string" }, description: "1-3 metrics or patterns that need attention" },
-                priority_actions: { type: "array", items: { type: "string" }, description: "3-5 specific actions for tomorrow, most important first" },
-                objection_insight: { type: "string", description: "One insight about the objection/concern patterns and how to handle them better" },
-              },
-              required: ["headline", "wins", "concerns", "priority_actions", "objection_insight"],
-              additionalProperties: false,
-            },
-          },
-        }],
-        tool_choice: { type: "function", function: { name: "daily_briefing" } },
+        max_tokens: 700,
+        temperature: 0.6,
       }),
     });
 
     if (!response.ok) {
       if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again shortly." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted. Check your OpenRouter account balance." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const errText = await response.text();
       console.error("AI gateway error:", response.status, errText);
       throw new Error(`AI gateway error: ${response.status}`);
     }
 
     const data = await response.json();
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (!toolCall?.function?.arguments) throw new Error("No structured response from AI");
-    const parsed = JSON.parse(toolCall.function.arguments);
+    const raw = data.choices?.[0]?.message?.content;
+    if (!raw) throw new Error("No response from AI");
+
+    let parsed: Record<string, unknown>;
+    try {
+      // Models occasionally wrap JSON in a markdown code fence despite instructions.
+      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+      parsed = JSON.parse(cleaned);
+    } catch {
+      throw new Error("Could not parse AI response");
+    }
 
     return new Response(JSON.stringify({ ...parsed, followUpCount: followUps.length, totalProspects: prospects.length }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
