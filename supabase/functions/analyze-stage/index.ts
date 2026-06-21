@@ -30,9 +30,8 @@ Deno.serve(async (req) => {
     if (!user) return unauthorized(corsHeaders);
 
     const { messages = [], prospect = {} } = await req.json();
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
-
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY is not configured");
 
     const offerContext = await loadContext(req);
 
@@ -55,14 +54,18 @@ ${convoText || "(no messages yet)"}
 
 Analyze and return: suggested stage, confidence, BANT scores with quoted evidence, reasoning, and the recommended next action.`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
+
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
+        "X-Title": "DM Setter OS",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -155,7 +158,7 @@ Analyze and return: suggested stage, confidence, BANT scores with quoted evidenc
     }
     if (response.status === 402) {
       return new Response(
-        JSON.stringify({ error: "AI credits exhausted. Add credits in Settings → Workspace → Usage." }),
+        JSON.stringify({ error: "AI credits exhausted. Check your OpenRouter account balance." }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
