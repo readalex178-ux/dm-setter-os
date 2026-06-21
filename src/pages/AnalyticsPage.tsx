@@ -6,7 +6,7 @@ import {
   PieChart, Pie, Cell, LineChart, Line, CartesianGrid,
 } from "recharts";
 import { BarChart3, Loader2 } from "lucide-react";
-import { useProspects, useKPIs } from "@/hooks/useSetterData";
+import { useProspects, useKPIs, type DBDailyKPI } from "@/hooks/useSetterData";
 import { PIPELINE_STAGES } from "@/hooks/useSetterData";
 import { EmptyState } from "@/components/EmptyState";
 
@@ -25,6 +25,56 @@ const tooltipStyle = {
 const QUALIFIED_STAGES = ["Qualification", "Interested", "Objection Handling", "Ready for Call"];
 
 type Range = "30d" | "90d" | "all";
+type Granularity = "day" | "week" | "month";
+
+// How many buckets a given range should ever try to chart, regardless of
+// how much history is in `kpis`. Keeps long histories readable.
+const MAX_BUCKETS = 26;
+
+function startOfWeek(d: Date): Date {
+  const copy = new Date(d);
+  const day = copy.getDay(); // 0 = Sunday
+  const diff = day === 0 ? -6 : 1 - day; // shift back to Monday
+  copy.setDate(copy.getDate() + diff);
+  copy.setHours(0, 0, 0, 0);
+  return copy;
+}
+
+function startOfMonth(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+/** Picks a sensible bucket size for the activity chart based on the
+ * selected range and how much history is actually available. This avoids
+ * dividing by an unbounded/zero date range and keeps 30d vs 90d vs All
+ * time visibly distinct. */
+function pickGranularity(range: Range, kpis: DBDailyKPI[]): Granularity {
+  if (range === "30d") return "day";
+  if (range === "90d") return "week";
+
+  if (!kpis.length) return "week";
+  const times = kpis.map((k) => new Date(k.date).getTime());
+  const spanDays = (Math.max(...times) - Math.min(...times)) / 86_400_000;
+  if (spanDays <= 45) return "day";
+  if (spanDays <= 365) return "week";
+  return "month";
+}
+
+function bucketStart(date: Date, granularity: Granularity): Date {
+  if (granularity === "day") {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+  if (granularity === "week") return startOfWeek(date);
+  return startOfMonth(date);
+}
+
+function bucketLabel(date: Date, granularity: Granularity): string {
+  if (granularity === "day") return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  if (granularity === "week") return `Wk of ${date.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+  return date.toLocaleDateString("en-US", { month: "short", year: "2-digit" });
+}
 
 export default function AnalyticsPage() {
   const { data: allProspects = [], isLoading } = useProspects();
@@ -41,12 +91,12 @@ export default function AnalyticsPage() {
 
   const prospects = useMemo(() => {
     if (!cutoff) return allProspects;
-    return allProspects.filter((p) => new Date(p.created_at) >= cutoff!);
+    return allProspects.filter((p) => new Date(p.created_at) >= cutoff);
   }, [allProspects, cutoff]);
 
   const kpis = useMemo(() => {
     if (!cutoff) return allKpis;
-    return allKpis.filter((k) => new Date(k.date) >= cutoff!);
+    return allKpis.filter((k) => new Date(k.date) >= cutoff);
   }, [allKpis, cutoff]);
 
   const totalConversations = prospects.length;
@@ -71,12 +121,38 @@ export default function AnalyticsPage() {
     .sort((a, b) => b.value - a.value)
     .slice(0, 6);
 
-  const kpisToChart = kpis.slice(0, 7).reverse();
-  const weeklyData = kpisToChart.map((k) => ({
-    day: new Date(k.date).toLocaleDateString("en-US", { weekday: "short" }),
-    conversations: k.dms_sent + k.follow_ups_sent,
-    booked: k.calls_booked,
-  }));
+  // Bucket granularity adapts to the selected range so 30d, 90d, and All
+  // time produce visibly different charts instead of the same fixed
+  // 7-day window every time.
+  const granularity = useMemo(() => pickGranularity(range, kpis), [range, kpis]);
+
+  const weeklyData = useMemo(() => {
+    if (!kpis.length) return [];
+    const buckets = new Map<string, { date: Date; conversations: number; booked: number }>();
+    for (const k of kpis) {
+      const start = bucketStart(new Date(k.date), granularity);
+      const key = start.toISOString();
+      const existing = buckets.get(key);
+      if (existing) {
+        existing.conversations += k.dms_sent + k.follow_ups_sent;
+        existing.booked += k.calls_booked;
+      } else {
+        buckets.set(key, {
+          date: start,
+          conversations: k.dms_sent + k.follow_ups_sent,
+          booked: k.calls_booked,
+        });
+      }
+    }
+    return Array.from(buckets.values())
+      .sort((a, b) => a.date.getTime() - b.date.getTime())
+      .slice(-MAX_BUCKETS)
+      .map((b) => ({
+        day: bucketLabel(b.date, granularity),
+        conversations: b.conversations,
+        booked: b.booked,
+      }));
+  }, [kpis, granularity]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-64"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
@@ -122,19 +198,19 @@ export default function AnalyticsPage() {
       ) : (
         <div className="grid lg:grid-cols-2 gap-6">
           <Card>
-            <CardHeader><CardTitle className="text-sm">Weekly Activity</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-sm">Activity Over Time</CardTitle></CardHeader>
             <CardContent>
               {weeklyData.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-12 text-center">Log daily KPIs to see weekly trends.</p>
+                <p className="text-sm text-muted-foreground py-12 text-center">Log daily KPIs to see activity trends.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer key={`${range}-${granularity}`} width="100%" height={250}>
                   <LineChart data={weeklyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="day" tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
-                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} />
+                    <XAxis dataKey="day" tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }} angle={weeklyData.length > 9 ? -45 : 0} textAnchor={weeklyData.length > 9 ? "end" : "middle"} height={weeklyData.length > 9 ? 50 : 30} />
+                    <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
                     <Tooltip contentStyle={tooltipStyle} />
-                    <Line type="monotone" dataKey="conversations" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="booked" stroke="hsl(var(--success))" strokeWidth={2} dot={false} />
+                    <Line type="monotone" dataKey="conversations" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} isAnimationActive={false} />
+                    <Line type="monotone" dataKey="booked" stroke="hsl(var(--success))" strokeWidth={2} dot={false} isAnimationActive={false} />
                   </LineChart>
                 </ResponsiveContainer>
               )}
@@ -144,12 +220,12 @@ export default function AnalyticsPage() {
           <Card>
             <CardHeader><CardTitle className="text-sm">Pipeline Distribution</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={250}>
+              <ResponsiveContainer key={range} width="100%" height={250}>
                 <BarChart data={stageData}>
                   <XAxis dataKey="name" tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} angle={-45} textAnchor="end" height={60} />
                   <YAxis tick={{ fontSize: 12, fill: "hsl(var(--muted-foreground))" }} allowDecimals={false} />
                   <Tooltip contentStyle={tooltipStyle} />
-                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </CardContent>
@@ -161,9 +237,9 @@ export default function AnalyticsPage() {
               {objections.length === 0 ? (
                 <p className="text-sm text-muted-foreground py-12 text-center">Run AI stage analysis on prospects to surface objection patterns.</p>
               ) : (
-                <ResponsiveContainer width="100%" height={250}>
+                <ResponsiveContainer key={range} width="100%" height={250}>
                   <PieChart>
-                    <Pie data={objections} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value" label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={objections} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value" isAnimationActive={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
                       {objections.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={tooltipStyle} />
