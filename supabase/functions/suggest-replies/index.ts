@@ -22,9 +22,28 @@ Deno.serve(async (req) => {
 
     const offerContext = await loadContext(req, { prospectId });
 
+    // Who sent the most recent message matters a lot here: if it was the Setter,
+    // the Prospect hasn't replied yet, and the AI must not mistake the Setter's own
+    // unanswered message for something the Prospect said.
+    const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+    const awaitingProspectReply = lastMessage?.sender === "setter";
+
     const convoText = messages
-      .map((m: any) => `${m.sender === "setter" ? "Setter" : "Prospect"}: ${m.content}`)
+      .map((m: any, i: number) => {
+        const label = m.sender === "setter" ? "Setter" : "Prospect";
+        const isLast = i === messages.length - 1;
+        const marker = isLast && awaitingProspectReply
+          ? "   [MOST RECENT MESSAGE — sent by the Setter; the Prospect has NOT replied to this yet]"
+          : "";
+        return `${label}: ${m.content}${marker}`;
+      })
       .join("\n");
+
+    const turnGuidance = messages.length === 0
+      ? "This is the opening message — there is no prior conversation yet."
+      : awaitingProspectReply
+      ? `IMPORTANT: The Prospect has NOT replied yet. The most recent message in the transcript below was sent by the SETTER (your client) and is still awaiting the Prospect's response. Do NOT treat that last message as something the Prospect said, and do NOT assume the Prospect has answered, agreed, or revealed new information just because related details appear in their profile. Generate 3 options for what the Setter could send NEXT while still waiting on a reply — for example a friendly follow-up, an added value/insight, a different angle, or a patient check-in. Do NOT simply restate or rephrase the question the Setter just asked.`
+      : `The most recent message in the transcript below was sent by the PROSPECT. Generate 3 reply options that directly and naturally respond to what the Prospect just said.`;
 
     const systemPrompt = `You are an expert DM setter AI co-pilot for high-ticket sales, coaching a setter in real time.${offerContext}
 
@@ -34,6 +53,7 @@ Generate exactly 3 distinct reply options the setter could send next. Each optio
 - Sound natural, human, and conversational (not salesy)
 - Be concise (under 50 words each)
 - Move the conversation forward toward qualification or booking
+- Correctly track who said what last — pay close attention to the Setter/Prospect labels in the transcript below, especially which side sent the LAST message, and never write a reply that assumes the Prospect said something the Setter actually said
 
 Respond with ONLY a single JSON array (no markdown, no code fences, no explanation) of exactly 3 objects matching this exact shape:
 [{"type": string (a short 1-3 word label for the angle, e.g. "Discovery", "Rapport", "Call Transition"), "content": string (the actual reply text to send), "coaching_note": string (one short sentence explaining why this reply works)}]`;
@@ -47,8 +67,10 @@ Respond with ONLY a single JSON array (no markdown, no code fences, no explanati
 - Call readiness: ${prospect.callReadiness ?? "Unknown"}
 - Lead score: ${prospect.leadScore ?? "Unknown"}
 
-Conversation so far:
+Conversation so far (Setter = your client, the DM setter sending messages; Prospect = the lead they're messaging):
 ${convoText || "(no messages yet — this is the opening)"}
+
+${turnGuidance}
 
 Generate the 3 reply options now as the JSON array described.`;
 
