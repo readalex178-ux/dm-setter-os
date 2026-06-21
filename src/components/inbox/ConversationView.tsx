@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,12 +30,25 @@ interface Props {
   messagesEndRef: React.RefObject<HTMLDivElement>;
 }
 
+const COMPOSER_MAX_HEIGHT = 150;
+
 export function ConversationView(props: Props) {
   const {
     sel, messages, isMobile, useDemo, hidden, messageInput, setMessageInput, sending,
     onSend, onBack, onAnalyzeStage, onChangeStage, onDelete, aiSuggestions, aiLoading, aiError,
     demoReplies, onRequestAi, messagesEndRef,
   } = props;
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-grow the composer to fit its content (e.g. a long AI-suggested reply),
+  // capped at COMPOSER_MAX_HEIGHT, beyond which it scrolls internally.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
+  }, [messageInput]);
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); }
@@ -70,13 +84,14 @@ export function ConversationView(props: Props) {
       />
 
       <div className="border-t border-border p-2 lg:p-4 shrink-0">
-        <div className="flex gap-2 max-w-2xl mx-auto">
+        <div className="flex gap-2 max-w-2xl mx-auto items-end">
           <Textarea
+            ref={textareaRef}
             placeholder="Type a message..."
             value={messageInput}
             onChange={(e) => setMessageInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="min-h-[42px] max-h-[120px] resize-none text-sm"
+            className="min-h-[42px] max-h-[150px] resize-none text-sm overflow-y-auto"
             rows={1}
           />
           <DictateButton onText={setMessageInput} />
