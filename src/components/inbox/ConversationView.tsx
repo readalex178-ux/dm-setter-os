@@ -178,6 +178,7 @@ function MessageBubble({ message, isMobile, onDelete }: { message: UIMessage; is
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>
+        </AlertDialogContent>
         </AlertDialog>
     </>
   );
