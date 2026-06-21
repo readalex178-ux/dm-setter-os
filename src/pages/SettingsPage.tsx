@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,6 +161,7 @@ function buildSeedMessageRows(userId: string, prospectId: string, handle: string
 
 export default function SettingsPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data: profile, isLoading } = useProfile();
   const { data: prospects = [] } = useProspects();
   const { data: kpis = [] } = useKPIs();
@@ -286,6 +288,11 @@ export default function SettingsPage() {
         title: "Test data seeded",
         description: `${SEED_PROSPECTS.length} prospects, ${messageRows.length} messages + 7 days of KPIs added.`,
       });
+      // Without this, the prospect/KPI/message counts on this page (and
+      // everywhere else) only refresh after a manual reload.
+      queryClient.invalidateQueries({ queryKey: ["prospects"] });
+      queryClient.invalidateQueries({ queryKey: ["daily_kpis"] });
+      queryClient.invalidateQueries({ queryKey: ["messages"] });
     } catch (e) {
       toast({ title: "Seed failed", description: e instanceof Error ? e.message : "Try again.", variant: "destructive" });
     } finally {
@@ -346,7 +353,7 @@ export default function SettingsPage() {
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-xs">Display Name</Label>
-                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="mt-1" />
+                  <Input value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="e.g. Alex" className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-xs">Email</Label>
