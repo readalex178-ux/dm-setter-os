@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import { useAuth } from "@/hooks/useAuth";
 
 export interface DBProspect {
@@ -22,6 +23,7 @@ export interface DBProspect {
   time_availability: string | null;
   source: string | null;
   platform: string | null;
+  profile_url: string | null;
   tags: string[] | null;
   notes: string | null;
   last_contact_at: string | null;
@@ -65,6 +67,37 @@ export const PIPELINE_STAGES = [
   "Objection Handling", "Ready for Call", "Call Booked",
   "Not Qualified", "Cold Lead",
 ] as const;
+
+// Derives a best-effort profile URL from platform + handle when the
+// prospect was created without an explicit one (e.g. extension scrape
+// fallback, manual add, CRM import). Returns null when no predictable URL
+// pattern exists for the platform (e.g. whatsapp) or there's no handle.
+export function deriveProfileUrl(
+  platform: string | null | undefined,
+  handle: string | null | undefined
+): string | null {
+  if (!handle) return null;
+  const cleanHandle = handle.trim().replace(/^@/, "");
+  if (!cleanHandle) return null;
+  switch ((platform || "").toLowerCase()) {
+    case "instagram":
+      return `https://instagram.com/${cleanHandle}`;
+    case "tiktok":
+      return `https://tiktok.com/@${cleanHandle}`;
+    case "facebook":
+      return `https://facebook.com/${cleanHandle}`;
+    case "linkedin":
+      // Best-effort guess — LinkedIn handles in URLs aren't always the same
+      // as display handles, so this may need manual correction.
+      return `https://linkedin.com/in/${cleanHandle}`;
+    case "twitter":
+    case "x":
+      return `https://x.com/${cleanHandle}`;
+    default:
+      // whatsapp and anything unrecognized have no predictable profile URL.
+      return null;
+  }
+}
 
 export function useProspects() {
   return useQuery({
@@ -135,7 +168,10 @@ export function useAddProspect() {
   const qc = useQueryClient();
   const { user } = useAuth();
   return useMutation({
-    mutationFn: async (input: { name: string; handle?: string; source?: string }) => {
+    mutationFn: async (input: {
+      name: string; handle?: string; source?: string; platform?: string; profile_url?: string;
+    }) => {
+      const profileUrl = input.profile_url || deriveProfileUrl(input.platform, input.handle);
       const { data, error } = await supabase
         .from("prospects")
         .insert({
@@ -143,6 +179,8 @@ export function useAddProspect() {
           name: input.name,
           handle: input.handle || null,
           source: input.source || "manual",
+          platform: (input.platform || null) as Database["public"]["Enums"]["platform_type"] | null,
+          profile_url: profileUrl,
           stage: "New Lead",
           last_contact_at: new Date().toISOString(),
         })
