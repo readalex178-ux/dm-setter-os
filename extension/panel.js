@@ -487,6 +487,10 @@ function buildSavePayload(stageOverride) {
       handle: lastConv?.handle || "",
       source: `${lastConv?.platformName || "Extension"} (Extension)`,
       platform: lastConv?.platformId,
+      // The actual page URL is the most accurate possible profile link —
+      // more reliable than guessing a pattern from platform + handle.
+      // background.js falls back to a derived URL if this isn't usable.
+      profileUrl: window.location.href || "",
       stage: stageOverride,
     },
     messages: lastConv?.msgs || [],
