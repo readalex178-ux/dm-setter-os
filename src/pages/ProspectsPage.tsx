@@ -170,7 +170,7 @@ export default function ProspectsPage() {
               min={0}
               max={10}
               placeholder="Min score"
-              className="h-8 text-xs w-24"
+              className="h-8 text-xs w-28 shrink-0"
               value={minScore}
               onChange={(e) => setMinScore(e.target.value)}
             />
@@ -242,7 +242,7 @@ export default function ProspectsPage() {
               <CardContent className="space-y-2 text-sm">
                 <div className="flex justify-between"><span className="text-muted-foreground">Intent</span><Badge variant="score">{selected.intent_level || "—"} {selected.intent_confidence ? `${selected.intent_confidence}%` : ""}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Motivation</span><Badge variant="score">{selected.motivation || "—"} {selected.motivation_confidence ? `${selected.motivation_confidence}%` : ""}</Badge></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant="warning">{selected.concerns || "—"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">Concern</span><Badge variant={selected.concerns ? "warning" : "score"}>{selected.concerns || "—"} {selected.concerns_confidence ? `${selected.concerns_confidence}%` : ""}</Badge></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Source</span><span>{selected.source || "—"}</span></div>
               </CardContent>
             </Card>
