@@ -100,11 +100,14 @@ export function useKPIs() {
   return useQuery({
     queryKey: ["daily_kpis"],
     queryFn: async (): Promise<DBDailyKPI[]> => {
+      // Limit raised from 30 -> 366 so Analytics' 90d/All time ranges (and
+      // Settings' KPI history export/delete counts) can see more than the
+      // last 30 logged days.
       const { data, error } = await supabase
         .from("daily_kpis")
         .select("*")
         .order("date", { ascending: false })
-        .limit(30);
+        .limit(366);
       if (error) throw error;
       return (data ?? []) as DBDailyKPI[];
     },
