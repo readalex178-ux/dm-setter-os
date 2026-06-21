@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Sparkles, Loader2, TrendingUp, AlertCircle, ListChecks, MessageSquareWarning } from "lucide-react";
+import { Sparkles, Loader2, TrendingUp, AlertCircle, ListChecks, MessageSquareWarning, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 interface Briefing {
@@ -17,16 +17,21 @@ interface Briefing {
 export function DailyBriefing() {
   const [loading, setLoading] = useState(false);
   const [briefing, setBriefing] = useState<Briefing | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   async function run() {
     setLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("daily-briefing", { body: {} });
-      if (error) throw error;
+      const { data, error: invokeError } = await supabase.functions.invoke("daily-briefing", { body: {} });
+      if (invokeError) throw invokeError;
       if (data?.error) throw new Error(data.error);
+      if (!data?.headline) throw new Error("The briefing came back empty. Please try again.");
       setBriefing(data);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not generate briefing");
+      const message = e instanceof Error ? e.message : "Could not generate briefing";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
     }
@@ -41,11 +46,24 @@ export function DailyBriefing() {
           </CardTitle>
           <Button size="sm" onClick={run} disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-            {briefing ? "Refresh" : "Generate"}
+            {loading ? "Generating…" : briefing ? "Refresh" : "Generate"}
           </Button>
         </div>
       </CardHeader>
-      {briefing && (
+      {error && !loading && (
+        <CardContent>
+          <div className="flex items-start gap-3 p-3 rounded-lg bg-destructive/10 border border-destructive/30">
+            <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div className="flex-1 space-y-2">
+              <p className="text-sm text-destructive">{error}</p>
+              <Button size="sm" variant="outline" onClick={run} className="h-7 px-2 text-xs">
+                <RotateCcw className="h-3 w-3 mr-1" /> Retry
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      )}
+      {briefing && !error && (
         <CardContent className="space-y-4">
           <p className="text-sm font-medium">{briefing.headline}</p>
           <div className="grid md:grid-cols-2 gap-4">
