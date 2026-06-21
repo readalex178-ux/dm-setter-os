@@ -90,8 +90,8 @@ export function ConversationInsights({ sel, prospectId, useDemo, scoring, onScor
           <CardContent className="p-3 space-y-2">
             <div className="text-xs font-medium text-muted-foreground">Main Concern</div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">{sel.concerns}</span>
-              <Badge variant="warning">{sel.concernsConfidence}%</Badge>
+              <span className="text-sm font-semibold">{sel.concerns || "—"}</span>
+              <Badge variant={sel.concerns ? "warning" : "score"}>{sel.concernsConfidence}%</Badge>
             </div>
           </CardContent>
         </Card>
