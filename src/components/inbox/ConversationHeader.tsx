@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Phone, Target, Trash2 } from "lucide-react";
+import { ArrowLeft, ExternalLink, Phone, Target, Trash2 } from "lucide-react";
 import { platformIcon, STAGES, type NormalizedProspect } from "@/components/inbox/types";
 
 interface Props {
@@ -59,6 +59,17 @@ export function ConversationHeader({ sel, isMobile, useDemo, onBack, onAnalyzeSt
           <div className="min-w-0 flex-1">
             <h2 className="font-semibold text-sm lg:text-base flex items-center gap-1.5 truncate">
               {platformIcon(sel.platform)} {sel.name}
+              {sel.profileUrl && (
+                <a
+                  href={sel.profileUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Open profile"
+                  className="text-muted-foreground hover:text-primary shrink-0"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
             </h2>
             <p className="text-xs text-muted-foreground truncate">{sel.handle} • {sel.stage}</p>
           </div>
