@@ -21,7 +21,7 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
       motivation: d.motivation, motivationConfidence: d.motivationConfidence, concerns: d.concerns,
       concernsConfidence: d.concernsConfidence, location: d.location, currentJob: d.currentJob,
       incomeGoal: d.incomeGoal, timeAvailability: d.timeAvailability, source: d.source,
-      platform: null, avatar: d.avatar, unread: d.unread,
+      platform: null, profileUrl: null, avatar: d.avatar, unread: d.unread,
       conversationScore: null, bookingProbability: null, leadTemperature: null,
       stageConfidence: null, stageSuggested: null, suggestedAction: null,
     };
@@ -35,7 +35,7 @@ function normalize(useDemo: boolean, selected: any): NormalizedProspect | null {
     concernsConfidence: p.concerns_confidence || 0, location: p.location || "—",
     currentJob: p.current_job || "—", incomeGoal: p.income_goal || "—",
     timeAvailability: p.time_availability || "—", source: p.source || "—",
-    platform: p.platform, avatar: p.name.split(" ").map((w) => w[0]).join("").slice(0, 2),
+    platform: p.platform, profileUrl: p.profile_url, avatar: p.name.split(" ").map((w) => w[0]).join("").slice(0, 2),
     unread: false,
     conversationScore: p.conversation_score, bookingProbability: p.booking_probability,
     leadTemperature: p.lead_temperature, stageConfidence: p.stage_confidence,
