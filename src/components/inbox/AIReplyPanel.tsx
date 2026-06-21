@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Copy, Loader2, Info } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 import type { AISuggestion } from "@/components/inbox/types";
 
 interface Props {
@@ -12,6 +13,11 @@ interface Props {
   demoReplies: { type: string; content: string }[];
   onRequest: () => void;
   onPick: (content: string) => void;
+}
+
+function copySuggestion(content: string) {
+  navigator.clipboard.writeText(content);
+  toast({ title: "Copied to clipboard" });
 }
 
 export function AIReplyPanel({ suggestions, loading, error, canRequest, useDemo, demoReplies, onRequest, onPick }: Props) {
@@ -46,9 +52,19 @@ export function AIReplyPanel({ suggestions, loading, error, canRequest, useDemo,
         <>
           <div className="flex lg:hidden gap-2 overflow-x-auto pb-1">
             {suggestions.map((r, i) => (
-              <button key={i} className="shrink-0 px-3 py-1.5 rounded-full border border-border bg-card text-xs font-medium hover:bg-muted/50 transition-colors" onClick={() => onPick(r.content)}>
-                {r.type}
-              </button>
+              <div key={i} className="shrink-0 flex items-center rounded-full border border-border bg-card overflow-hidden">
+                <button className="px-3 py-1.5 text-xs font-medium hover:bg-muted/50 transition-colors" onClick={() => onPick(r.content)}>
+                  {r.type}
+                </button>
+                <button
+                  className="px-2 py-1.5 border-l border-border text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+                  title="Copy"
+                  aria-label="Copy suggestion"
+                  onClick={() => copySuggestion(r.content)}
+                >
+                  <Copy className="h-3 w-3" />
+                </button>
+              </div>
             ))}
           </div>
           <div className="hidden lg:grid gap-2">
@@ -57,7 +73,7 @@ export function AIReplyPanel({ suggestions, loading, error, canRequest, useDemo,
                 <div className="flex items-center justify-between mb-1">
                   <Badge variant="outline" className="text-[10px]">{r.type}</Badge>
                   <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" title="Copy"
-                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(r.content); }}>
+                    onClick={(e) => { e.stopPropagation(); copySuggestion(r.content); }}>
                     <Copy className="h-3 w-3" />
                   </Button>
                 </div>
