@@ -16,7 +16,7 @@ const STAGES = [
 
 const MEMORY_CATEGORIES = ["goal", "pain", "budget", "family", "availability", "objection", "interest"];
 
-async function callAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string, tool: any) {
+async function callAI(apiKey: string, model: string, systemPrompt: string, userPrompt: string) {
   const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -31,8 +31,8 @@ async function callAI(apiKey: string, model: string, systemPrompt: string, userP
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
-      tools: [{ type: "function", function: tool }],
-      tool_choice: { type: "function", function: { name: tool.name } },
+      max_tokens: 900,
+      temperature: 0.4,
     }),
   });
   if (response.status === 429) return { error: "Rate limit exceeded, please try again shortly.", status: 429 };
@@ -43,9 +43,15 @@ async function callAI(apiKey: string, model: string, systemPrompt: string, userP
     return { error: `AI gateway error: ${response.status}`, status: 500 };
   }
   const data = await response.json();
-  const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
-  if (!toolCall) return { error: "No tool call returned by AI", status: 500 };
-  return { result: JSON.parse(toolCall.function.arguments) };
+  const raw = data?.choices?.[0]?.message?.content;
+  if (!raw) return { error: "No response from AI", status: 500 };
+  try {
+    // Models occasionally wrap JSON in a markdown code fence despite instructions.
+    const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    return { result: JSON.parse(cleaned) };
+  } catch {
+    return { error: "Could not parse AI response", status: 500 };
+  }
 }
 
 Deno.serve(async (req) => {
@@ -86,35 +92,12 @@ Deno.serve(async (req) => {
     const prospectInfo = `Prospect: ${prospect.name} | Stage: ${prospect.stage} | Job: ${prospect.current_job || "?"} | Income goal: ${prospect.income_goal || "?"} | Motivation: ${prospect.motivation || "?"} | Concerns: ${prospect.concerns || "?"}`;
 
     if (mode === "review") {
-      const tool = {
-        name: "submit_review",
-        description: "Submit a full coaching review of the setter's handling of this conversation.",
-        parameters: {
-          type: "object",
-          properties: {
-            grade: { type: "string", description: "Letter grade A-F for how the setter handled the conversation." },
-            overallNote: { type: "string", description: "2-3 sentence honest summary." },
-            strengths: { type: "array", items: { type: "string" } },
-            weaknesses: { type: "array", items: { type: "string" } },
-            missedQualification: { type: "array", items: { type: "string" }, description: "Qualification questions/opportunities the setter missed." },
-            missedObjections: { type: "array", items: { type: "string" }, description: "Objections raised by the prospect that were not handled well." },
-            improvements: { type: "array", items: { type: "string" } },
-            alternativeResponses: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: { context: { type: "string" }, suggestion: { type: "string" } },
-                required: ["context", "suggestion"], additionalProperties: false,
-              },
-            },
-          },
-          required: ["grade", "overallNote", "strengths", "weaknesses", "improvements"],
-          additionalProperties: false,
-        },
-      };
-      const sys = `You are an elite DM-setting coach. Review the setter's handling of this conversation honestly and constructively. Quote specifics where possible.${offerContext}`;
-      const usr = `${prospectInfo}\n\nConversation:\n${convoText}`;
-      const out = await callAI(OPENROUTER_API_KEY, model, sys, usr, tool);
+      const sys = `You are an elite DM-setting coach. Review the setter's handling of this conversation honestly and constructively. Quote specifics where possible.${offerContext}
+
+Respond with ONLY a single JSON object (no markdown, no code fences, no explanation) matching this exact shape:
+{"grade": string (letter grade A-F), "overallNote": string (2-3 sentence honest summary), "strengths": string[], "weaknesses": string[], "missedQualification": string[] (qualification questions/opportunities missed), "missedObjections": string[] (objections raised by the prospect not handled well), "improvements": string[], "alternativeResponses": [{"context": string, "suggestion": string}]}`;
+      const usr = `${prospectInfo}\n\nConversation:\n${convoText}\n\nReturn the JSON object described.`;
+      const out = await callAI(OPENROUTER_API_KEY, model, sys, usr);
       if (out.error) return new Response(JSON.stringify({ error: out.error }),
         { status: out.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       return new Response(JSON.stringify({ review: out.result }),
@@ -122,38 +105,12 @@ Deno.serve(async (req) => {
     }
 
     // mode === "score"
-    const tool = {
-      name: "submit_scoring",
-      description: "Submit conversation scoring + extracted prospect memory.",
-      parameters: {
-        type: "object",
-        properties: {
-          conversationScore: { type: "number", description: "Overall quality/health of the conversation 0-100." },
-          bookingProbability: { type: "number", description: "Likelihood this becomes a booked call, 0-100." },
-          leadTemperature: { type: "string", enum: ["Hot", "Warm", "Cold"] },
-          suggestedStage: { type: "string", enum: STAGES },
-          stageConfidence: { type: "number", description: "Confidence in suggested stage 0-100." },
-          suggestedAction: { type: "string", description: "One concrete next move for the setter." },
-          memory: {
-            type: "array",
-            description: "Durable facts worth remembering about this prospect.",
-            items: {
-              type: "object",
-              properties: {
-                category: { type: "string", enum: MEMORY_CATEGORIES },
-                detail: { type: "string", description: "Concise fact, e.g. 'Wants to replace $5k/mo job income'." },
-              },
-              required: ["category", "detail"], additionalProperties: false,
-            },
-          },
-        },
-        required: ["conversationScore", "bookingProbability", "leadTemperature", "suggestedStage", "stageConfidence", "suggestedAction", "memory"],
-        additionalProperties: false,
-      },
-    };
-    const sys = `You are an expert DM sales analyst. Score the conversation health and booking likelihood, classify lead temperature and stage, recommend the next action, and extract durable prospect memory (goals, pains, budget, family, availability, objections, interests). Be evidence-based.${offerContext}`;
-    const usr = `${prospectInfo}\n\nConversation:\n${convoText}`;
-    const out = await callAI(OPENROUTER_API_KEY, model, sys, usr, tool);
+    const sys = `You are an expert DM sales analyst. Score the conversation health and booking likelihood, classify lead temperature and stage, recommend the next action, and extract durable prospect memory (goals, pains, budget, family, availability, objections, interests). Be evidence-based.${offerContext}
+
+Respond with ONLY a single JSON object (no markdown, no code fences, no explanation) matching this exact shape:
+{"conversationScore": number (0-100, overall quality/health of the conversation), "bookingProbability": number (0-100, likelihood this becomes a booked call), "leadTemperature": one of ["Hot", "Warm", "Cold"], "suggestedStage": one of [${STAGES.map((s) => `"${s}"`).join(", ")}], "stageConfidence": number (0-100), "suggestedAction": string (one concrete next move for the setter), "memory": [{"category": one of [${MEMORY_CATEGORIES.map((c) => `"${c}"`).join(", ")}], "detail": string (concise fact, e.g. 'Wants to replace $5k/mo job income')}]}`;
+    const usr = `${prospectInfo}\n\nConversation:\n${convoText}\n\nReturn the JSON object described.`;
+    const out = await callAI(OPENROUTER_API_KEY, model, sys, usr);
     if (out.error) return new Response(JSON.stringify({ error: out.error }),
       { status: out.status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
