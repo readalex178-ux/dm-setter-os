@@ -30,7 +30,7 @@ export default function InboxPage() {
     isMobile, showChat, setShowChat, search, setSearch, messageInput, setMessageInput,
     sending, useDemo, loaded, aiSuggestions, aiLoading, aiError, scoring, messagesEndRef,
     selectedId, selectProspect, filtered, sel, messages, replies, dbProspectsEmpty,
-    handleSend, deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm,
+    handleSend, deleteProspect, confirmDelete, cancelDelete, showDeleteConfirm, deleteMessage,
     fetchAiSuggestions, scoreConversation, applyStage,
     showAddProspect, setShowAddProspect, handleProspectAdded,
   } = inbox;
@@ -93,6 +93,7 @@ export default function InboxPage() {
           onAnalyzeStage={() => setStageDialogOpen(true)}
           onChangeStage={(s) => applyStage(s)}
           onDelete={deleteProspect}
+          onDeleteMessage={deleteMessage}
           aiSuggestions={aiSuggestions}
           aiLoading={aiLoading}
           aiError={aiError}
