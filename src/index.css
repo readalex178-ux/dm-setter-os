@@ -122,4 +122,9 @@
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
+  /* Was referenced (BottomNav) but never defined, so iOS devices with a
+   * home-indicator safe area got zero extra clearance. */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
