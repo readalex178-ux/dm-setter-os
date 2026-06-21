@@ -11,6 +11,7 @@ let isOpen = false;
 let lastConv = null;
 let lastAnalysis = null;
 let lastContext = null;
+let lastSavedProspectId = null;
 let signedIn = false;
 let connOk = false;
 let threadKey = "";
@@ -451,6 +452,17 @@ async function analyse() {
     if (!res?.ok) throw new Error(res?.error || "Analysis failed");
     renderAnalysis(res.analysis);
     showStatus("");
+
+    // Analysis is optional enrichment — it never triggers a save on its own.
+    // But if this prospect was already saved to the CRM (this session or a
+    // previous one), push the new analysis into that existing record instead
+    // of leaving it stranded client-side until the user happens to click
+    // Save again.
+    if (lastSavedProspectId || lastContext?.found) {
+      syncEnrichment().catch((err) =>
+        console.warn("[DM Setter OS] Enrichment sync failed:", err)
+      );
+    }
   } catch (e) {
     console.error("[DM Setter OS] Analyse failed:", e);
     showStatus(e.message, "error");
@@ -461,14 +473,41 @@ async function analyse() {
 }
 
 // ── Save to CRM ──────────────────────────────────────────────────────────────
+// Saving is the basic action: anyone you're DMing is a prospect, so this
+// persists whatever scraped info we have (name/handle/platform, and any
+// captured messages) the moment the user clicks. It never waits on, or
+// requires, AI analysis — "Analyse Conversation" is a fully separate,
+// optional enrichment step that can run before, after, or never.
+
+function buildSavePayload(stageOverride) {
+  const analysis = lastAnalysis ? { ...lastAnalysis, stage: stageOverride } : { stage: stageOverride };
+  return {
+    prospect: {
+      name: lastConv?.name || "Unknown",
+      handle: lastConv?.handle || "",
+      source: `${lastConv?.platformName || "Extension"} (Extension)`,
+      platform: lastConv?.platformId,
+      stage: stageOverride,
+    },
+    messages: lastConv?.msgs || [],
+    analysis,
+  };
+}
 
 async function saveToApp() {
-  if (!lastConv?.msgs?.length) {
-    showStatus("Analyse a conversation first before saving.", "error");
-    return;
-  }
+  if (!lastConv) lastConv = scrape();
+
   if (!connOk || !signedIn) {
     showStatus("Sign in to DM Setter OS to sync your CRM.", "error");
+    return;
+  }
+
+  if (!lastConv.name && !lastConv.handle) {
+    const entered = prompt("What's this prospect's name or @handle?", "");
+    if (entered?.trim()) lastConv.name = entered.trim();
+  }
+  if (!lastConv.name && !lastConv.handle) {
+    showStatus("Couldn't identify this prospect — open a DM conversation first.", "error");
     return;
   }
 
@@ -478,29 +517,13 @@ async function saveToApp() {
   btn.textContent = "Saving…";
   msgEl.classList.remove("visible");
 
-  if (!lastConv.name) {
-    const entered = prompt("What's this prospect's name?", "");
-    if (entered?.trim()) lastConv.name = entered.trim();
-  }
-
   const stageOverride = $("dms-stage-select").value;
-  const analysis = lastAnalysis ? { ...lastAnalysis, stage: stageOverride } : { stage: stageOverride };
-
-  const payload = {
-    prospect: {
-      name: lastConv.name || "Unknown",
-      handle: lastConv.handle || "",
-      source: `${lastConv.platformName} (Extension)`,
-      platform: lastConv.platformId,
-      stage: stageOverride,
-    },
-    messages: lastConv.msgs,
-    analysis,
-  };
+  const payload = buildSavePayload(stageOverride);
 
   try {
     const result = await sendBg({ type: "SAVE_CONVERSATION", payload });
     if (!result?.ok) throw new Error(result?.error || "Unknown error");
+    lastSavedProspectId = result.id;
 
     btn.textContent = "✓ Saved to CRM";
     btn.classList.add("done");
@@ -522,6 +545,18 @@ async function saveToApp() {
   }
 }
 
+// Silent variant used to push a post-save analysis into an already-saved
+// prospect record. No button/status UI churn — failures are just logged,
+// since this is best-effort enrichment, not the primary save action.
+async function syncEnrichment() {
+  if (!connOk || !signedIn) return;
+  if (!lastConv?.name && !lastConv?.handle) return;
+  const stageOverride = $("dms-stage-select")?.value || "New Lead";
+  const payload = buildSavePayload(stageOverride);
+  const result = await sendBg({ type: "SAVE_CONVERSATION", payload });
+  if (result?.ok) lastSavedProspectId = result.id;
+}
+
 // ── Event-driven thread detection (no polling) ───────────────────────────────
 
 function currentThreadKey() {
@@ -534,6 +569,7 @@ function onThreadChanged() {
   lastConv = scrape();
   lastAnalysis = null;
   lastContext = null;
+  lastSavedProspectId = null;
 
   // Reset analysis panels
   $("dms-insights-section").style.display = "none";

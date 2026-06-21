@@ -118,6 +118,27 @@ async function verifySession() {
   }
 }
 
+// Looks up an existing prospect for this user by handle+platform — the
+// natural dedup key for "the same person you're DMing." Returns the row id
+// or null. Only handle+platform is used (not name), since names are
+// freeform and unreliable, while handle+platform uniquely identifies the
+// account on that platform.
+async function findExistingProspect(userId, handle, platform) {
+  if (!handle) return null; // nothing reliable to dedup on
+  const params = new URLSearchParams({
+    select: "id",
+    user_id: `eq.${userId}`,
+    handle: `eq.${handle}`,
+    limit: "1",
+  });
+  // platform can legitimately be null (unrecognized platform) — match that too.
+  params.set("platform", platform ? `eq.${platform}` : "is.null");
+  const res = await authedFetch(`/rest/v1/prospects?${params.toString()}`, { method: "GET" });
+  if (!res.ok) return null; // best-effort — fall through to insert rather than block the save
+  const rows = await res.json().catch(() => []);
+  return rows?.[0]?.id || null;
+}
+
 async function saveConversation(payload) {
   const session = await getSession();
   if (!session?.user?.id) throw new Error("Sign in via the extension popup first.");
@@ -126,34 +147,70 @@ async function saveConversation(payload) {
 
   const pid = (prospect.platform || "").toLowerCase();
   const platform = PLATFORM_IDS.includes(pid) ? pid : null;
+  const handle = (prospect.handle || "").trim() || null;
 
-  const prospectId = crypto.randomUUID();
-  const prospectRow = {
-    id: prospectId,
+  // Basic identity fields are always written. AI-derived fields are optional
+  // enrichment — they're only included when analysis actually produced a
+  // value, so a plain "Save to CRM" click (no analysis run) never clobbers
+  // previously-analyzed data with nulls, and never blocks on analysis being
+  // present in the first place.
+  const baseRow = {
     user_id: userId,
     name: prospect.name || "Unknown",
-    handle: prospect.handle || null,
+    handle,
     stage: analysis?.stage || prospect.stage || "New Lead",
-    conversation_score: analysis?.conversation_score ?? null,
-    booking_probability: analysis?.booking_probability ?? null,
-    lead_temperature: analysis?.temperature || null,
-    suggested_action: analysis?.next_action || null,
-    concerns: Array.isArray(analysis?.objections) && analysis.objections.length
-      ? analysis.objections.join("; ")
-      : (prospect.concerns || null),
     source: prospect.source || `${prospect.platform || "Extension"} (Extension)`,
     platform,
     last_contact_at: new Date().toISOString(),
   };
+  const aiFields = {};
+  if (analysis?.conversation_score != null) aiFields.conversation_score = analysis.conversation_score;
+  if (analysis?.booking_probability != null) aiFields.booking_probability = analysis.booking_probability;
+  if (analysis?.temperature) aiFields.lead_temperature = analysis.temperature;
+  if (analysis?.next_action) aiFields.suggested_action = analysis.next_action;
+  if (Array.isArray(analysis?.objections) && analysis.objections.length) {
+    aiFields.concerns = analysis.objections.join("; ");
+  } else if (prospect.concerns) {
+    aiFields.concerns = prospect.concerns;
+  }
 
-  const pRes = await authedFetch("/rest/v1/prospects", {
-    method: "POST",
-    headers: { Prefer: "return=representation" },
-    body: JSON.stringify(prospectRow),
-  });
-  if (!pRes.ok) {
-    const t = await pRes.text();
-    throw new Error("Could not save prospect: " + t.slice(0, 160));
+  // Dedup on handle+platform: if this prospect already exists (saved before,
+  // or being enriched by a later Analyse run), update that row instead of
+  // inserting a duplicate.
+  const existingId = await findExistingProspect(userId, handle, platform);
+  let prospectId = existingId;
+
+  if (existingId) {
+    const upRes = await authedFetch(`/rest/v1/prospects?id=eq.${existingId}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ ...baseRow, ...aiFields }),
+    });
+    if (!upRes.ok) {
+      const t = await upRes.text();
+      throw new Error("Could not update existing prospect: " + t.slice(0, 160));
+    }
+  } else {
+    prospectId = crypto.randomUUID();
+    const prospectRow = {
+      id: prospectId,
+      conversation_score: null,
+      booking_probability: null,
+      lead_temperature: null,
+      suggested_action: null,
+      concerns: null,
+      ...baseRow,
+      ...aiFields,
+    };
+    const pRes = await authedFetch("/rest/v1/prospects", {
+      method: "POST",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify(prospectRow),
+    });
+    if (!pRes.ok) {
+      const t = await pRes.text();
+      throw new Error("Could not save prospect: " + t.slice(0, 160));
+    }
   }
 
   if (Array.isArray(messages) && messages.length) {
