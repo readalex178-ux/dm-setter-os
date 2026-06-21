@@ -306,3 +306,17 @@ export function useDeleteAllMessages() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["messages"] }),
   });
 }
+
+export function useDeleteMessage() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (!user) throw new Error("Not authenticated");
+      // Scoped to the current user for safety, matching useDeleteAllMessages.
+      const { error } = await supabase.from("messages").delete().eq("id", id).eq("user_id", user.id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["messages"] }),
+  });
+}
