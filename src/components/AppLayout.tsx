@@ -7,20 +7,17 @@ import { Outlet } from "react-router-dom";
 export default function AppLayout() {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen overflow-hidden flex w-full">
         {/* Sidebar — hidden on mobile via media query inside Sidebar component */}
         <AppSidebar />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 h-full">
           <header className="h-12 flex items-center border-b border-border px-4 shrink-0">
             <SidebarTrigger className="mr-4 hidden lg:flex" />
             <span className="text-xs font-medium text-muted-foreground">
               DM Setter OS
             </span>
           </header>
-          {/* pb-36 (not just pb-16) so the floating VoiceAssistant button
-              (which sits ~80-128px above the viewport bottom on mobile) never
-              overlaps the last row of scrollable page content. */}
-          <main className="flex-1 overflow-auto pb-36 lg:pb-0">
+          <main className="flex-1 min-h-0 overflow-auto pb-16 lg:pb-0">
             <Outlet />
           </main>
         </div>
