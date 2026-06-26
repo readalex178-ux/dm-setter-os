@@ -228,9 +228,9 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="score">{p.lead_score}/10</Badge>
-                  <Badge variant={p.call_readiness >= 70 ? "success" : p.call_readiness >= 40 ? "warning" : "secondary"}>
-                    {p.call_readiness}%
+                  {p.lead_score != null ? `${p.lead_score}/10` : '—'}/10` : '—'}</Badge>
+                  <Badge variant={p.call_readiness != null && p.call_readiness >= 70 ? "success" : p.call_readiness != null && p.call_readiness >= 40 ? "warning" : "secondary"}>
+                    {p.call_readiness != null ? `${p.call_readiness}%` : '\u2014'}
                   </Badge>
                 </div>
               </Link>
