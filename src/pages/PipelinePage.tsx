@@ -27,7 +27,8 @@ const stageColors: Record<string, string> = {
 
 // Consistent red/amber/green scale for every row, instead of only ever
 // coloring values above ~75% and leaving everything else looking unstyled.
-function callReadyVariant(value: number): "destructive" | "warning" | "success" {
+function callReadyVariant(value: number | null): "destructive" | "warning" | "success" | "secondary" {
+  if (value == null) return "secondary";
   if (value >= 70) return "success";
   if (value >= 40) return "warning";
   return "destructive";
@@ -181,9 +182,9 @@ export default function PipelinePage() {
                           </Button>
                         </div>
                         <div className="flex items-center gap-1.5 mb-2">
-                          <Badge variant="score" className="text-[10px]">{p.lead_score}/10</Badge>
+                          <Badge variant="score" className="text-[10px]">{p.lead_score != null ? `${p.lead_score}/10` : '—'}</Badge>
                           <Badge variant={callReadyVariant(p.call_readiness)} className="text-[10px]">
-                            <Phone className="h-2.5 w-2.5 mr-0.5" />{p.call_readiness}%
+                            <Phone className="h-2.5 w-2.5 mr-0.5" />{p.call_readiness != null ? `${p.call_readiness}%` : '—'}
                           </Badge>
                         </div>
                         <Select value={p.stage} onValueChange={(v) => move(p.id, v)}>
@@ -250,8 +251,8 @@ export default function PipelinePage() {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="p-3"><Badge variant="score">{p.lead_score}/10</Badge></td>
-                    <td className="p-3"><Badge variant={callReadyVariant(p.call_readiness)}>{p.call_readiness}%</Badge></td>
+                    <td className="p-3"><Badge variant="score">{p.lead_score != null ? `${p.lead_score}/10` : '—'}</Badge></td>
+                    <td className="p-3"><Badge variant={callReadyVariant(p.call_readiness)}>{p.call_readiness != null ? `${p.call_readiness}%` : '—'}</Badge></td>
                     <td className="p-3">{p.intent_level || "—"} {p.intent_confidence ? `${p.intent_confidence}%` : ""}</td>
                     <td className="p-3">
                       <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setAnalyzeId(p.id)}>
