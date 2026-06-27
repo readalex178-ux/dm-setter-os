@@ -11,6 +11,3 @@ verify_jwt = false
 
 [functions.analyze-stage]
 verify_jwt = false
-
-[functions.extension-ai]
-verify_jwt = false
