@@ -3,8 +3,8 @@ import { Badge } from "@/components/ui/badge";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Phone, Sparkles, GitBranch, Loader2, Search, ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Phone, Sparkles, GitBranch, Loader2, Search, ExternalLink, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { StageAnalysisDialog } from "@/components/StageAnalysisDialog";
@@ -73,6 +73,39 @@ export default function PipelinePage() {
     const term = search.toLowerCase();
     return !term || p.name.toLowerCase().includes(term) || (p.handle ?? "").toLowerCase().includes(term);
   });
+  type SortCol = "name" | "stage" | "score" | "callReady" | "intent" | null;
+  const [sortCol, setSortCol] = useState<SortCol>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(col: SortCol) {
+    if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortCol(col); setSortDir("asc"); }
+  }
+
+  const sortedProspects = useMemo(() => {
+    if (!sortCol) return filteredProspects;
+    return [...filteredProspects].sort((a, b) => {
+      let cmp = 0;
+      if (sortCol === "name") cmp = a.name.localeCompare(b.name);
+      else if (sortCol === "stage") cmp = PIPELINE_STAGES.indexOf(a.stage as any) - PIPELINE_STAGES.indexOf(b.stage as any);
+      else if (sortCol === "score") cmp = (a.lead_score ?? -1) - (b.lead_score ?? -1);
+      else if (sortCol === "callReady") cmp = (a.call_readiness ?? -1) - (b.call_readiness ?? -1);
+      else if (sortCol === "intent") cmp = (a.intent_level ?? "").localeCompare(b.intent_level ?? "");
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [filteredProspects, sortCol, sortDir]);
+
+  function SortTh({ col, label }: { col: SortCol; label: string }) {
+    const active = sortCol === col;
+    return (
+      <th className="text-left p-3 text-xs font-medium text-muted-foreground">
+        <button className="flex items-center gap-1 hover:text-foreground transition-colors" onClick={() => toggleSort(col)}>
+          {label}
+          {active ? (sortDir === "asc" ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />) : <ChevronsUpDown className="h-3 w-3 opacity-40" />}
+        </button>
+      </th>
+    );
+  }
 
   async function move(id: string, stage: string) {
     try {
@@ -210,16 +243,16 @@ export default function PipelinePage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Name</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Stage</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Score</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Call Ready</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground">Intent</th>
-                  <th className="text-left p-3 text-xs font-medium text-muted-foreground"></th>
+                  <SortTh col="name" label="Name" />
+                  <SortTh col="stage" label="Stage" />
+                  <SortTh col="score" label="Score" />
+                  <SortTh col="callReady" label="Call Ready" />
+                  <SortTh col="intent" label="Intent" />
+                  <th className="p-3" />
                 </tr>
               </thead>
               <tbody>
-                {filteredProspects.map((p) => (
+                {sortedProspects.map((p) => (
                   <tr key={p.id} className="border-b border-border hover:bg-muted/50">
                     <td className="p-3">
                       <div className="flex items-center gap-2">
