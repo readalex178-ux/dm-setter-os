@@ -342,11 +342,10 @@ else if (platformId === "linkedin") {
   events.forEach(el => {
     const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
     const text = bodyEl?.textContent?.trim();
-    // LinkedIn marks the current user's own messages with this modifier class.
-                 const isOwn = el.classList.contains('msg-s-event-listitem--other') === false
-    && (el.querySelector('.msg-s-message-group--other') === null)
-    && detectSender(el) === "setter";
-    const sender = isOwn ? "setter" : (detectSender(el) || "prospect");
+    // LinkedIn: stable class-based sender detection
+            const isProspect = el.classList.contains('msg-s-event-listitem--other')
+              || el.querySelector('.msg-s-message-group--other') !== null;
+            const sender = isProspect ? 'prospect' : 'setter';
     add(text, sender);
   });
   // Fallback: scoped dir="auto" leaves
