@@ -112,6 +112,7 @@ ${transcript}
 
 Analyse this conversation and return the JSON object.`;
 
+    const model = Deno.env.get("OPENROUTER_MODEL") || "openai/gpt-4o-mini";
     const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -121,7 +122,7 @@ Analyse this conversation and return the JSON object.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-flash-1.5:free",
+        model,
         max_tokens: 1800,
         response_format: { type: "json_object" },
         messages: [
