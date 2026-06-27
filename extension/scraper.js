@@ -79,6 +79,10 @@ let cur = itemEl;
 function getChatContainer(platformId) {
   const candidates = {
     instagram: [
+      // June 2026: Instagram uses a split-pane layout. The inbox sidebar is
+      // [role="navigation"][aria-label="Thread list"] and its next sibling
+      // div is the open conversation thread. Old selectors matched the sidebar.
+      '[role="navigation"][aria-label="Thread list"] + div',
       '[role="main"] [role="list"]',
       '[role="main"] [role="grid"]',
       '[role="main"] ul',
@@ -199,7 +203,7 @@ if (platformId === "tiktok") {
 
 // Twitter/X
 if (platformId === "twitter") {
-  const el = document.querySelector('[data-testid="conversation-info-header"] span, [data-testid="UserName"] span');
+  const el = document.querySelector('.msg-entity-lockup__entity-title, .msg-conversation-listitem__participant-names');
   if (el?.textContent?.trim()) return el.textContent.trim();
   const title = document.title.replace(/\s*[\|/]\s*.*/g, "").trim();
   if (title && title !== "Twitter" && title !== "X" && title.length < 60) return title;
@@ -253,7 +257,8 @@ if (platformId === "instagram") {
                                                      if (el.querySelectorAll('[dir="auto"]').length > 0) return;
     // Skip nav/header elements
                                                      if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
-    const text = el.textContent?.trim();
+
+    if (el.tagName === 'H1' || el.tagName === 'H2') return; // contact header, not a message    const text = el.textContent?.trim();
     const sender = detectSender(el);
     add(text, sender);
   });
