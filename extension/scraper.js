@@ -383,15 +383,61 @@ function getDebugInfo(platformId, container) {
   return lines.join("\n");
 }
 
+// ── Handle/username extraction (for CRM dedup key) ──────────────────────────
+
+function getProspectHandle(platformId) {
+  if (platformId === "instagram") {
+    // Profile link is an <a> inside the conversation header area
+    const pane = document.querySelector('[role="navigation"][aria-label="Thread list"] + div') || document.querySelector('[role="main"]');
+    const link = pane?.querySelector('a[href*="instagram.com/"]');
+    if (link) {
+      const m = link.href.match(/instagram\.com\/([^/?#]+)/);
+      if (m && !["direct","p","explore","reel"].includes(m[1])) return m[1];
+    }
+    return null;
+  }
+  if (platformId === "tiktok") {
+    const el = document.querySelector('[data-e2e="chat-uniqueid"]');
+    const t = el?.textContent?.trim();
+    return t ? t.replace(/^@/, "") : null;
+  }
+  if (platformId === "twitter") {
+    const link = document.querySelector('[data-testid="conversation-info-header"] a');
+    if (link) {
+      const m = link.href.match(/(?:twitter|x)\.com\/([^/?#]+)/);
+      if (m && !["messages","i","home"].includes(m[1])) return m[1];
+    }
+    return null;
+  }
+  if (platformId === "linkedin") {
+    const link = document.querySelector('.msg-thread__link-to-profile, .msg-entity-lockup a[href*="/in/"]');
+    if (link?.href) {
+      const m = link.href.match(/linkedin\.com\/in\/([^/?#]+)/);
+      return m ? m[1] : null;
+    }
+    return null;
+  }
+  if (platformId === "facebook") {
+    const link = document.querySelector('[aria-label*="conversation"] a[href*="facebook.com/"]');
+    if (link?.href) {
+      const m = link.href.match(/facebook\.com\/([^/?#]+)/);
+      if (m && !["messages","profile.php"].includes(m[1])) return m[1];
+    }
+    return null;
+  }
+  return null;
+}
+
 // ── Main scrape function ──────────────────────────────────────────────────────
 
 function scrape() {
   const platform = getCurrentPlatform();
   const platformId = platform?.id || "unknown";
   const name = getProspectName(platformId);
+  const handle = getProspectHandle(platformId);
   const container = getChatContainer(platformId);
   const msgs = extractMessages(container, platformId);
   const lines = msgs.map(m => (m.sender === "setter" ? "You" : (name || "Prospect")) + ": " + m.content);
   const debug = msgs.length === 0 ? getDebugInfo(platformId, container) : null;
-  return { platformId, platformName: platform?.name || "Unknown", name, msgs, lines, debug };
+  return { platformId, platformName: platform?.name || "Unknown", name, handle, msgs, lines, debug };
 }
