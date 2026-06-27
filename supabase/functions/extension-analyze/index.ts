@@ -34,7 +34,7 @@ function json(body: unknown, status = 200) {
 // Robust JSON extraction from a model response.
 function parseJSON(raw: string): any {
   if (!raw?.trim()) throw new Error("Empty AI response");
-  let text = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+  let text = raw.replace(/```jsons*/gi, "").replace(/```s*/g, "").trim();
   const start = text.search(/[[{]/);
   if (start > 0) text = text.slice(start);
   const lastClose = Math.max(text.lastIndexOf("]"), text.lastIndexOf("}"));
@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     const { user: authUser } = await getAuthUser(req);
     if (!authUser) return unauthorized(corsHeaders);
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY");
+    if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const body = await req.json().catch(() => ({}));
     const platform: string = typeof body.platform === "string" ? body.platform : "unknown";
@@ -84,18 +84,18 @@ Deno.serve(async (req) => {
 You analyse a sales DM conversation and return a single, complete JSON object. You NEVER send messages — you only advise the human setter.
 
 Methodology:
-- Stages (use exactly one of these): New Lead → Discovery → Qualification (BANT) → Interested → Objection Handling → Ready for Call → Call Booked. Use "Not Qualified" or "Cold Lead" for dead-end conversations.
+- Stages (use exactly one of these): New Lead -> Discovery -> Qualification (BANT) -> Interested -> Objection Handling -> Ready for Call -> Call Booked. Use "Not Qualified" or "Cold Lead" for dead-end conversations.
 - BANT = Budget, Authority, Need, Timeline.
 - Temperature: "hot" (ready to book / strong intent), "warm" (engaged, needs nurture), "cold" (low intent / unresponsive).
 
-Return ONLY valid JSON in EXACTLY this shape, no markdown, no commentary:
+You MUST respond with ONLY a valid JSON object matching EXACTLY this schema -- no markdown, no code fences, no commentary:
 {
-  "conversation_score": <0-100 overall quality/health of how the setter is running this conversation>,
-  "booking_probability": <0-100 likelihood this prospect books a call soon>,
+  "conversation_score": <integer 0-100, overall quality/health of how the setter is running this conversation>,
+  "booking_probability": <integer 0-100, likelihood this prospect books a call soon>,
   "temperature": "hot" | "warm" | "cold",
   "stage": "<current stage from the list above>",
   "intent": "<1 short sentence describing what the prospect actually wants or is looking for>",
-  "objections": ["<short objection detected>", ...],
+  "objections": ["<short objection detected>"],
   "next_action": "<one concrete, specific next step the setter should take>",
   "summary": "<1-2 sentence read on where this conversation stands>",
   "replies": [
@@ -112,15 +112,18 @@ ${transcript}
 
 Analyse this conversation and return the JSON object.`;
 
-    const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": "https://dm-wingman-pro.vercel.app",
+        "X-Title": "DM Setter OS",
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-flash-1.5:free",
         max_tokens: 1800,
+        response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
           { role: "user", content: userPrompt },
@@ -163,7 +166,7 @@ Analyse this conversation and return the JSON object.`;
       replies: Array.isArray(analysis.replies)
         ? analysis.replies
             .filter((r: any) => r && typeof r.content === "string")
-            .slice(0, 5) // ← updated from 3 to 5
+            .slice(0, 5)
             .map((r: any) => ({
               label: String(r.label || "Reply").slice(0, 40),
               content: String(r.content).slice(0, 1200),
