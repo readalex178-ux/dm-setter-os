@@ -41,12 +41,6 @@ function detectSender(el) {
   return null;
 }
 
-// TikTok-specific sender detection. Confirmed against live TikTok DM DOM
-// (June 2026): each message row's "...DivMessageHorizontalContainer..."
-// element uses flex-direction: row-reverse for messages you sent, and
-// row for messages the prospect sent. justify-content/align-self are not
-// used for this on TikTok, so the generic detectSender() above doesn't
-// catch it — hence this dedicated walker.
 function detectSenderTikTok(itemEl) {
   const horiz = itemEl.querySelector('div[class*="MessageHorizontalContainer"]');
   if (horiz) {
@@ -54,8 +48,6 @@ function detectSenderTikTok(itemEl) {
     if (fd === "row-reverse") return "setter";
     if (fd === "row") return "prospect";
   }
-  // Fallback: walk up from the item itself in case the inner container
-// selector ever changes.
 let cur = itemEl;
   for (let i = 0; i < 8; i++) {
     if (!cur || cur === document.body) break;
@@ -67,21 +59,9 @@ let cur = itemEl;
   return null;
 }
 
-// ── Find the chat container (NOT the whole page) ───────────────────────────
-//
-// IMPORTANT: if none of a platform's specific selectors match, we return
-// null rather than silently falling back to document.body. Scanning the
-// whole page (nav bars, sidebars, "For You" feed, etc.) is what previously
-// produced garbled, repeated junk messages on platforms whose DOM had
-// drifted from the hardcoded selectors below (e.g. TikTok). An honest
-// "no messages found" state is better than fabricated output.
-
 function getChatContainer(platformId) {
   const candidates = {
     instagram: [
-      // June 2026: Instagram uses a split-pane layout. The inbox sidebar is
-      // [role="navigation"][aria-label="Thread list"] and its next sibling
-      // div is the open conversation thread. Old selectors matched the sidebar.
       '[role="navigation"][aria-label="Thread list"] + div',
       '[role="main"] [role="list"]',
       '[role="main"] [role="grid"]',
@@ -89,13 +69,7 @@ function getChatContainer(platformId) {
       '[role="main"]',
       ],
     tiktok: [
-      // Confirmed against live TikTok DM DOM (June 2026). data-e2e
-    // attributes are TikTok's own stable test-id convention; the
-    // surrounding "css-xxxxx-hash--DivChatMain" class is unstable
-    // and not relied on.
     '[data-e2e="dm-new-message-list"]',
-      // Older/alternate TikTok web builds — kept as fallback in case
-      // of A/B test or rollout variance.
       '[data-e2e="chat-detail"]',
       '[data-e2e="chat-message-container"]',
       '[data-e2e="message-list"]',
@@ -105,10 +79,6 @@ function getChatContainer(platformId) {
       '[class*="MessageList"]',
       '[class*="messageList"]',
       '[class*="DivMessageListContainer"]',
-      // NOTE: intentionally no '[aria-label="Messages"]' here — on the
-      // real TikTok DOM that matches the top-nav "Messages" inbox
-      // button (a TUXButton), not the conversation pane, which was
-      // silently producing a wrong container and zero real messages.
       ],
     twitter: [
       '[data-testid="DMActivity"]',
@@ -127,31 +97,19 @@ function getChatContainer(platformId) {
       '.msg-conversation-card__content',
       ],
   };
-
 const selectors = candidates[platformId] || [];
   for (const sel of selectors) {
     const el = document.querySelector(sel);
     if (el) return el;
   }
-
-// Best-effort fallback for platforms whose primary layout uses a real
-// role="main" landmark scoped to the conversation pane (Instagram,
-// Facebook). Platforms without a reliable landmark (TikTok, Twitter,
-// LinkedIn) get null instead of document.body — see note above.
 if (platformId === "instagram" || platformId === "facebook") {
   return document.querySelector('[role="main"]') || null;
 }
   return null;
 }
 
-// ── Name extraction ─────────────────────────────────────────────────────────
-
 function getProspectName(platformId) {
-  // Instagram: name is in the thread header as a link
 if (platformId === "instagram") {
-  // June 2026: Instagram renders the prospect name in the first meaningful
-  // span inside [data-pagelet="IGDInboxHeaderOffMsys"]. Older header
-  // selectors (h1, h2, header span[dir="auto"]) no longer match.
   const igHeader = document.querySelector('[data-pagelet="IGDInboxHeaderOffMsys"]');
   if (igHeader) {
     const SKIP = /^(active|audio call|video call|conversation information|call)/i;
@@ -161,7 +119,6 @@ if (platformId === "instagram") {
     });
     if (nameSpan?.textContent?.trim()) return nameSpan.textContent.trim();
   }
-  // Older fallback selectors
   const selectors = [
     'div[role="main"] header a span',
     'div[role="main"] header h2',
@@ -176,19 +133,10 @@ if (platformId === "instagram") {
   }
 }
 
-// TikTok: name in chat header. Confirmed against live TikTok DM DOM
-// (June 2026) — the previous selectors here (chat-user-name,
-// chat-detail-header, etc.) don't exist on the real page, which is
-// why name extraction was silently failing ("Unknown Prospect").
-// The header actually renders the contact's display name in a <p>
-// with data-e2e="dm-new-chat-nickname", and their @handle in a
-// sibling <p> with data-e2e="chat-uniqueid". Both are unique on the
-// page (only the open conversation's header has them).
 if (platformId === "tiktok") {
   const selectors = [
     '[data-e2e="dm-new-chat-nickname"]',
     '[data-e2e="chat-uniqueid"]',
-    // Older/alternate TikTok web builds — kept as fallback.
     '[data-e2e="chat-user-name"]',
     '[data-e2e="chat-detail-header"] [class*="name"]',
     '[data-e2e="chat-detail-header"] [class*="Name"]',
@@ -204,12 +152,10 @@ if (platformId === "tiktok") {
       if (text && text.length > 0 && text.length < 60 && !["TikTok","Messages","DM"].includes(text)) return text.trim();
     }
   }
-  // TikTok title: "Chat with Username | TikTok" or just "TikTok"
   const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").replace(/^Chat with\s*/i, "").trim();
   if (title && title !== "TikTok" && title !== "Messages" && title.length < 60) return title;
 }
 
-// Twitter/X
 if (platformId === "twitter") {
   const selectors = [
     '[data-testid="conversation-info-header"] span[dir="ltr"]',
@@ -225,13 +171,28 @@ if (platformId === "twitter") {
   if (title && title !== "Twitter" && title !== "X" && title !== "Messages" && title.length < 60) return title;
 }
 
-// Facebook
 if (platformId === "facebook") {
-  const el = document.querySelector('h4[dir="auto"], [aria-label*="conversation"] h4');
-  if (el?.textContent?.trim()) return el.textContent.trim();
+  // 1. Page title is most reliable — FB/Messenger sets tab title to contact name when in a convo
+  const rawTitle = document.title.replace(/\s*[|·•\-–—]\s*.*/g, '').trim();
+  const SKIP_FB = /^(messenger|facebook|messages)$/i;
+  if (rawTitle && rawTitle.length > 1 && rawTitle.length < 60 && !SKIP_FB.test(rawTitle)) return rawTitle;
+  // 2. DOM fallbacks
+  const fbSelectors = [
+    'h2[dir="auto"]',
+    'h4[dir="auto"]',
+    '[aria-label*="conversation"] h2',
+    '[aria-label*="conversation"] h4',
+    '[role="main"] span[dir="auto"]',
+  ];
+  for (const sel of fbSelectors) {
+    const els = document.querySelectorAll(sel);
+    for (const el of els) {
+      const text = el?.textContent?.trim();
+      if (text && text.length > 1 && text.length < 60 && !SKIP_FB.test(text)) return text;
+    }
+  }
 }
 
-// LinkedIn
 if (platformId === "linkedin") {
   const selectors = [
     '.msg-thread__link-to-profile',
@@ -251,61 +212,38 @@ if (platformId === "linkedin") {
 return null;
 }
 
-// ── Message extraction scoped to container ──────────────────────────────────
-
 function extractMessages(container, platformId) {
   const msgs = [];
   const seen = new Set();
-
 if (!container) return msgs;
-
 function add(text, sender) {
   const t = (text || "").trim();
   if (isJunk(t) || seen.has(t) || !sender) return;
   seen.add(t);
   msgs.push({ sender, content: t });
 }
-
 if (platformId === "instagram") {
-  // Instagram messages are in spans/divs with dir="auto" inside the conversation
   container.querySelectorAll('[dir="auto"]').forEach(el => {
-    // Skip if it contains nested dir="auto" (it's a container not a leaf)
-                                                     if (el.querySelectorAll('[dir="auto"]').length > 0) return;
-    // Skip nav/header elements
-                                                     if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
-
-    if (el.tagName === 'H1' || el.tagName === 'H2') return; // contact header, not a message
+    if (el.querySelectorAll('[dir="auto"]').length > 0) return;
+    if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
+    if (el.tagName === 'H1' || el.tagName === 'H2') return;
     const text = el.textContent?.trim();
     const sender = detectSender(el);
     add(text, sender);
   });
 }
-
 else if (platformId === "tiktok") {
-  // Primary path — confirmed against live TikTok DM DOM (June 2026).
-  // Each message is wrapped in an element with
-  // data-e2e="dm-new-chat-item", and the actual message text (when
-  // the message is plain text) lives in a descendant with
-  // data-e2e="dm-new-message-text". Sender direction comes from
-  // detectSenderTikTok (see above) — TikTok encodes it via
-  // flex-direction (row-reverse = you, row = prospect), not via
-  // justify-content/align-self like the other platforms here.
   container.querySelectorAll('[data-e2e="dm-new-chat-item"]').forEach(item => {
     const textEl = item.querySelector('[data-e2e="dm-new-message-text"]');
-    if (!textEl) return; // non-text message (video share, unsupported type, etc.)
-                                                                      add(textEl.textContent, detectSenderTikTok(item) || "prospect");
+    if (!textEl) return;
+    add(textEl.textContent, detectSenderTikTok(item) || "prospect");
   });
-
-  // Try the older data-e2e="chat-message" shape next, in case of
-  // A/B test or rollout variance.
   if (msgs.length === 0) {
     container.querySelectorAll('[data-e2e="chat-message"]').forEach(el => {
       const textEl = el.querySelector('p') || el.querySelector('span');
       add((textEl || el).textContent, detectSenderTikTok(el) || detectSender(el));
     });
   }
-
-  // Class-based fallback within container only
   if (msgs.length === 0) {
     const classSelectors = ['[class*="DmMessage"]', '[class*="MessageItem"]', '[class*="messageItem"]', '[class*="chatMessage"]', '[class*="ChatMessage"]'];
     for (const sel of classSelectors) {
@@ -316,12 +254,6 @@ else if (platformId === "tiktok") {
       if (msgs.length > 0) break;
     }
   }
-
-  // Scoped text walker — ONLY runs when getChatContainer found a real,
-  // platform-specific container (never document.body / [role="main"]
-  // fallback — those are excluded upstream by returning null). This is
-  // a narrower net than before, intentionally: it is better to surface
-  // "no messages found" than to scrape page chrome as fake messages.
   if (msgs.length === 0) {
     const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT);
     let node;
@@ -332,14 +264,12 @@ else if (platformId === "tiktok") {
       if (!parent || parent.children.length > 0) continue;
       const tag = parent.tagName?.toLowerCase();
       if (["script", "style", "noscript"].includes(tag)) continue;
-      // Skip if parent is a button or link (nav elements)
-    if (parent.closest('button, a, nav, header')) continue;
+      if (parent.closest('button, a, nav, header')) continue;
       const sender = detectSenderTikTok(parent) || detectSender(parent);
       add(text, sender);
     }
   }
 }
-
 else if (platformId === "twitter") {
   container.querySelectorAll('[data-testid="messageEntry"]').forEach(el => {
     const textEl = el.querySelector('[data-testid="tweetText"]') || el.querySelector('span:not(:has(*))');
@@ -348,7 +278,6 @@ else if (platformId === "twitter") {
     add(text, isOwn ? "setter" : "prospect");
   });
 }
-
 else if (platformId === "facebook") {
   container.querySelectorAll('[dir="auto"]').forEach(el => {
     if (el.querySelectorAll('[dir="auto"]').length > 0) return;
@@ -357,31 +286,23 @@ else if (platformId === "facebook") {
     add(text, sender);
   });
 }
-
 else if (platformId === "linkedin") {
-  // LinkedIn groups messages in event list items; the active speaker has a meta header.
   const events = container.querySelectorAll('.msg-s-event-listitem, li.msg-s-message-list__event');
   events.forEach(el => {
     const bodyEl = el.querySelector('.msg-s-event-listitem__body, p.msg-s-event-listitem__body');
     const text = bodyEl?.textContent?.trim();
-    // LinkedIn: stable class-based sender detection
-            const isProspect = el.classList.contains('msg-s-event-listitem--other')
-              || el.querySelector('.msg-s-message-group--other') !== null;
-            const sender = isProspect ? 'prospect' : 'setter';
+    const isProspect = el.classList.contains('msg-s-event-listitem--other') || el.querySelector('.msg-s-message-group--other') !== null;
+    const sender = isProspect ? 'prospect' : 'setter';
     add(text, sender);
   });
-  // Fallback: scoped dir="auto" leaves
   if (msgs.length === 0) {
     container.querySelectorAll('.msg-s-event-listitem__body').forEach(el => {
       add(el.textContent?.trim(), detectSender(el) || "prospect");
     });
   }
 }
-
 return msgs;
 }
-
-// ── Debug info when nothing found ──────────────────────────────────────────
 
 function getDebugInfo(platformId, container) {
   const lines = [
@@ -400,11 +321,8 @@ function getDebugInfo(platformId, container) {
   return lines.join("\n");
 }
 
-// ── Handle/username extraction (for CRM dedup key) ──────────────────────────
-
 function getProspectHandle(platformId) {
   if (platformId === "instagram") {
-    // Profile link is an <a> inside the conversation header area
     const pane = document.querySelector('[role="navigation"][aria-label="Thread list"] + div') || document.querySelector('[role="main"]');
     const link = pane?.querySelector('a[href*="instagram.com/"]');
     if (link) {
@@ -444,8 +362,6 @@ function getProspectHandle(platformId) {
   }
   return null;
 }
-
-// ── Main scrape function ──────────────────────────────────────────────────────
 
 function scrape() {
   const platform = getCurrentPlatform();
