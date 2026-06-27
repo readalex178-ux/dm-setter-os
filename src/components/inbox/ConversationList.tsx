@@ -2,7 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ExternalLink, Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "lucide-react";
 import { stageColor, platformIcon, type DBProspect } from "@/components/inbox/types";
 import type { Prospect as DemoProspect } from "@/data/demo-data";
 
@@ -17,10 +17,19 @@ interface Props {
   onAddProspect?: () => void;
 }
 
+function relativeTime(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(diff / 3600000);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(diff / 86400000)}d ago`;
+}
+
 export function ConversationList({ search, setSearch, filtered, useDemo, selectedId, onSelect, hidden, onAddProspect }: Props) {
   return (
-    <div className={`w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 lg:h-full ${hidden ? "hidden" : "flex-1"} lg:flex`}>
-      <div className="p-3 border-b border-border space-y-2">
+    <div className={`w-full lg:w-80 border-b lg:border-b-0 lg:border-r border-border flex flex-col shrink-0 h-full overflow-hidden ${hidden ? "hidden" : "flex-1"} lg:flex`}>
+      <div className="p-3 border-b border-border space-y-2 shrink-0">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -36,27 +45,31 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
           </Button>
         )}
       </div>
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         {filtered.map((p) => {
           const name = p.name || "";
           const handle = p.handle || "";
           const stage = p.stage || "";
           const score = useDemo ? (p as DemoProspect).leadScore : (p as DBProspect).lead_score;
           const avatar = useDemo ? (p as DemoProspect).avatar : name.split(" ").map((w: string) => w[0]).join("").slice(0, 2);
-          const unread = useDemo ? (p as DemoProspect).unread : false;
+          const unread = useDemo
+            ? (p as DemoProspect).unread
+            : (() => {
+                const lc = (p as DBProspect).last_contact_at;
+                if (!lc) return false;
+                const key = `dms_read_${p.id}`;
+                const readAt = localStorage.getItem(key);
+                if (!readAt) return true;
+                return new Date(lc) > new Date(readAt);
+              })();
           const plat = useDemo ? null : (p as DBProspect).platform;
           const temp = useDemo ? null : (p as DBProspect).lead_temperature;
-          const profileUrl = useDemo ? null : (p as DBProspect).profile_url;
+          const lastContact = !useDemo ? (p as DBProspect).last_contact_at : null;
           return (
-            <div
+            <button
               key={p.id}
-              role="button"
-              tabIndex={0}
               onClick={() => onSelect(p.id)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect(p.id); }
-              }}
-              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors cursor-pointer ${selectedId === p.id ? "bg-accent" : ""}`}
+              className={`w-full text-left p-3 border-b border-border hover:bg-muted transition-colors ${selectedId === p.id ? "bg-accent" : ""}`}
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
@@ -64,36 +77,21 @@ export function ConversationList({ search, setSearch, filtered, useDemo, selecte
                   {unread && <div className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span className="text-sm font-medium truncate flex items-center gap-1">
-                    {platformIcon(plat)} {name}
-                    {profileUrl && (
-                      <a
-                        href={profileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="Open profile"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-muted-foreground hover:text-primary shrink-0"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    )}
-                  </span>
+                  <span className="text-sm font-medium truncate flex items-center gap-1">{platformIcon(plat)} {name}</span>
                   <div className="text-xs text-muted-foreground truncate">{handle}</div>
+                  {lastContact && (
+                    <p className="text-xs text-muted-foreground truncate">{relativeTime(lastContact)}</p>
+                  )}
                   <div className="flex items-center gap-1.5 mt-1 flex-wrap">
                     <Badge variant={stageColor[stage] as any} className="text-[10px] px-1.5 py-0">{stage}</Badge>
-                    <Badge variant="score" className="text-[10px] px-1.5 py-0">{score}/10</Badge>
+                    <Badge variant="score" className="text-[10px] px-1.5 py-0">{score != null ? `${score}/10` : '—'}</Badge>
                     {temp && <Badge variant={temp.toLowerCase() === "hot" ? "destructive" : temp.toLowerCase() === "warm" ? "warning" : "secondary"} className="text-[10px] px-1.5 py-0">{temp}</Badge>}
                   </div>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
-        {/* Reserves space on mobile so the last conversation isn't hidden
-            behind the floating VoiceAssistant button + bottom tab bar,
-            since this list scrolls independently of <main>'s padding. */}
-        <div className="h-32 lg:hidden" aria-hidden="true" />
       </ScrollArea>
     </div>
   );
