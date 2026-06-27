@@ -256,14 +256,16 @@ async function saveConversation(payload) {
     }
   }
 
-  if (Array.isArray(messages) && messages.length) {
-    const rows = messages.map((m) => ({
+  // Only insert messages when the prospect is NEW — skip on re-saves to avoid
+  // duplicate rows for conversations that were already persisted.
+  if (!existingId && Array.isArray(messages) && messages.length) {
+    const rows = messages.map((m, i) => ({
       id: crypto.randomUUID(),
       user_id: userId,
       prospect_id: prospectId,
       sender: m.sender || "prospect",
       content: m.content || "",
-      sent_at: new Date().toISOString(),
+      sent_at: new Date(Date.now() - (messages.length - 1 - i) * 2000).toISOString(),
     }));
     const mRes = await authedFetch("/rest/v1/messages", {
       method: "POST",
