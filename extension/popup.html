@@ -55,6 +55,17 @@
     <div class="btn-section">
       <button class="btn-primary" id="btn-analyse" disabled>Analyse Current DM</button>
     </div>
+    <div class="row-section" id="webhook-section" style="display:none">
+      <div class="webhook-wrap">
+        <div class="row-label" style="margin-bottom:4px">Webhook URL <span style="font-size:9px;opacity:.5">(Zapier / Make → HubSpot / Salesforce)</span></div>
+        <input type="url" id="webhook-url" placeholder="https://hooks.zapier.com/..." style="width:100%;box-sizing:border-box;background:#1a1a2e;border:1px solid #333;border-radius:6px;color:#e0e0e0;padding:6px 8px;font-size:11px;margin-bottom:4px" />
+        <button class="btn-save-webhook" id="btn-save-webhook" style="font-size:11px;padding:4px 10px;background:#00e5ff;color:#000;border:none;border-radius:5px;cursor:pointer;font-weight:600">Save</button>
+        <span id="webhook-saved-msg" style="font-size:10px;color:#00e5ff;margin-left:6px;display:none">Saved ✓</span>
+      </div>
+    </div>
+    <div class="row-section">
+      <div class="row-label" style="cursor:pointer;color:#888;font-size:11px" id="btn-toggle-webhook">⚙ CRM Webhook Settings</div>
+    </div>
     <div class="recent-section">
       <div class="recent-label">Recently Saved</div>
       <div id="recent-list"><div class="empty-msg">Nothing saved yet.</div></div>

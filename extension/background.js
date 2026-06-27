@@ -173,6 +173,23 @@ async function findExistingProspect(userId, handle, platform) {
   return rows?.[0]?.id || null;
 }
 
+
+// ── Webhook (Zapier / Make → any CRM) ─────────────────────────────────────────
+async function fireWebhook(payload) {
+  try {
+    const s = await chrome.storage.local.get("crm_webhook_url");
+    const url = s?.crm_webhook_url?.trim();
+    if (!url) return;
+    await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    console.warn("[DM Setter OS] Webhook error:", e?.message);
+  }
+}
+
 async function saveConversation(payload) {
   const session = await getSession();
   if (!session?.user?.id) throw new Error("Sign in via the extension popup first.");
@@ -276,6 +293,26 @@ async function saveConversation(payload) {
       throw new Error("Saved prospect but messages failed: " + t.slice(0, 160));
     }
   }
+
+  // Fire CRM webhook (Zapier/Make/HubSpot/Salesforce) if configured
+  const session2 = await getSession();
+  fireWebhook({
+    id: prospectId,
+    name: baseRow.name,
+    handle: baseRow.handle,
+    platform: baseRow.platform,
+    stage: baseRow.stage,
+    profile_url: baseRow.profile_url,
+    source: baseRow.source,
+    last_contact_at: baseRow.last_contact_at,
+    conversation_score: aiFields.conversation_score ?? null,
+    booking_probability: aiFields.booking_probability ?? null,
+    lead_temperature: aiFields.lead_temperature ?? null,
+    suggested_action: aiFields.suggested_action ?? null,
+    concerns: aiFields.concerns ?? null,
+    user_email: session2?.user?.email ?? null,
+    timestamp: new Date().toISOString(),
+  });
 
   return { id: prospectId };
 }

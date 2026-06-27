@@ -95,6 +95,7 @@ async function populateMain(user) {
 
   // Recent prospects
   loadRecent();
+  loadWebhook();
 }
 
 async function loadRecent() {
@@ -125,6 +126,14 @@ async function loadRecent() {
       ${score != null ? `<span class="ri-score">${score}/100</span>` : ""}
     </div>`;
   }).join("");
+}
+
+
+async function loadWebhook() {
+  const s = await chrome.storage.local.get("crm_webhook_url").catch(() => ({}));
+  const url = s.crm_webhook_url || "";
+  const inp = document.getElementById("webhook-url");
+  if (inp) inp.value = url;
 }
 
 // ── Events ───────────────────────────────────────────────────────────────────────────────
@@ -163,5 +172,18 @@ document.addEventListener("DOMContentLoaded", () => {
     show("view-auth");
   });
 
-  init();
+
+  document.getElementById("btn-toggle-webhook")?.addEventListener("click", () => {
+    const sec = document.getElementById("webhook-section");
+    if (sec) sec.style.display = sec.style.display === "none" ? "" : "none";
+  });
+
+  document.getElementById("btn-save-webhook")?.addEventListener("click", async () => {
+    const url = document.getElementById("webhook-url")?.value?.trim() || "";
+    await chrome.storage.local.set({ crm_webhook_url: url });
+    const msg = document.getElementById("webhook-saved-msg");
+    if (msg) { msg.style.display = ""; setTimeout(() => { msg.style.display = "none"; }, 2000); }
+  });
+
+    init();
 });
