@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     // otherwise fall back to name match.
     let query = supabase
       .from("prospects")
-      .select("id, name, handle, platform, stage, lead_score, profile_url, conversation_score")
+      .select("id, name, handle, platform, stage, conversation_score, profile_url")
       .eq("user_id", user.id)
       .limit(1);
 
@@ -104,7 +104,6 @@ Deno.serve(async (req) => {
         handle: prospect.handle,
         platform: prospect.platform,
         stage: prospect.stage,
-        lead_score: prospect.lead_score,
         conversation_score: prospect.conversation_score,
         profile_url: prospect.profile_url,
       },

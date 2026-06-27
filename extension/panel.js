@@ -105,7 +105,17 @@ function buildPanel() {
         <div class="dms-section" id="dms-crm-section">
           <div class="dms-section-head">CRM Actions</div>
           <div class="dms-crm-row">
-            <button class="dms-btn-primary" id="dms-save-btn">💾 Save to CRM</button>
+            <!-- Shown when prospect name can't be detected automatically -->
+          <div id="dms-name-fallback" style="display:none;margin-bottom:8px">
+            <input type="text" id="dms-manual-name" class="dms-input" placeholder="Enter prospect name / @handle" style="width:100%;box-sizing:border-box" />
+          </div>
+          <button class="dms-btn-primary" id="dms-save-btn">💾 Save to CRM</button>
+          <div style="margin-top:6px;text-align:center">
+            <a id="dms-open-profile" href="#" target="_blank" rel="noopener"
+               style="display:none;font-size:11px;color:var(--dms-primary);text-decoration:none;opacity:.8">
+              ↗ Open Profile
+            </a>
+          </div>
           </div>
           <select class="dms-select" id="dms-stage-select">
             ${STAGES.map((s) => `<option value="${s}">${s}</option>`).join("")}
@@ -237,6 +247,11 @@ async function hydrateContext(conv) {
     if (!res?.ok) return;
     lastContext = res.context;
     renderContext(res.context);
+    // If the prospect already exists in CRM, track their ID so analyses
+    // can pull per-prospect memory from the AI engine.
+    if (res.context?.found && res.context?.prospect?.id) {
+      lastSavedProspectId = res.context.prospect.id;
+    }
   } catch (e) {
     console.warn("[DM Setter OS] Context hydrate failed:", e);
   }
@@ -393,9 +408,11 @@ function flash(btn, label) {
 function insertIntoComposer(text) {
   const selectors = [
     'div[role="textbox"][contenteditable="true"]',
+    'div[data-testid="conversation-compose-box-input"][contenteditable="true"]',
     'textarea[placeholder*="Message" i]',
     'div[contenteditable="true"][aria-label*="Message" i]',
     '.msg-form__contenteditable[contenteditable="true"]',
+    'footer div[contenteditable="true"]',
     'textarea',
   ];
   let box = null;
@@ -507,13 +524,28 @@ async function saveToApp() {
   }
 
   if (!lastConv.name && !lastConv.handle) {
-    const entered = prompt("What's this prospect's name or @handle?", "");
-    if (entered?.trim()) lastConv.name = entered.trim();
+    // Show inline name input instead of browser prompt (prompt() can be blocked by site CSP)
+    const fallbackWrap = $("dms-name-fallback");
+    const fallbackInp = $("dms-manual-name");
+    if (fallbackWrap && fallbackInp) {
+      const entered = fallbackInp.value?.trim();
+      if (entered) {
+        lastConv.name = entered;
+        fallbackWrap.style.display = "none";
+      } else {
+        fallbackWrap.style.display = "block";
+        fallbackInp.focus();
+        showStatus("Enter a name above, then click Save again.", "info");
+        return;
+      }
+    } else {
+      showStatus("Couldn't identify this prospect — open a DM conversation first.", "error");
+      return;
+    }
   }
-  if (!lastConv.name && !lastConv.handle) {
-    showStatus("Couldn't identify this prospect — open a DM conversation first.", "error");
-    return;
-  }
+  // Hide name fallback if it was shown
+  const _fb = $("dms-name-fallback");
+  if (_fb) _fb.style.display = "none";
 
   const btn = $("dms-save-btn");
   const msgEl = $("dms-save-msg");
@@ -565,7 +597,7 @@ async function syncEnrichment() {
 
 function currentThreadKey() {
   const conv = (typeof scrape === "function") ? scrape() : { name: "", lines: [] };
-  return `${location.pathname}|${conv.name || ""}|${conv.lines.length}`;
+  return `${location.pathname}|${conv.name || ""}`;
 }
 
 function onThreadChanged() {
@@ -589,6 +621,7 @@ function onThreadChanged() {
 
   renderConvPreview(lastConv);
   hydrateContext(lastConv);
+  updateProfileLink(lastConv);
 }
 
 function startObserver() {
@@ -659,6 +692,29 @@ function loadPasted() {
   $("dms-paste-toggle").textContent = "Show";
 }
 
+
+// ── Open Profile link ────────────────────────────────────────────────────────
+
+function updateProfileLink(conv) {
+  const link = $("dms-open-profile");
+  if (!link) return;
+  // Build the best profile URL we can from what we have
+  let url = "";
+  const pid = conv?.platformId;
+  const handle = conv?.handle;
+  const href = window.location.href;
+  if (pid === "instagram" && handle) url = `https://instagram.com/${handle}`;
+  else if (pid === "tiktok" && handle) url = `https://tiktok.com/@${handle}`;
+  else if (pid === "twitter" && handle) url = `https://x.com/${handle}`;
+  else if (pid === "linkedin" && handle) url = `https://linkedin.com/in/${handle}`;
+  else if (pid === "facebook" && handle) url = `https://facebook.com/${handle}`;
+  else if (pid === "whatsapp" && handle) url = `https://wa.me/${handle}`;
+  // Fallback: current page URL if it looks like a profile/conversation page
+  else if (href && !href.includes("messages") && !href.includes("/direct/")) url = href;
+  if (url) { link.href = url; link.style.display = "inline"; }
+  else { link.style.display = "none"; }
+}
+
 // ── Panel open/close ─────────────────────────────────────────────────────────
 
 function openPanel() {
@@ -672,6 +728,7 @@ function openPanel() {
     $("dms-refresh").onclick = () => {
       lastConv = scrape();
       renderConvPreview(lastConv);
+      updateProfileLink(lastConv);
       refreshConnection().then(() => hydrateContext(lastConv));
     };
 
@@ -698,6 +755,7 @@ function openPanel() {
     lastConv = scrape();
     renderConvPreview(lastConv);
     hydrateContext(lastConv);
+    updateProfileLink(lastConv);
   });
 
   startObserver();

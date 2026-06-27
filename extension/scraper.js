@@ -9,7 +9,25 @@ function getCurrentPlatform() {
   if (h.includes("twitter.com") || h.includes("x.com")) return { id: "twitter", name: "Twitter/X", emoji: "𝕏" };
   if (h.includes("facebook.com") || h.includes("messenger.com")) return { id: "facebook", name: "Facebook", emoji: "👤" };
   if (h.includes("linkedin.com")) return { id: "linkedin", name: "LinkedIn", emoji: "💼" };
-  return null;
+  if (h.includes("web.whatsapp.com")) return { id: "whatsapp", name: "WhatsApp", emoji: "💬" };
+  if (platformId === "whatsapp") {
+  // Primary: contact name from the conversation header
+  const header = document.querySelector('[data-testid="conversation-info-header"]');
+  if (header) {
+    // span[title] is the most stable — WhatsApp sets title attr to the full name
+    const titleSpan = header.querySelector('span[title]');
+    if (titleSpan?.title?.trim()) return titleSpan.title.trim();
+    // Fallback: first dir=auto span in the header
+    const dirSpan = header.querySelector('span[dir="auto"]');
+    if (dirSpan?.textContent?.trim()) return dirSpan.textContent.trim();
+  }
+  // Secondary: page title (WhatsApp sets it to contact name in active convo)
+  const waTitle = document.title.replace(/\s*[|·•]\s*.*/g, '').trim();
+  const SKIP_WA = /^(WhatsApp|whatsapp)$/i;
+  if (waTitle && !SKIP_WA.test(waTitle) && waTitle.length < 80) return waTitle;
+}
+
+return null;
 }
 
 // ── Junk filter ──────────────────────────────────────────────────────────
@@ -96,6 +114,10 @@ function getChatContainer(platformId) {
       '.scaffold-layout__detail .msg-thread',
       '.msg-conversation-card__content',
       ],
+    whatsapp: [
+      '[data-testid="conversation-panel-messages"]',
+      '#main',
+      ],
   };
 const selectors = candidates[platformId] || [];
   for (const sel of selectors) {
@@ -104,6 +126,9 @@ const selectors = candidates[platformId] || [];
   }
 if (platformId === "instagram" || platformId === "facebook") {
   return document.querySelector('[role="main"]') || null;
+}
+if (platformId === "whatsapp") {
+  return document.querySelector('#main') || document.body;
 }
   return null;
 }
@@ -301,6 +326,29 @@ else if (platformId === "linkedin") {
     });
   }
 }
+else if (platformId === "whatsapp") {
+  // Try data-testid based approach first (most reliable)
+  const msgContainers = container.querySelectorAll('[data-testid="msg-container"]');
+  if (msgContainers.length > 0) {
+    msgContainers.forEach(el => {
+      const textEl = el.querySelector('[data-testid="msg-text"]') || el.querySelector('.selectable-text');
+      const text = textEl?.textContent?.trim();
+      const isOut = !!el.closest('.message-out');
+      add(text, isOut ? "setter" : "prospect");
+    });
+  }
+  // Fallback: class-based (older WhatsApp Web builds)
+  if (msgs.length === 0) {
+    container.querySelectorAll('.message-in, .message-out').forEach(el => {
+      // Skip nested — only top-level message divs
+      if (el.parentElement?.closest('.message-in, .message-out')) return;
+      const textEl = el.querySelector('.selectable-text span') || el.querySelector('[data-testid="msg-text"]');
+      const text = textEl?.textContent?.trim();
+      const isOut = el.classList.contains('message-out');
+      add(text, isOut ? "setter" : "prospect");
+    });
+  }
+}
 return msgs;
 }
 
@@ -312,7 +360,7 @@ function getDebugInfo(platformId, container) {
     "Container: " + (!container ? "none found (try scrolling into the conversation, or use Paste fallback)" : container.tagName + "." + container.className?.toString().slice(0, 40)),
     ];
   if (container) {
-    const checks = ['[data-e2e="dm-new-chat-item"]', '[data-e2e="dm-new-message-text"]', '[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]'];
+    const checks = ['[data-e2e="dm-new-chat-item"]', '[data-e2e="dm-new-message-text"]', '[data-e2e="chat-message"]', '[role="row"]', '[role="listitem"]', '[dir="auto"]', '[data-testid="messageEntry"]', '[data-testid="msg-container"]', '.message-in', '.message-out'];
     checks.forEach(sel => {
       const n = container.querySelectorAll(sel).length;
       if (n > 0) lines.push("Found " + n + "x " + sel);
@@ -359,6 +407,11 @@ function getProspectHandle(platformId) {
       if (m && !["messages","profile.php"].includes(m[1])) return m[1];
     }
     return null;
+  }
+  if (platformId === "whatsapp") {
+    // Phone number may appear as a query param when arriving from a wa.me link
+    const waPhone = new URLSearchParams(location.search).get('phone');
+    return waPhone || null;
   }
   return null;
 }

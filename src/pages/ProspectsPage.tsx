@@ -55,7 +55,7 @@ export default function ProspectsPage() {
       p.name.toLowerCase().includes(search.toLowerCase()) ||
       (p.handle ?? "").toLowerCase().includes(search.toLowerCase());
     const matchStage = stageFilter === "all" || p.stage === stageFilter;
-    const matchScore = minScore.trim() === "" || (p.lead_score ?? 0) >= Number(minScore);
+    const matchScore = minScore.trim() === "" || (p.conversation_score ?? 0) >= Number(minScore);
     return matchSearch && matchStage && matchScore;
   });
 

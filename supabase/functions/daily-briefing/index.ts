@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     );
 
     const [prospectsRes, kpisRes] = await Promise.all([
-      supabase.from("prospects").select("name,stage,lead_score,call_readiness,last_contact_at,concerns"),
+      supabase.from("prospects").select("name,stage,conversation_score,call_readiness,last_contact_at,concerns"),
       supabase.from("daily_kpis").select("*").order("date", { ascending: false }).limit(7),
     ]);
 

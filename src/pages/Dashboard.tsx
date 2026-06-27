@@ -54,7 +54,7 @@ export default function Dashboard() {
 
   const kpiCards = [
     { label: "Total Prospects", value: prospects.length, icon: MessageSquare, color: "text-primary" },
-    { label: "Active Leads", value: activeLeads, icon: Users, olor: "text-info" },
+    { label: "Active Leads", value: activeLeads, icon: Users, color: "text-info" },
     { label: "Qualified", value: qualified, icon: UserCheck, color: "text-success" },
     { label: "Ready for Call", value: readyForCall, icon: Phone, color: "text-warning" },
     { label: "Calls Booked", value: booked, icon: PhoneCall, color: "text-success" },
@@ -113,7 +113,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 mb-3">
             <Zap className="h-4 w-4 text-primary" />
             <span className="text-sm font-semibold">Focus Now</span>
-            <span className="text-xs text-muted-foreground">â highest priority actions</span>
+            <span className="text-xs text-muted-foreground">— highest priority actions</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {focusItems.map((f) => (
@@ -178,7 +178,7 @@ export default function Dashboard() {
             <CardContent className="p-4">
               <kpi.icon className={`h-3.5 w-3.5 ${kpi.color} mb-2.5`} />
               <div className="text-2xl font-bold tabular-nums">{kpi.value}</div>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{kipi.label}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{kpi.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -223,7 +223,7 @@ export default function Dashboard() {
           <CardContent className="px-5 pb-4 space-y-1">
             {hotProspects.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">
-                No hot prospects yet â score climbs as conversations progress.
+                No hot prospects yet — score climbs as conversations progress.
               </p>
             ) : hotProspects.map((p) => {
               const score = p.conversation_score ?? 0;
@@ -279,7 +279,7 @@ export default function Dashboard() {
               disabled={!quickName.trim() || addProspect.isPending}
               onClick={handleQuickAdd}>
               {addProspect.isPending
-                ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Addingâ¦</>
+                ? <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> Adding…</>
                 : <><Plus className="h-4 w-4 mr-1.5" /> Add to New Leads</>}
             </Button>
           </CardContent>

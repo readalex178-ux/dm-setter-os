@@ -27,4 +27,4 @@ window.addEventListener("storage", (e) => {
 });
 
 // Also poll every 2 s to catch in-page auth state changes that don't fire storage events
-setInterval(sendSession, 2000);
+setInterval(sendSession, 5000);

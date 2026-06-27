@@ -56,6 +56,7 @@ Deno.serve(async (req) => {
     if (!OPENROUTER_API_KEY) throw new Error("OPENROUTER_API_KEY not configured");
 
     const body = await req.json().catch(() => ({}));
+    const prospectId: string | undefined = typeof body.prospectId === "string" && body.prospectId ? body.prospectId : undefined;
     const platform: string = typeof body.platform === "string" ? body.platform : "unknown";
     const name: string = typeof body.name === "string" && body.name.trim() ? body.name.trim() : "Unknown";
     const rawMessages: ExtMessage[] = Array.isArray(body.messages) ? body.messages : [];
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
       .join("\n");
 
     // Inject the user's knowledge base (offer, ICP, objections, FAQ, examples).
-    const knowledge = await loadContext(req);
+    const knowledge = await loadContext(req, prospectId ? { prospectId } : undefined);
 
     const system = `You are the AI analysis engine inside DM Setter OS, an operating system for professional DM setters.
 You analyse a sales DM conversation and return a single, complete JSON object. You NEVER send messages — you only advise the human setter.

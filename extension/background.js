@@ -157,20 +157,38 @@ function isUsableProfileUrl(url) {
 // or null. Only handle+platform is used (not name), since names are
 // freeform and unreliable, while handle+platform uniquely identifies the
 // account on that platform.
-async function findExistingProspect(userId, handle, platform) {
-  if (!handle) return null; // nothing reliable to dedup on
-  const params = new URLSearchParams({
-    select: "id",
-    user_id: `eq.${userId}`,
-    handle: `eq.${handle}`,
-    limit: "1",
-  });
-  // platform can legitimately be null (unrecognized platform) — match that too.
-  params.set("platform", platform ? `eq.${platform}` : "is.null");
-  const res = await authedFetch(`/rest/v1/prospects?${params.toString()}`, { method: "GET" });
-  if (!res.ok) return null; // best-effort — fall through to insert rather than block the save
-  const rows = await res.json().catch(() => []);
-  return rows?.[0]?.id || null;
+async function findExistingProspect(userId, handle, platform, name) {
+  // Primary dedup key: handle + platform (most reliable — uniquely identifies the account)
+  if (handle) {
+    const params = new URLSearchParams({
+      select: "id",
+      user_id: `eq.${userId}`,
+      handle: `eq.${handle}`,
+      limit: "1",
+    });
+    params.set("platform", platform ? `eq.${platform}` : "is.null");
+    const res = await authedFetch(`/rest/v1/prospects?${params.toString()}`, { method: "GET" });
+    if (res.ok) {
+      const rows = await res.json().catch(() => []);
+      if (rows?.[0]?.id) return rows[0].id;
+    }
+  }
+  // Fallback dedup: name + platform (catches platforms that don't expose handles)
+  if (name && platform) {
+    const params = new URLSearchParams({
+      select: "id",
+      user_id: `eq.${userId}`,
+      name: `eq.${name}`,
+      platform: `eq.${platform}`,
+      limit: "1",
+    });
+    const res = await authedFetch(`/rest/v1/prospects?${params.toString()}`, { method: "GET" });
+    if (res.ok) {
+      const rows = await res.json().catch(() => []);
+      if (rows?.[0]?.id) return rows[0].id;
+    }
+  }
+  return null; // no match — proceed to insert
 }
 
 
@@ -237,7 +255,7 @@ async function saveConversation(payload) {
   // Dedup on handle+platform: if this prospect already exists (saved before,
   // or being enriched by a later Analyse run), update that row instead of
   // inserting a duplicate.
-  const existingId = await findExistingProspect(userId, handle, platform);
+  const existingId = await findExistingProspect(userId, handle, platform, prospect.name);
   let prospectId = existingId;
 
   if (existingId) {
@@ -295,7 +313,6 @@ async function saveConversation(payload) {
   }
 
   // Fire CRM webhook (Zapier/Make/HubSpot/Salesforce) if configured
-  const session2 = await getSession();
   fireWebhook({
     id: prospectId,
     name: baseRow.name,
@@ -310,7 +327,7 @@ async function saveConversation(payload) {
     lead_temperature: aiFields.lead_temperature ?? null,
     suggested_action: aiFields.suggested_action ?? null,
     concerns: aiFields.concerns ?? null,
-    user_email: session2?.user?.email ?? null,
+    user_email: session?.user?.email ?? null,
     timestamp: new Date().toISOString(),
   });
 
@@ -319,7 +336,7 @@ async function saveConversation(payload) {
 
 async function getRecent() {
   const res = await authedFetch(
-    "/rest/v1/prospects?select=id,name,stage,lead_score,conversation_score,updated_at&order=updated_at.desc&limit=20",
+    "/rest/v1/prospects?select=id,name,stage,conversation_score,updated_at&order=updated_at.desc&limit=20",
     { method: "GET" }
   );
   if (!res.ok) throw new Error("Could not load prospects");

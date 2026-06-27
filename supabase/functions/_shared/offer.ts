@@ -1,5 +1,5 @@
 // Shared helper: loads the caller's active Offer Profile and formats it for prompts.
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 export async function loadOfferContext(req: Request): Promise<string> {
   try {
