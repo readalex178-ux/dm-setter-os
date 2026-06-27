@@ -149,13 +149,24 @@ if (platformId === "instagram" || platformId === "facebook") {
 function getProspectName(platformId) {
   // Instagram: name is in the thread header as a link
 if (platformId === "instagram") {
+  // June 2026: Instagram renders the prospect name in the first meaningful
+  // span inside [data-pagelet="IGDInboxHeaderOffMsys"]. Older header
+  // selectors (h1, h2, header span[dir="auto"]) no longer match.
+  const igHeader = document.querySelector('[data-pagelet="IGDInboxHeaderOffMsys"]');
+  if (igHeader) {
+    const SKIP = /^(active|audio call|video call|conversation information|call)/i;
+    const nameSpan = [...igHeader.querySelectorAll('span')].find(s => {
+      const t = s.textContent?.trim();
+      return t && t.length > 1 && t.length < 80 && !SKIP.test(t);
+    });
+    if (nameSpan?.textContent?.trim()) return nameSpan.textContent.trim();
+  }
+  // Older fallback selectors
   const selectors = [
     'div[role="main"] header a span',
     'div[role="main"] header h2',
     'div[role="main"] header span[dir="auto"]',
-    'div[role="main"] header [role="button"] span[dir="auto"]',
-    'div[role="main"] header h1',
-    ];
+  ];
   for (const sel of selectors) {
     const els = document.querySelectorAll(sel);
     for (const el of els) {
@@ -163,9 +174,6 @@ if (platformId === "instagram") {
       if (text && text.length > 0 && text.length < 60 && text !== "Instagram") return text;
     }
   }
-  // Page title — Instagram puts name in title when DM is open
-  const title = document.title.replace(/\s*[\|•·]\s*.*/g, "").trim();
-  if (title && title !== "Instagram" && title !== "Direct" && title.length < 60) return title;
 }
 
 // TikTok: name in chat header. Confirmed against live TikTok DM DOM
@@ -203,10 +211,18 @@ if (platformId === "tiktok") {
 
 // Twitter/X
 if (platformId === "twitter") {
-  const el = document.querySelector('.msg-entity-lockup__entity-title, .msg-conversation-listitem__participant-names');
-  if (el?.textContent?.trim()) return el.textContent.trim();
+  const selectors = [
+    '[data-testid="conversation-info-header"] span[dir="ltr"]',
+    '[data-testid="UserName"] span',
+    '[aria-label*="conversation"] h2',
+  ];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    const text = el?.textContent?.trim();
+    if (text && text.length > 0 && text.length < 60 && !['Twitter','X','Messages'].includes(text)) return text;
+  }
   const title = document.title.replace(/\s*[\|/]\s*.*/g, "").trim();
-  if (title && title !== "Twitter" && title !== "X" && title.length < 60) return title;
+  if (title && title !== "Twitter" && title !== "X" && title !== "Messages" && title.length < 60) return title;
 }
 
 // Facebook
