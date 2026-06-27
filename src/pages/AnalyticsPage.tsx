@@ -239,7 +239,10 @@ export default function AnalyticsPage() {
               ) : (
                 <ResponsiveContainer key={range} width="100%" height={250}>
                   <PieChart>
-                    <Pie data={objections} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value" isAnimationActive={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}>
+                    <Pie data={objections} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={3} dataKey="value" isAnimationActive={false} label={({ name, percent }) => {
+              const short = name.length > 20 ? name.slice(0, 20) + '…' : name;
+              return `${short} ${(percent * 100).toFixed(0)}%`;
+            }}>
                       {objections.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                     </Pie>
                     <Tooltip contentStyle={tooltipStyle} />
