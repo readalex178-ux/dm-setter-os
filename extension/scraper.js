@@ -258,7 +258,8 @@ if (platformId === "instagram") {
     // Skip nav/header elements
                                                      if (el.closest('header, nav, [role="navigation"], [role="banner"]')) return;
 
-    if (el.tagName === 'H1' || el.tagName === 'H2') return; // contact header, not a message    const text = el.textContent?.trim();
+    if (el.tagName === 'H1' || el.tagName === 'H2') return; // contact header, not a message
+    const text = el.textContent?.trim();
     const sender = detectSender(el);
     add(text, sender);
   });
