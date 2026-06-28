@@ -345,7 +345,13 @@ async function getRecent() {
 
 // ── Message router ───────────────────────────────────────────────────────────
 
-chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+  // Only trust messages from this extension's own content scripts/pages —
+  // never act on a message whose sender isn't us.
+  if (sender.id !== chrome.runtime.id) {
+    return false;
+  }
+
   (async () => {
     try {
       switch (msg.type) {

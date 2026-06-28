@@ -1,13 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getAuthUser, unauthorized } from "../_shared/auth.ts";
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimited } from "../_shared/rateLimit.ts";
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req.headers.get("origin"));
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -20,11 +17,20 @@ Deno.serve(async (req) => {
     const { user } = await getAuthUser(req);
     if (!user) return unauthorized(corsHeaders);
 
+    if (!(await checkRateLimit(user.id, "send-message", 30, 60))) return rateLimited(corsHeaders);
+
     const { prospectId, content } = await req.json();
 
     if (!prospectId || !content) {
       return new Response(
         JSON.stringify({ error: 'Missing prospectId or content' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (typeof content !== 'string' || content.length > 4000) {
+      return new Response(
+        JSON.stringify({ error: 'Message content must be a string under 4000 characters.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

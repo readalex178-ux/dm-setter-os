@@ -1,12 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimited } from "../_shared/rateLimit.ts";
 
 Deno.serve(async (req) => {
+  const CORS = buildCorsHeaders(req.headers.get("origin"));
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
 
   try {
@@ -20,6 +17,8 @@ Deno.serve(async (req) => {
     );
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+
+    if (!(await checkRateLimit(user.id, "training-chat"))) return rateLimited(CORS);
 
     const body = await req.json();
     const { messages = [], scenario, offer, icp, scripts = [], objections = [] } = body;

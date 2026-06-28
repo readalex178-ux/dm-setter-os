@@ -464,6 +464,17 @@ async function analyse() {
     messages: lastConv.msgs,
   };
 
+  const MAX_PAYLOAD_BYTES = 50_000;
+  if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+    payload.messages = payload.messages.slice(-60);
+    if (JSON.stringify(payload).length > MAX_PAYLOAD_BYTES) {
+      showStatus("Conversation is too large to analyse — scroll up less before retrying.", "error");
+      btn.disabled = false;
+      btn.textContent = "⚡ Analyse Conversation";
+      return;
+    }
+  }
+
   try {
     const res = await sendBg({ type: "ANALYZE_CONVERSATION", payload });
     if (!res?.ok) throw new Error(res?.error || "Analysis failed");
@@ -788,7 +799,11 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 // Messages from popup
-chrome.runtime.onMessage.addListener((msg) => {
+chrome.runtime.onMessage.addListener((msg, sender) => {
+  // Only trust messages from this extension's own pages (e.g. the popup) —
+  // never act on a message whose sender isn't us.
+  if (sender.id !== chrome.runtime.id) return;
+
   if (msg?.type === "TOGGLE_OVERLAY") togglePanel(!!msg.visible);
   if (msg?.type === "TOGGLE_PANEL") togglePanel(!!msg.show);
   if (msg?.type === "ANALYSE_NOW") {

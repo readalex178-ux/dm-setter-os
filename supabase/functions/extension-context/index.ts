@@ -1,10 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-  "Access-Control-Allow-Headers": "Authorization, Content-Type, apikey, x-client-info",
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
+import { checkRateLimit, rateLimited } from "../_shared/rateLimit.ts";
 
 function recommendedApproach(stage: string | null): string {
   switch (stage) {
@@ -32,12 +28,13 @@ function recommendedApproach(stage: string | null): string {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
+  const corsHeaders = buildCorsHeaders(req.headers.get("origin"));
+  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
     const supabase = createClient(
@@ -48,8 +45,10 @@ Deno.serve(async (req) => {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: CORS });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
+
+    if (!(await checkRateLimit(user.id, "extension-context"))) return rateLimited(corsHeaders);
 
     const body = await req.json().catch(() => ({}));
     const platform: string | null = typeof body.platform === "string" && body.platform ? body.platform.toLowerCase() : null;
@@ -58,7 +57,7 @@ Deno.serve(async (req) => {
 
     if (!handle && !name) {
       return new Response(JSON.stringify({ found: false }), {
-        headers: { ...CORS, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -84,7 +83,7 @@ Deno.serve(async (req) => {
     if (error) {
       console.error("extension-context DB error:", error);
       return new Response(JSON.stringify({ found: false }), {
-        headers: { ...CORS, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -92,7 +91,7 @@ Deno.serve(async (req) => {
 
     if (!prospect) {
       return new Response(JSON.stringify({ found: false }), {
-        headers: { ...CORS, "Content-Type": "application/json" },
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -111,10 +110,10 @@ Deno.serve(async (req) => {
     };
 
     return new Response(JSON.stringify(response), {
-      headers: { ...CORS, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("extension-context error:", err);
-    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: CORS });
+    return new Response(JSON.stringify({ error: String(err) }), { status: 500, headers: corsHeaders });
   }
 });
