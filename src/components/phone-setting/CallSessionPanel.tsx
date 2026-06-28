@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import {
   Phone, PhoneOff, ScreenShare, Volume2, Smartphone, Loader2,
-  AlertTriangle, CheckCircle2, Captions, Sparkles,
+  AlertTriangle, CheckCircle2, Captions, Sparkles, HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,10 +97,66 @@ interface Suggestion {
   text: string;
 }
 
+// getUserMedia rejects with a DOMException named NotAllowedError/SecurityError
+// when the mic permission is blocked; the speech recognition API surfaces the
+// same condition as a string error code, handled separately at the call site.
+function isMicPermissionDenied(e: unknown): boolean {
+  if (e instanceof DOMException) return e.name === "NotAllowedError" || e.name === "SecurityError";
+  if (e instanceof Error) return /not-allowed|permission denied/i.test(e.message);
+  return false;
+}
+
+function MicPermissionSteps() {
+  return (
+    <ol className="list-decimal pl-4 space-y-1">
+      <li>
+        Go to{" "}
+        <code className="rounded bg-muted px-1 py-0.5 text-[11px]">chrome://settings/content/microphone</code>
+      </li>
+      <li>Find this site listed under "Not allowed"</li>
+      <li>Remove it</li>
+      <li>Reload the page</li>
+    </ol>
+  );
+}
+
+function MicBlockedNotice() {
+  return (
+    <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
+      <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      <div className="space-y-1.5">
+        <p className="font-medium">Microphone access was blocked.</p>
+        <p>To fix:</p>
+        <MicPermissionSteps />
+      </div>
+    </div>
+  );
+}
+
+function MicHelpTip() {
+  return (
+    <Collapsible>
+      <CollapsibleTrigger
+        onClick={(e) => e.stopPropagation()}
+        className="text-[11px] text-primary mt-1.5 flex items-center gap-1 hover:underline"
+      >
+        <HelpCircle className="h-3 w-3" /> How to allow mic
+      </CollapsibleTrigger>
+      <CollapsibleContent onClick={(e) => e.stopPropagation()} className="mt-1.5">
+        <div className="rounded-md border border-border bg-muted/30 p-2 text-[11px] text-muted-foreground">
+          <p className="mb-1">If your browser blocked the mic before, allow it again:</p>
+          <MicPermissionSteps />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 export function CallSessionPanel({ prospect, onCallEnded }: Props) {
   const [phase, setPhase] = useState<CallPhase>("idle");
   const [selectedMode, setSelectedMode] = useState<CallMode | null>(null);
   const [connectError, setConnectError] = useState<string | null>(null);
+  const [micBlocked, setMicBlocked] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
 
   const [finalLines, setFinalLines] = useState<string[]>([]);
@@ -207,7 +264,7 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
     recognition.onerror = (e: SpeechRecognitionErrorEvent) => {
       console.error("SpeechRecognition error:", e?.error);
       if (e?.error === "not-allowed" || e?.error === "service-not-allowed") {
-        setConnectError("Microphone access was blocked — live transcription stopped.");
+        setMicBlocked(true);
       }
     };
     recognition.onend = () => {
@@ -222,6 +279,7 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
 
   async function beginActiveCall(mode: CallMode) {
     setConnectError(null);
+    setMicBlocked(false);
     setPhase("connecting");
     try {
       if (mode === "voip") {
@@ -246,7 +304,11 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
       if (speechSupported) startRecognition();
       setPhase("active");
     } catch (e) {
-      setConnectError(e instanceof Error ? e.message : "Could not get microphone/audio permission.");
+      if (isMicPermissionDenied(e)) {
+        setMicBlocked(true);
+      } else {
+        setConnectError(e instanceof Error ? e.message : "Could not get microphone/audio permission.");
+      }
       setPhase("picking");
     }
   }
@@ -311,6 +373,7 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
     lastSentRef.current = "";
     setSelectedMode(null);
     setConnectError(null);
+    setMicBlocked(false);
   }
 
   function endCall() {
@@ -331,6 +394,7 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
     setPhase("idle");
     setSelectedMode(null);
     setConnectError(null);
+    setMicBlocked(false);
   }
 
   // ---- Render ----
@@ -370,7 +434,9 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
               <span>Live transcription requires Chrome or Edge. VoIP/Speakerphone modes will still let you talk, but no transcript or AI suggestions will appear in this browser.</span>
             </div>
           )}
-          {connectError && (
+          {micBlocked ? (
+            <MicBlockedNotice />
+          ) : connectError && (
             <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
               <span>{connectError}</span>
@@ -381,14 +447,21 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
             {MODE_OPTIONS.map((opt) => {
               const Icon = opt.icon;
               const active = selectedMode === opt.id;
+              const disabled = phase === "connecting";
               return (
-                <button
+                <div
                   key={opt.id}
-                  type="button"
-                  disabled={phase === "connecting"}
-                  onClick={() => setSelectedMode(opt.id)}
+                  role="button"
+                  tabIndex={disabled ? -1 : 0}
+                  aria-pressed={active}
+                  onClick={() => { if (!disabled) setSelectedMode(opt.id); }}
+                  onKeyDown={(e) => {
+                    if (disabled) return;
+                    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedMode(opt.id); }
+                  }}
                   className={cn(
-                    "text-left rounded-lg border p-3 transition-colors disabled:opacity-60",
+                    "text-left rounded-lg border p-3 transition-colors cursor-pointer",
+                    disabled && "opacity-60 pointer-events-none",
                     active ? "border-primary bg-primary/5" : "border-border hover:bg-muted/40",
                   )}
                 >
@@ -396,7 +469,8 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
                     <Icon className="h-4 w-4 text-primary" /> {opt.title}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">{opt.description}</p>
-                </button>
+                  {opt.id !== "mobile" && <MicHelpTip />}
+                </div>
               );
             })}
           </div>
@@ -464,7 +538,9 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">
-        {connectError && (
+        {micBlocked ? (
+          <MicBlockedNotice />
+        ) : connectError && (
           <div className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 p-2.5 text-xs text-destructive">
             <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
             <span>{connectError}</span>
