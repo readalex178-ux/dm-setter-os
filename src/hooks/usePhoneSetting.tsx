@@ -59,6 +59,7 @@ export interface DBPhoneCall {
   ai_summary: string | null;
   ai_next_step: string | null;
   ai_follow_up_message: string | null;
+  transcript: string | null;
   called_at: string;
   created_at: string;
 }
@@ -155,6 +156,7 @@ export function useLogPhoneCall() {
       outcome: CallOutcome;
       notes?: string;
       duration_minutes?: number;
+      transcript?: string;
     }) => {
       const calledAt = new Date().toISOString();
       const { data, error } = await supabase

@@ -11,8 +11,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import {
-  Sparkles, Loader2, Quote, Phone, Save, Send, Copy, Check, History,
+  Sparkles, Loader2, Quote, Phone, Save, Send, Copy, Check, History, Captions,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -20,6 +21,7 @@ import {
   CALL_OUTCOMES, usePhoneCalls, useLogPhoneCall, useUpdatePhoneCall, useUpdatePhoneProspect,
   type CallOutcome, type PhoneProspect, type PhoneStage, type PreCallBrief,
 } from "@/hooks/usePhoneSetting";
+import { CallSessionPanel } from "@/components/phone-setting/CallSessionPanel";
 
 interface Props {
   prospect: PhoneProspect | null;
@@ -55,8 +57,10 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
   const [submitting, setSubmitting] = useState(false);
   const [lastDebrief, setLastDebrief] = useState<{ summary: string; nextStep: string; followUpMessage: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
 
   const notesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debriefRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!prospect) return;
@@ -69,8 +73,17 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
     setDebriefNotes("");
     setDurationMinutes("");
     setLastDebrief(null);
+    setPendingTranscript(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prospect?.id]);
+
+  function handleCallEnded(transcript: string | null) {
+    setPendingTranscript(transcript);
+    toast({ title: "Call ended", description: "Log the outcome below to save it to this prospect's history." });
+    requestAnimationFrame(() => {
+      debriefRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   function savePhoneNumber() {
     if (!prospect || phoneNumber === (prospect.phone_number ?? "")) return;
@@ -119,6 +132,7 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
         outcome,
         notes: debriefNotes || undefined,
         duration_minutes: Number.isFinite(duration) ? duration : undefined,
+        transcript: pendingTranscript || undefined,
       });
 
       if (outcome === "Appointment Booked") {
@@ -129,6 +143,7 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
       setDebriefNotes("");
       setDurationMinutes("");
       setOutcome("");
+      setPendingTranscript(null);
 
       try {
         const { data, error } = await supabase.functions.invoke("phone-debrief-summary", {
@@ -195,6 +210,9 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
                 />
               </div>
             </div>
+
+            {/* Live call listening */}
+            <CallSessionPanel prospect={prospect} onCallEnded={handleCallEnded} />
 
             {/* Pre-call AI brief */}
             <Card>
@@ -279,9 +297,15 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
             </div>
 
             {/* Post-call debrief */}
-            <Card>
+            <Card ref={debriefRef}>
               <CardHeader className="pb-3"><CardTitle className="text-sm">Post-Call Debrief</CardTitle></CardHeader>
               <CardContent className="space-y-3">
+                {pendingTranscript && (
+                  <div className="rounded-md border border-border bg-muted/30 p-2.5 max-h-28 overflow-y-auto text-xs text-muted-foreground whitespace-pre-wrap">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-foreground mb-1">Captured transcript (will be saved with this call)</p>
+                    {pendingTranscript}
+                  </div>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs text-muted-foreground">Outcome</Label>
@@ -364,6 +388,18 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
                       </div>
                       {c.notes && <p className="text-sm">{c.notes}</p>}
                       {c.ai_summary && <p className="text-xs text-muted-foreground mt-1 italic">AI: {c.ai_summary}</p>}
+                      {c.transcript && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="text-[10px] text-primary mt-1.5 flex items-center gap-1 hover:underline">
+                            <Captions className="h-3 w-3" /> View transcript
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <p className="text-xs text-muted-foreground mt-1.5 whitespace-pre-wrap rounded-md bg-muted/30 border border-border p-2">
+                              {c.transcript}
+                            </p>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
                     </div>
                   ))}
                 </div>

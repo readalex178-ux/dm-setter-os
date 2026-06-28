@@ -391,6 +391,7 @@ export type Database = {
           notes: string | null
           outcome: string
           prospect_id: string
+          transcript: string | null
           updated_at: string
           user_id: string
         }
@@ -405,6 +406,7 @@ export type Database = {
           notes?: string | null
           outcome: string
           prospect_id: string
+          transcript?: string | null
           updated_at?: string
           user_id: string
         }
@@ -419,6 +421,7 @@ export type Database = {
           notes?: string | null
           outcome?: string
           prospect_id?: string
+          transcript?: string | null
           updated_at?: string
           user_id?: string
         }

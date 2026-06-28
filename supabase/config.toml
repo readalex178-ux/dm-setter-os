@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.phone-debrief-summary]
 verify_jwt = false
+
+[functions.phone-live-suggestions]
+verify_jwt = false
