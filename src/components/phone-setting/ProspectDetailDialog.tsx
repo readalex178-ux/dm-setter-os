@@ -196,23 +196,30 @@ export function ProspectDetailDialog({ prospect, open, onOpenChange, onMove }: P
 
         <ScrollArea className="flex-1 pr-3">
           <div className="space-y-6">
-            {/* Phone number */}
+            {/* Call mode picker / live call listening — shown first and never
+                gated on a phone number, since the call modes (VoIP screen-share
+                audio, speakerphone, mobile solo) don't dial through this app. */}
+            <CallSessionPanel prospect={prospect} onCallEnded={handleCallEnded} />
+
+            {/* Phone number — optional, for display/reference only */}
             <div>
               <Label className="text-xs text-muted-foreground">Phone Number</Label>
               <div className="relative mt-1">
                 <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-9"
-                  placeholder="No number on file"
+                  placeholder="Add phone number to start a call"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   onBlur={savePhoneNumber}
                 />
               </div>
+              {!prospect.phone_number && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Optional — for display and dialing reference. You can start the call above without one.
+                </p>
+              )}
             </div>
-
-            {/* Live call listening */}
-            <CallSessionPanel prospect={prospect} onCallEnded={handleCallEnded} />
 
             {/* Pre-call AI brief */}
             <Card>

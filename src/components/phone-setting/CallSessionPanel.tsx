@@ -337,13 +337,18 @@ export function CallSessionPanel({ prospect, onCallEnded }: Props) {
 
   if (phase === "idle") {
     return (
-      <Card>
-        <CardContent className="py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <Phone className="h-4 w-4 text-primary" /> Call Listening
+      <Card className="border-primary/30">
+        <CardContent className="py-4 flex items-center justify-between gap-3">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <Phone className="h-4 w-4 text-primary" /> Ready to call
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Pick how you're taking the call — mic access is only requested after you hit Start.
+            </p>
           </div>
-          <Button size="sm" onClick={() => setPhase("picking")}>
-            <Phone className="h-3.5 w-3.5 mr-1" /> Start Call
+          <Button onClick={() => setPhase("picking")} className="shrink-0">
+            <Phone className="h-4 w-4 mr-1.5" /> Start Call
           </Button>
         </CardContent>
       </Card>
