@@ -31,6 +31,7 @@ const ExtensionPage = lazy(() => import("./pages/ExtensionPage"));
 const OfferPage = lazy(() => import("./pages/OfferPage"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBasePage"));
 const FollowUpsPage = lazy(() => import("./pages/FollowUpsPage"));
+const PhoneSettingPage = lazy(() => import("./pages/PhoneSettingPage"));
 
 validateEnv();
 
@@ -83,6 +84,7 @@ const App = () => (
               <Route path="inbox" element={<Guard name="Inbox"><InboxPage /></Guard>} />
               <Route path="pipeline" element={<Guard name="Pipeline"><PipelinePage /></Guard>} />
               <Route path="followups" element={<Guard name="Follow-Ups"><FollowUpsPage /></Guard>} />
+              <Route path="phonesetting" element={<Guard name="Phone Setting"><PhoneSettingPage /></Guard>} />
               <Route path="prospects" element={<Guard name="Prospects"><ProspectsPage /></Guard>} />
               <Route path="scripts" element={<Guard name="Scripts"><ScriptsPage /></Guard>} />
               <Route path="offer" element={<Guard name="My Offer"><OfferPage /></Guard>} />

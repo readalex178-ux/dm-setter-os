@@ -1,6 +1,7 @@
 import {
   LayoutDashboard, Inbox, GitBranch, Users, BookOpen,
   GraduationCap, Target, BarChart3, Settings, Activity, Chrome, Package, Library, Clock, LogOut,
+  Phone,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,12 @@ const groups: { label: string; items: Item[] }[] = [
       { title: "Pipeline", url: "/app/pipeline", icon: GitBranch },
       { title: "Follow-Ups", url: "/app/followups", icon: Clock },
       { title: "Prospects", url: "/app/prospects", icon: Users },
+    ],
+  },
+  {
+    label: "Calling",
+    items: [
+      { title: "Phone Setting", url: "/app/phonesetting", icon: Phone },
     ],
   },
   {

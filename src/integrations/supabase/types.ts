@@ -379,6 +379,116 @@ export type Database = {
         }
         Relationships: []
       }
+      phone_calls: {
+        Row: {
+          ai_follow_up_message: string | null
+          ai_next_step: string | null
+          ai_summary: string | null
+          called_at: string
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          notes: string | null
+          outcome: string
+          prospect_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_follow_up_message?: string | null
+          ai_next_step?: string | null
+          ai_summary?: string | null
+          called_at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          outcome: string
+          prospect_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_follow_up_message?: string | null
+          ai_next_step?: string | null
+          ai_summary?: string | null
+          called_at?: string
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          notes?: string | null
+          outcome?: string
+          prospect_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_calls_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      phone_commissions: {
+        Row: {
+          amount: number
+          booked_at: string
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          phone_call_id: string | null
+          prospect_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          booked_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          phone_call_id?: string | null
+          prospect_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          booked_at?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          phone_call_id?: string | null
+          prospect_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "phone_commissions_phone_call_id_fkey"
+            columns: ["phone_call_id"]
+            isOneToOne: false
+            referencedRelation: "phone_calls"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "phone_commissions_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -457,6 +567,7 @@ export type Database = {
           current_job: string | null
           handle: string | null
           id: string
+          in_call_notes: string | null
           income_goal: string | null
           intent_confidence: number | null
           intent_level: string | null
@@ -469,8 +580,12 @@ export type Database = {
           motivation_confidence: number | null
           name: string
           notes: string | null
+          phone_number: string | null
+          phone_stage: string
           platform: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id: string | null
+          pre_call_brief: Json | null
+          pre_call_brief_generated_at: string | null
           profile_url: string | null
           source: string | null
           stage: string
@@ -494,6 +609,7 @@ export type Database = {
           current_job?: string | null
           handle?: string | null
           id?: string
+          in_call_notes?: string | null
           income_goal?: string | null
           intent_confidence?: number | null
           intent_level?: string | null
@@ -506,8 +622,12 @@ export type Database = {
           motivation_confidence?: number | null
           name: string
           notes?: string | null
+          phone_number?: string | null
+          phone_stage?: string
           platform?: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id?: string | null
+          pre_call_brief?: Json | null
+          pre_call_brief_generated_at?: string | null
           profile_url?: string | null
           source?: string | null
           stage?: string
@@ -531,6 +651,7 @@ export type Database = {
           current_job?: string | null
           handle?: string | null
           id?: string
+          in_call_notes?: string | null
           income_goal?: string | null
           intent_confidence?: number | null
           intent_level?: string | null
@@ -543,8 +664,12 @@ export type Database = {
           motivation_confidence?: number | null
           name?: string
           notes?: string | null
+          phone_number?: string | null
+          phone_stage?: string
           platform?: Database["public"]["Enums"]["platform_type"] | null
           platform_thread_id?: string | null
+          pre_call_brief?: Json | null
+          pre_call_brief_generated_at?: string | null
           profile_url?: string | null
           source?: string | null
           stage?: string
